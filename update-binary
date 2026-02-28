@@ -1,4 +1,0 @@
-#!/system/bin/sh
-MAGISK_PATH=/data/adb/magisk
-[ -z $MAGISK_PATH ] && MAGISK_PATH=/data/adb/ksu
-exec $([ -f $MAGISK_PATH/magiskboot ] && echo $MAGISK_PATH/magiskboot || echo magisk) --install-module "$@"
