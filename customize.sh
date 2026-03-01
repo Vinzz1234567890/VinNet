@@ -5,7 +5,7 @@ POSTFSDATA=false
 LATESTARTSERVICE=true
 
 ui_print "-----------------------------------------------------"
-ui_print "- Update: Fixed Wifi Not Connect"
+ui_print "- Update: Other Improvement"
 ui_print "-----------------------------------------------------"
 sleep 1
 ui_print "- Device Brand: $(getprop ro.product.brand)"
