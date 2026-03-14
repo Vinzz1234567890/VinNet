@@ -1,0 +1,13 @@
+Improve the Appearance of the Module Installation
+Deleted the Flush tweak
+Replaced the TCP Congestion Algorithm with Westwood
+Deleted the WiFi Monitor script
+Added a CPU Workload Distribution script when managing the network
+Prioritized Game Server Network Traffic (Mobile Legends)
+Enabled Busy Polling
+Enabled Busy Read
+Changed all settings and add some settings to the WiFi Vendor
+--------------------------------------------------
+Bonus⬇️
+Enabled the Android Dynamic Performance Framework feature
+Changed the CPU Governor to performance
