@@ -14,9 +14,7 @@ sleep 0.5
 ui_print "- Kernel: $(uname -r)"
 sleep 0.5
 ui_print "- Architecture: $(getprop ro.product.cpu.abilist)"
-ui_print "--------------------------------------------------"
 sleep 1
-ui_print "--------------------------------------------------"
 ui_print "- Checking Device Compatibility..."
 sleep 0.5
 if [ "$(getprop ro.product.device)" == "fog" ]; then
@@ -25,11 +23,9 @@ else
     ui_print "- Device isn't fog"
     sleep 0.5
     ui_print "- Delete vendor Configuration"
-    rm -rf "$MODPATH/system/vendor"
+    rm -rf "$MODPATH/vendor"
 fi
-ui_print "--------------------------------------------------"
 sleep 1
-ui_print "--------------------------------------------------"
 ui_print "- Updates:"
 sleep 0.5
 while read -r line; do
@@ -37,17 +33,13 @@ while read -r line; do
     ui_print "- $line"
     sleep 0.5
 done <"$MODPATH/updates.txt"
-ui_print "--------------------------------------------------"
 sleep 1
-ui_print "--------------------------------------------------"
 ui_print "- Setting Permissions..."
 sleep 0.5
 ui_print "- Configurating Network..."
 sleep 0.5
 ui_print "- Installing VinNet..."
-ui_print "--------------------------------------------------"
 sleep 1
-ui_print "--------------------------------------------------"
 ui_print "- Note: This module is still under development"
 ui_print "        and may cause system instability"
 ui_print "        or bootloop on your device."
@@ -64,9 +56,7 @@ sleep 0.5
 ui_print "        If you encounter any issues"
 ui_print "        while using this module,"
 ui_print "        please report them to developer."
-ui_print "--------------------------------------------------"
 sleep 1
-ui_print "--------------------------------------------------"
 ui_print "- Credit: Vinzz (Developer)"
 ui_print "- TikTok: @vinzz.fog"
 ui_print "- GitHub: @Vinzz1234567890"
