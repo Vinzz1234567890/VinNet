@@ -1,13 +1,40 @@
-Improve the Appearance of the Module Installation
-Deleted the Flush tweak
-Replaced the TCP Congestion Algorithm with Westwood
-Deleted the WiFi Monitor script
-Added a CPU Workload Distribution script when managing the network
-Prioritized Game Server Network Traffic (Mobile Legends)
-Enabled Busy Polling
-Enabled Busy Read
-Changed all settings and add some settings to the WiFi Vendor
---------------------------------------------------
-Bonus⬇️
-Enabled the Android Dynamic Performance Framework feature
-Changed the CPU Governor to performance
+Added various validation checks during module installation process
+Changed the values of all kernel network parameters and Wi-Fi vendor settings
+Set TCP max memory option value to default
+Disabled TCP timestamps
+Set TCP finish timeout value to default
+Enabled TCP slow start after idle
+Enabled low-latency TCP
+Enabled TCP forward acknowledgment
+Disabled TCP metrics
+Changed TCP receive and send buffer sizes
+Set maximum TCP time wait value to default
+Increased the maximum number of SYN queues
+Set garbage collector's neighbor threshold value to default
+Set delay first probe time value for IPv6 to default
+Removed the proxy delay tweak
+Set router solicitation delay value for IPv6 to default
+Reduced maximum passive scanning time for channel from 110 to 40
+Reduced minimum passive scanning time for channel from 60 to 20
+Increased scanning interval for neighboring access points from 200 to 10000
+Increased device's detection range for Wi-Fi signals from 85 to 95
+Reduced the minimum duration of scanning process from 20 to 5
+Reduced the maximum duration of scanning process from 30 to 15
+Reduced maximum active scanning time for channel from 40 to 20
+Reduced minimum active scanning time for channel from 20 to 10
+Decreased the maximum data capacity that can be sent in a single large packet over a Wi-Fi 5 connection
+Reduced the maximum size limit for a single data packet on a Wi-Fi 5 network
+Increased minimum interval for receiving router advertisement packets from 600 to 3000
+Lowered minimum data load threshold from 150 to 50
+Lowered medium data load threshold from 500 to 250
+Lowered maximum data load threshold from 2000 to 800
+Increased the time interval for system to recalculate average data usage from 100 ms to 500 ms
+Disabled IP acceleration
+Increased the maximum number of data packets that can be received before the system is forced to clear the queue from 1 to 4
+Configured delivery traffic indication message to operate in real time
+Enabled high-performance mode on network whenever there is even slightest bit of traffic
+Increased the final timeout before disconnecting due to loss of beacon from 2 second to 6 second
+Set TCP congestion control value to BBRPlus if supported
+Change queueing discipline value to cake if supported
+Disabled feature that automatically removes undetected access points from scan list
+Added an update check script to manager
