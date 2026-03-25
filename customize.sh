@@ -1,6 +1,4 @@
 #!/system/bin/sh
-PROPFILE=false
-POSTFSDATA=false
 LATESTARTSERVICE=true
 sleep 2
 ui_print "--------------------------------------------------"
@@ -15,10 +13,12 @@ for target in $MetaModules; do
 done
 sleep 1
 if [ "$MetaModule" = true ]; then
-    ui_print "- Using the Meta Module Installation Method"
+    ui_print "- Using $(basename $target) Mounting Method"
     SKIPMOUNT=true
 else
-    ui_print "- Using the KernelSU Installation Method"
+    ui_print "- Using Standard Mounting Method"
+    ui_print "- Using standard mounting method results in a failure rate of approximately 99% on latest Android systems"
+    ui_print "- I recommend installing meta module before installing this module"
     SKIPMOUNT=false
 fi
 sleep 2
@@ -35,7 +35,7 @@ ui_print "- Kernel: $(uname -r)"
 sleep 1
 ui_print "- Architecture: $(getprop ro.product.cpu.abilist)"
 sleep 1
-if [ "$(getprop ro.product.device)" == "fog" ]; then
+if [ "$(getprop ro.product.device)" = "fog" ]; then
     ui_print "- Device is fog"
 else
     ui_print "- Device isn't fog"
@@ -49,7 +49,7 @@ ui_print "- Updates:"
 sleep 1
 while read -r line; do
     [ -z "$line" ] && continue
-    ui_print "- $line"
+    ui_print "$line"
 done <"$MODPATH/updates.txt"
 sleep 2
 ui_print "--------------------------------------------------"
