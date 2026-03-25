@@ -1,0 +1,3 @@
+#!/sbin/sh
+. /data/adb/*/util_functions.sh
+install_module
