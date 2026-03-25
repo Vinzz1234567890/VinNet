@@ -14,3 +14,4 @@
 - • Added mount status notification after booting into system
 - • Reduced transmission queue length from 2000 to 1024 to minimize bufferload
 - • Deleted all Wi-Fi suggestions
+- • Fixed errors during installation process via Magisk Manager (hopefully)
