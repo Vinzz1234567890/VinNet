@@ -1,6 +1,6 @@
 {
-    "version": "1.0.7",
-    "versionCode": 20260322,
-    "zipUrl": "https://github.com/Vinzz1234567890/VinNet/releases/download/v1.0.7/VinNet-v1.0.7.zip",
-    "changelog": "https://raw.githubusercontent.com/Vinzz1234567890/VinNet/refs/heads/main/updates.txt"
+    "version": "1.0.6",
+    "versionCode": 20260315,
+    "zipUrl": "https://github.com/Vinzz1234567890/VinNet/releases/download/v1.0.8/VinNet-1.0.8-EVE.zip",
+    "changelog": "https://raw.githubusercontent.com/Vinzz1234567890/VinNet/refs/heads/main/changelog.md"
 }
