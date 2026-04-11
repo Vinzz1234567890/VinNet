@@ -7,6 +7,7 @@
 ### 🔧Fixed
 
 - Installation error using Magisk manager **(Hopefully)**
+- Binary detection error during module installation process via manager
 
 ### ✨Added
 
