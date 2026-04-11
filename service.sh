@@ -1,5 +1,6 @@
 #!/system/bin/sh
 (
+
     until [ "$(getprop sys.boot_completed)" = "1" ]; do
         sleep 5
     done
@@ -28,13 +29,21 @@
     [ -f /proc/sys/net/ipv4/tcp_max_syn_backlog ] && echo "1024" >/proc/sys/net/ipv4/tcp_max_syn_backlog                                # Default tcp_max_syn_backlog=128, Check via "cat /proc/sys/net/ipv4/tcp_max_syn_backlog"
     [ -f /proc/sys/net/ipv4/tcp_fastopen ] && echo "3" >/proc/sys/net/ipv4/tcp_fastopen                                                 # Default tcp_fastopen=1, Check via "cat /proc/sys/net/ipv4/tcp_fastopen"
     [ -f /proc/sys/net/ipv4/neigh/default/delay_first_probe_time ] && echo "1" >/proc/sys/net/ipv4/neigh/default/delay_first_probe_time # Default delay_first_probe_time=5, Check via "cat /proc/sys/net/ipv4/neigh/default/delay_first_probe_time"
-    [ -x /system/bin/iw ] && /system/bin/iw wlan0 set power_save off                                                                    # Default power_save=on, Check via "/system/bin/iw wlan0 get power_save"
     [ -f /sys/class/net/wlan0/tx_queue_len ] && echo "1024" >/sys/class/net/wlan0/tx_queue_len                                          # Default tx_queue_len=3000, Check via "cat /sys/class/net/wlan0/tx_queue_len"
+    [ -f /sys/class/net/rmnet_data0/tx_queue_len ] && echo "1024" >/sys/class/net/rmnet_data0/tx_queue_len                              # Default tx_queue_len=1000, Check via "cat /sys/class/net/rmnet_data0/tx_queue_len"
+    [ -f /sys/class/net/rmnet_ipa0/tx_queue_len ] && echo "1024" >/sys/class/net/rmnet_ipa0/tx_queue_len                                # Default tx_queue_len=1000, Check via "cat /sys/class/net/rmnet_ipa0/tx_queue_len"
 
-    command -v cmd && cmd wifi remove-all-suggestions                              # Default remove-all-suggestions=none, Check via "cmd wifi list-suggestions"
+    command -v cmd && cmd wifi remove-all-suggestions                              # Default remove-all-suggestions=No suggestions on this device, Check via "cmd wifi list-suggestions"
     command -v cmd && cmd wifi set-ipreach-disconnect disabled                     # Default set-ipreach-disconnect=true, Check via "cmd wifi get-ipreach-disconnect"
     command -v cmd && cmd wifi set-network-selection-config disabled disabled -a 0 # Check via "dumpsys wifi | grep -i 'mSufficiencyCheckEnabledWhenScreen'"
     command -v cmd && cmd wifi set-scan-always-available disabled                  # Risky script (may reduce GPS accuracy), Default set-scan-always-available=null, Check via "settings get global wifi_scan_always_enabled"
+    command -v cmd && cmd wifi force-low-latency-mode enabled
+
+    v() {
+        /system/bin/iw wlan0 get power_save | grep -q on && /system/bin/iw wlan0 set power_save off # Default power_save=on, Check via "/system/bin/iw wlan0 get power_save"
+        sleep 120 && v
+    }
+    v
 
     [ -f /proc/sys/net/ipv4/tcp_congestion_control ] && echo "bbrplus" >/proc/sys/net/ipv4/tcp_congestion_control
     [ -f /sys/class/net/wlan0/queues/rx-0/rps_cpus ] && echo "ff" >/sys/class/net/wlan0/queues/rx-0/rps_cpus
@@ -55,8 +64,8 @@
     [ -f /sys/devices/system/cpu/cpufreq/policy4/scaling_governor ] && echo "performance" >/sys/devices/system/cpu/cpufreq/policy4/scaling_governor
 
     if [ "$(getprop ro.product.device)" != "fog" ]; then
-        VMS="Vendor Mount Status: Failed (Device isn't fog)"
-    elif grep -q "VinNet" "/vendor/etc/wifi/WCNSS_qcom_cfg.ini"; then
+        VMS="Vendor Mount Status: Fail (Device isn't fog)"
+    elif grep -q "VinNet" "/vendor/etc/wifi/WCNSS_qcom_cfg.ini" && grep -q "VinNet" "/vendor/etc/wifi/wpa_supplicant_overlay.conf"; then
         VMS="Vendor Mount Status: Success"
     else
         VMS="Vendor Mount Status: Fail (Require Meta Module)"
@@ -66,10 +75,8 @@
     else
         BMS="Binary Mount Status: Fail (Require Meta Module)"
     fi
-
     VBMS="${VMS}
-${BMS}"
-
+    ${BMS}"
     su shell -c "cmd notification post -S bigtext -t 'VinNet' 'Mount Status' '$VBMS'"
 
 ) &
