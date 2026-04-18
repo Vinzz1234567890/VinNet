@@ -31,10 +31,13 @@ sleep 10
 [ -f /sys/class/net/rmnet_data0/tx_queue_len ] && echo "1024" >/sys/class/net/rmnet_data0/tx_queue_len                              # Default tx_queue_len=1000, Check via "cat /sys/class/net/rmnet_data0/tx_queue_len"
 [ -f /sys/class/net/rmnet_ipa0/tx_queue_len ] && echo "1024" >/sys/class/net/rmnet_ipa0/tx_queue_len                                # Default tx_queue_len=1000, Check via "cat /sys/class/net/rmnet_ipa0/tx_queue_len"
 
-command -v cmd >/dev/null && cmd wifi remove-all-suggestions                              # Default all-suggestions=No suggestions on this device, Check via "cmd wifi list-suggestions"
-command -v cmd >/dev/null && cmd wifi set-ipreach-disconnect disabled                     # Default ipreach-disconnect=true, Check via "cmd wifi get-ipreach-disconnect"
-command -v cmd >/dev/null && cmd wifi set-network-selection-config disabled disabled -a 0 # Check via "dumpsys wifi | grep -i 'mSufficiencyCheckEnabledWhenScreen'"
-command -v cmd >/dev/null && cmd wifi set-scan-always-available disabled                  # Risky script (may reduce GPS accuracy), Default scan-always-available=null, Check via "settings get global wifi_scan_always_enabled"
+command -v cmd >/dev/null && cmd wifi remove-all-suggestions                                                    # Default all-suggestions=No suggestions on this device, Check via "cmd wifi list-suggestions"
+command -v cmd >/dev/null && cmd wifi set-ipreach-disconnect disabled                                           # Default ipreach-disconnect=true, Check via "cmd wifi get-ipreach-disconnect"
+command -v cmd >/dev/null && cmd wifi set-network-selection-config disabled disabled -a 0                       # Check via "dumpsys wifi | grep -i 'mSufficiencyCheckEnabledWhenScreen'"
+command -v cmd >/dev/null && cmd wifi set-scan-always-available disabled                                        # Risky script (may reduce GPS accuracy), Default scan-always-available=null, Check via "settings get global wifi_scan_always_enabled"
+command -v tc >/dev/null && [ -d /sys/class/net/wlan0 ] && tc qdisc replace dev wlan0 root fq_codel             # Default qdisc=pfifo_fast, Check via "tc qdisc show"
+command -v tc >/dev/null && [ -d /sys/class/net/rmnet_data0 ] && tc qdisc replace dev rmnet_data0 root fq_codel # Default qdisc=pfifo_fast, Check via "tc qdisc show"
+command -v tc >/dev/null && [ -d /sys/class/net/rmnet_ipa0 ] && tc qdisc replace dev rmnet_ipa0 root fq_codel   # Default qdisc=pfifo_fast, Check via "tc qdisc show"
 command -v cmd >/dev/null && cmd wifi force-low-latency-mode enabled
 command -v cmd >/dev/null && cmd activity set-ignore-delivery-group-policy com.mobile.legends
 command -v cmd >/dev/null && cmd activity set-ignore-delivery-group-policy com.dts.freefiremax
@@ -49,10 +52,6 @@ command -v cmd >/dev/null && cmd activity set-ignore-delivery-group-policy com.s
         sleep 300
     done
 ) &
-
-tc qdisc replace dev wlan0 root fq_codel       # Default qdisc=pfifo_fast, Check via "tc qdisc show"
-tc qdisc replace dev rmnet_data0 root fq_codel # Default qdisc=pfifo_fast, Check via "tc qdisc show"
-tc qdisc replace dev rmnet_ipa0 root fq_codel  # Default qdisc=pfifo_fast, Check via "tc qdisc show"
 
 if [ "$(getprop ro.product.device)" != "fog" ]; then
     VMS="Vendor: Fail (Not fog)"
