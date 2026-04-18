@@ -2,7 +2,33 @@
 
 ---
 
-## v1.0.9-ZENITH - 2026-04-11 - Latest
+## v1.1.0-JIRASD - 2026-04-17 - Latest
+
+### 🔥Deleted
+
+- All experimental scripts from `service.sh`
+- `debug.sf.enable_adpf_cpu_hint` script from `service.sh`
+- CPU governor script from `service.sh` and restore default settings
+
+### 🔄️Changed
+
+- Method for modifying qdisc values from using sysctl to using tc
+
+### ✨Added
+
+- `set-ignore-delivery-group-policy` setting for the Mobile Legends, Free Fire Max, Clash of Clans, and Clash Royale packages via cmd in `service.sh`
+
+### ✅Enabled
+
+- Aggregation for 4G mobile data via property in `system.prop`
+
+### 📈Improved
+
+- Efficiency and simplicity of all scripts in `service.sh`
+
+---
+
+## v1.0.9-ZENITH - 2026-04-11
 
 ### 🔧Fixed
 

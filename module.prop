@@ -1,7 +1,7 @@
 id=VinNet
 name=VinNet
-version=1.0.9-ZENITH
-versionCode=20260411
+version=1.1.0-JIRASD
+versionCode=20260417
 author=Vinzz
 description=An Aggressive Network Configuration | DWYOR
 updateJson=https://raw.githubusercontent.com/Vinzz1234567890/VinNet/refs/heads/main/update.json

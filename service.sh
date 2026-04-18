@@ -31,50 +31,34 @@ sleep 10
 [ -f /sys/class/net/rmnet_data0/tx_queue_len ] && echo "1024" >/sys/class/net/rmnet_data0/tx_queue_len                              # Default tx_queue_len=1000, Check via "cat /sys/class/net/rmnet_data0/tx_queue_len"
 [ -f /sys/class/net/rmnet_ipa0/tx_queue_len ] && echo "1024" >/sys/class/net/rmnet_ipa0/tx_queue_len                                # Default tx_queue_len=1000, Check via "cat /sys/class/net/rmnet_ipa0/tx_queue_len"
 
-command -v cmd && cmd wifi remove-all-suggestions                              # Default remove-all-suggestions=No suggestions on this device, Check via "cmd wifi list-suggestions"
-command -v cmd && cmd wifi set-ipreach-disconnect disabled                     # Default set-ipreach-disconnect=true, Check via "cmd wifi get-ipreach-disconnect"
-command -v cmd && cmd wifi set-network-selection-config disabled disabled -a 0 # Check via "dumpsys wifi | grep -i 'mSufficiencyCheckEnabledWhenScreen'"
-command -v cmd && cmd wifi set-scan-always-available disabled                  # Risky script (may reduce GPS accuracy), Default set-scan-always-available=null, Check via "settings get global wifi_scan_always_enabled"
-command -v cmd && cmd wifi force-low-latency-mode enabled
+command -v cmd >/dev/null && cmd wifi remove-all-suggestions                                                    # Default all-suggestions=No suggestions on this device, Check via "cmd wifi list-suggestions"
+command -v cmd >/dev/null && cmd wifi set-ipreach-disconnect disabled                                           # Default ipreach-disconnect=true, Check via "cmd wifi get-ipreach-disconnect"
+command -v cmd >/dev/null && cmd wifi set-network-selection-config disabled disabled -a 0                       # Check via "dumpsys wifi | grep -i 'mSufficiencyCheckEnabledWhenScreen'"
+command -v cmd >/dev/null && cmd wifi set-scan-always-available disabled                                        # Risky script (may reduce GPS accuracy), Default scan-always-available=null, Check via "settings get global wifi_scan_always_enabled"
+command -v tc >/dev/null && [ -d /sys/class/net/wlan0 ] && tc qdisc replace dev wlan0 root fq_codel             # Default qdisc=pfifo_fast, Check via "tc qdisc show"
+command -v tc >/dev/null && [ -d /sys/class/net/rmnet_data0 ] && tc qdisc replace dev rmnet_data0 root fq_codel # Default qdisc=pfifo_fast, Check via "tc qdisc show"
+command -v tc >/dev/null && [ -d /sys/class/net/rmnet_ipa0 ] && tc qdisc replace dev rmnet_ipa0 root fq_codel   # Default qdisc=pfifo_fast, Check via "tc qdisc show"
+command -v cmd >/dev/null && cmd wifi force-low-latency-mode enabled
+command -v cmd >/dev/null && cmd activity set-ignore-delivery-group-policy com.mobile.legends
+command -v cmd >/dev/null && cmd activity set-ignore-delivery-group-policy com.dts.freefiremax
+command -v cmd >/dev/null && cmd activity set-ignore-delivery-group-policy com.supercell.clashofclans
+command -v cmd >/dev/null && cmd activity set-ignore-delivery-group-policy com.supercell.clashroyale
 
-v() {
-    /system/bin/iw wlan0 get power_save | grep -q on && /system/bin/iw wlan0 set power_save off # Default power_save=on, Check via "/system/bin/iw wlan0 get power_save"
-    sleep 120 && v
-}
-v &
-
-[ -f /proc/sys/net/ipv4/tcp_congestion_control ] && echo "bbrplus" >/proc/sys/net/ipv4/tcp_congestion_control
-[ -f /sys/class/net/wlan0/queues/rx-0/rps_cpus ] && echo "ff" >/sys/class/net/wlan0/queues/rx-0/rps_cpus
-iptables -t mangle -A OUTPUT -p udp --dport 5000:6000 -j TOS --set-tos 0x10
-iptables -t mangle -A OUTPUT -p udp --dport 3000:4000 -j TOS --set-tos 0x10
-iptables -t mangle -A OUTPUT -p udp --dport 2702 -j TOS --set-tos 0x10
-iptables -t mangle -A OUTPUT -p udp --dport 3702 -j TOS --set-tos 0x10
-iptables -t mangle -A OUTPUT -p udp --dport 9000:9999 -j TOS --set-tos 0x10
-iptables -t mangle -A OUTPUT -p udp --dport 30000:30300 -j TOS --set-tos 0x10
-iptables -t mangle -A OUTPUT -p tcp --tcp-flags FIN,SYN,RST,ACK ACK -m length --length 40:100 -j TOS --set-tos 0x10
-[ -f /proc/sys/net/core/busy_poll ] && echo "50" >/proc/sys/net/core/busy_poll
-[ -f /proc/sys/net/core/busy_read ] && echo "50" >/proc/sys/net/core/busy_read
-[ -f /proc/sys/net/core/default_qdisc ] && echo "fq_codel" >/proc/sys/net/core/default_qdisc
-
-# Bonus
-setprop debug.sf.enable_adpf_cpu_hint 1
-[ -f /sys/devices/system/cpu/cpufreq/policy0/scaling_governor ] && echo "performance" >/sys/devices/system/cpu/cpufreq/policy0/scaling_governor
-[ -f /sys/devices/system/cpu/cpufreq/policy4/scaling_governor ] && echo "performance" >/sys/devices/system/cpu/cpufreq/policy4/scaling_governor
+(
+    while [ -d /sys/class/net/wlan0 ]; do
+        if command -v iw >/dev/null; then
+            iw wlan0 get power_save | grep -q on && iw wlan0 set power_save off # Default power_save=on, Check via "iw wlan0 get power_save"
+        fi
+        sleep 300
+    done
+) &
 
 if [ "$(getprop ro.product.device)" != "fog" ]; then
-    VMS="Vendor Mount Status: Fail (Device isn't fog)"
-elif grep -q "VinNet" "/vendor/etc/wifi/WCNSS_qcom_cfg.ini" && grep -q "p2p" "/vendor/etc/wifi/wpa_supplicant_overlay.conf"; then
-    VMS="Vendor Mount Status: Success"
+    VMS="Vendor: Fail (Not fog)"
+elif grep -q "VinNet" "/vendor/etc/wifi/WCNSS_qcom_cfg.ini" 2>/dev/null && grep -q "p2p_disabled=1" "/vendor/etc/wifi/wpa_supplicant_overlay.conf" 2>/dev/null; then
+    VMS="Vendor: Success"
 else
-    VMS="Vendor Mount Status: Fail (Require Meta Module)"
+    VMS="Vendor: Fail (No Meta)"
 fi
-if [ -f /system/bin/iw* ] || [ -f /vendor/bin/iw* ] || [ -f /system/xbin/iw* ]; then
-    BMS="Binary Mount Status: Success"
-else
-    BMS="Binary Mount Status: Fail (Require Meta Module)"
-fi
-
-VBMS="${VMS}
-${BMS}"
-
-su shell -c "cmd notification post -S bigtext -t 'VinNet' 'Mount Status' '$VBMS'"
+command -v iw >/dev/null && BMS="Binary: Success" || BMS="Binary: Fail (No Meta)"
+su shell -c "cmd notification post -S bigtext -t 'VinNet' 'Mount Status' '$VMS | $BMS'"
