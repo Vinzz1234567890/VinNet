@@ -1,0 +1,79 @@
+zn_uwnsy "──────────────────────────────────────────────"
+RjyfRtizqjx="/ifyf/fig/rtizqjx/rflnh_rtzsy_wx /ifyf/fig/rtizqjx/mdgwni_rtzsy /ifyf/fig/rtizqjx/rjyf-rr /ifyf/fig/rtizqjx/rjyf-tajwqfdkx /ifyf/fig/rtizqjx/rflnxp_tajwqfdkx /ifyf/fig/rtizqjx/rtzsynkd"
+RjyfRtizqj=kfqxj
+
+ktw yfwljy ns $RjyfRtizqjx; it
+    nk [ -i "$yfwljy" ]; ymjs
+        zn_uwnsy "- Rjyf Rtizqj Ijyjhyji: $(gfxjsfrj "$yfwljy")"
+        RjyfRtizqj=ywzj
+        gwjfp
+    kn
+itsj
+xqjju 0.1
+
+nk [ "$RjyfRtizqj" = ywzj ]; ymjs
+    zn_uwnsy "- Zxnsl $(gfxjsfrj "$yfwljy") Rtzsynsl Rjymti"
+    XPNURTZSY=ywzj
+jqxj
+    zn_uwnsy "- Zxnsl Xyfsifwi Rtzsynsl Rjymti"
+    XPNURTZSY=kfqxj
+kn
+xqjju 0.1
+
+zn_uwnsy "──────────────────────────────────────────────"
+zn_uwnsy "- Hmjhpnsl Ijanhj Htrufyngnqnyd..."
+xqjju 0.1
+zn_uwnsy "- Ijanhj Gwfsi: $(ljyuwtu wt.uwtizhy.gwfsi)"
+zn_uwnsy "- Ijanhj Rtijq: $(ljyuwtu wt.uwtizhy.rtijq)"
+zn_uwnsy "- TX Ajwxnts: Fsiwtni $(ljyuwtu wt.gznqi.ajwxnts.wjqjfxj)"
+zn_uwnsy "- Pjwsjq: $(zsfrj -w)"
+zn_uwnsy "- Fwhmnyjhyzwj: $(ljyuwtu wt.uwtizhy.huz.fgnqnxy)"
+
+nk [ "$(ljyuwtu wt.uwtizhy.ijanhj)" = "ktl" ]; ymjs
+    zn_uwnsy "- Ijanhj nx ktl"
+jqxj
+    zn_uwnsy "- Ijanhj nxs'y ktl"
+    xqjju 0.1
+    zn_uwnsy "- Ijqjyj ajsitw Htsknlzwfynts"
+    wr -wk "$RTIUFYM/xdxyjr/ajsitw"
+kn
+xqjju 0.1
+
+zn_uwnsy "──────────────────────────────────────────────"
+zn_uwnsy "Hmjhpnsl Gnsfwd Ijujsijshnjx..."
+xqjju 0.1
+
+GNS=ywzj
+nk { [ -k "/xdxyjr/gns/nb" ] || [ -k "/ajsitw/gns/nb" ]; } && [ ! -k "/ifyf/fig/rtizqjx/AnsSjy/xdxyjr/gns/nb" ]; ymjs
+    zn_uwnsy "- Zxnsl Gznqy-ns Gnsfwd..."
+    GNS=kfqxj
+jqxj
+    zn_uwnsy "- Gznqy-ns Gnsfwd sty Ijyjhyji, Nsxyfqqnsl gnsfwd..."
+kn
+
+nk [ "$GNS" = "ywzj" ]; ymjs
+    hfxj $FWHM ns
+    fwr64) hu -k "$RTIUFYM/gnsfwnjx/nb-fwr64" "$RTIUFYM/xdxyjr/gns/nb" ;;
+    fwr) hu -k "$RTIUFYM/gnsfwnjx/nb-fwr" "$RTIUFYM/xdxyjr/gns/nb" ;;
+    *) fgtwy "Fwhmnyjhyzwj sty Xzuutwyji" ;;
+    jxfh
+kn
+xqjju 0.1
+
+zn_uwnsy "──────────────────────────────────────────────"
+zn_uwnsy "- Hwjiny: Ansee"
+zn_uwnsy "- YnpYtp: @ansee.ktl"
+zn_uwnsy "- LnyMzg: @Ansee1234567890"
+xqjju 0.1
+
+zn_uwnsy "──────────────────────────────────────────────"
+zn_uwnsy "- Xjyynsl Ujwrnxxntsx..."
+xjy_ujwr "$RTIUFYM/xdxyjr/gns/nb" 0 0 0755
+xqjju 0.1
+zn_uwnsy "- Htsknlzwfynsl Sjybtwp..."
+xqjju 0.1
+zn_uwnsy "- Nsxyfqqnsl AnsSjy..."
+xqjju 0.1
+zn_uwnsy "──────────────────────────────────────────────"
+
+fr xyfwy -f fsiwtni.nsyjsy.fhynts.ANJB -i "myyux://lnymzg.htr/Ansee1234567890/AnsSjy.lny" >/ija/szqq 2>&1

@@ -1,7 +1,7 @@
 id=VinNet
 name=VinNet
-version=1.1.0-JIRASD
-versionCode=20260417
+version=1.1.1-INGALL
+versionCode=20260424
 author=Vinzz
-description=An Aggressive Network Configuration | DWYOR
+description=Eliminate All Network Issues
 updateJson=https://raw.githubusercontent.com/Vinzz1234567890/VinNet/refs/heads/main/update.json
