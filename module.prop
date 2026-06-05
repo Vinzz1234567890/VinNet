@@ -4,4 +4,5 @@ version=1.1.1-INGALL
 versionCode=20260424
 author=Vinzz
 description=Standalone Implementation of Network Optimalization
+support=https://github.com/Vinzz1234567890
 updateJson=https://raw.githubusercontent.com/Vinzz1234567890/VinNet/refs/heads/main/update.json
