@@ -3,5 +3,5 @@ name=VinNet
 version=1.1.1-INGALL
 versionCode=20260424
 author=Vinzz
-description=Eliminate All Network Issues
+description=Standalone Implementation of Network Optimalization
 updateJson=https://raw.githubusercontent.com/Vinzz1234567890/VinNet/refs/heads/main/update.json
