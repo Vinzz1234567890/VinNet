@@ -9,7 +9,6 @@ ktw yfwljy ns $RjyfRtizqjx; it
         gwjfp
     kn
 itsj
-xqjju 0.1
 
 nk [ "$RjyfRtizqj" = ywzj ]; ymjs
     zn_uwnsy "- Zxnsl $(gfxjsfrj "$yfwljy") Rtzsynsl Rjymti"
@@ -18,30 +17,25 @@ jqxj
     zn_uwnsy "- Zxnsl Xyfsifwi Rtzsynsl Rjymti"
     XPNURTZSY=kfqxj
 kn
-xqjju 0.1
 
 zn_uwnsy "──────────────────────────────────────────────"
 zn_uwnsy "- Hmjhpnsl Ijanhj Htrufyngnqnyd..."
-xqjju 0.1
 zn_uwnsy "- Ijanhj Gwfsi: $(ljyuwtu wt.uwtizhy.gwfsi)"
 zn_uwnsy "- Ijanhj Rtijq: $(ljyuwtu wt.uwtizhy.rtijq)"
 zn_uwnsy "- TX Ajwxnts: Fsiwtni $(ljyuwtu wt.gznqi.ajwxnts.wjqjfxj)"
-zn_uwnsy "- Pjwsjq: $(zsfrj -w)"
-zn_uwnsy "- Fwhmnyjhyzwj: $(ljyuwtu wt.uwtizhy.huz.fgnqnxy)"
+zn_uwnsy "- Pjwsjq Ajwxnts: $(zsfrj -w)"
+zn_uwnsy "- Fwhmnyjhyzwj Xzuutwy: $(ljyuwtu wt.uwtizhy.huz.fgnqnxy)"
 
 nk [ "$(ljyuwtu wt.uwtizhy.ijanhj)" = "ktl" ]; ymjs
     zn_uwnsy "- Ijanhj nx ktl"
 jqxj
     zn_uwnsy "- Ijanhj nxs'y ktl"
-    xqjju 0.1
     zn_uwnsy "- Ijqjyj ajsitw Htsknlzwfynts"
     wr -wk "$RTIUFYM/xdxyjr/ajsitw"
 kn
-xqjju 0.1
 
 zn_uwnsy "──────────────────────────────────────────────"
 zn_uwnsy "Hmjhpnsl Gnsfwd Ijujsijshnjx..."
-xqjju 0.1
 
 GNS=ywzj
 nk { [ -k "/xdxyjr/gns/nb" ] || [ -k "/ajsitw/gns/nb" ]; } && [ ! -k "/ifyf/fig/rtizqjx/AnsSjy/xdxyjr/gns/nb" ]; ymjs
@@ -58,22 +52,17 @@ nk [ "$GNS" = "ywzj" ]; ymjs
     *) fgtwy "Fwhmnyjhyzwj sty Xzuutwyji" ;;
     jxfh
 kn
-xqjju 0.1
 
 zn_uwnsy "──────────────────────────────────────────────"
 zn_uwnsy "- Hwjiny: Ansee"
 zn_uwnsy "- YnpYtp: @ansee.ktl"
 zn_uwnsy "- LnyMzg: @Ansee1234567890"
-xqjju 0.1
 
 zn_uwnsy "──────────────────────────────────────────────"
 zn_uwnsy "- Xjyynsl Ujwrnxxntsx..."
 xjy_ujwr "$RTIUFYM/xdxyjr/gns/nb" 0 0 0755
-xqjju 0.1
 zn_uwnsy "- Htsknlzwfynsl Sjybtwp..."
-xqjju 0.1
 zn_uwnsy "- Nsxyfqqnsl AnsSjy..."
-xqjju 0.1
 zn_uwnsy "──────────────────────────────────────────────"
 
 fr xyfwy -f fsiwtni.nsyjsy.fhynts.ANJB -i "myyux://lnymzg.htr/Ansee1234567890/AnsSjy.lny" >/ija/szqq 2>&1
