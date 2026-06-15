@@ -31,7 +31,7 @@
 
 ---
 
-## 📦 Deployment
+## 📦 Instructions
 
 <details>
 <summary><b>Installation Instructions</b></summary>
@@ -58,7 +58,7 @@
 
 ## 🛠️ Diagnostics
 
-| Symptom | Root Cause | Resolution |
+| Problem | Complication | Resolution |
 | :--- | :--- | :--- |
 | **Bootloop** | Incompatible tweak parameters. | Boot to Safe Mode / Delete module via Custom Recovery. |
 | **Unstable Network** | Tweak misconfiguration / conflict. | Make sure there are no misconfigured tweaks or any that could cause conflicts. |
