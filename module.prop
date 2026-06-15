@@ -4,5 +4,5 @@ version=1.1.1-INGALL
 versionCode=20260424
 author=Vinzz
 description=Standalone Implementation of Network Optimization
-webuiIcon=webroot/VinNet.jpeg
+webuiIcon=webroot/assets/VinNet.jpg
 updateJson=https://raw.githubusercontent.com/Vinzz1234567890/VinNet/refs/heads/main/update.json
