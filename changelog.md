@@ -2,7 +2,30 @@
 
 ---
 
-## v1.1.0-JIRASD - 2026-04-17 - Latest
+## v1.1.1-INGALL - 2026-04-24 - Latest
+
+### ✨Added
+
+- `index.html`
+- `VinNet.css`
+- `VinNet.js`
+- `VinNet.jpg`
+- `VinNetBanner.mp4`
+- `GoogleSansFlex.ttf`
+- `customize`
+- Caesar encode to `customize` and `customize.sh`
+
+### 🔄️Changed
+
+- Structure and logic of `customize.sh` script to make it more concise and straightforward
+
+### 📈Improved
+
+- Speed up module installation by removing all sleep commands from `customize.sh`
+
+---
+
+## v1.1.0-JIRASD - 2026-04-17
 
 ### 🔥Deleted
 
