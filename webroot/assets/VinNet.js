@@ -124,19 +124,22 @@ async function loadDevice() {
 ───────────────────────────────────── */
 const PING_TARGETS = ['1.1.1.1', '8.8.8.8', '114.114.114.114'];
 
-function setNetTile(vId, dId, val, gradeFn) {
-    document.getElementById(vId).textContent = val ?? '—';
-    if (val === null || val === undefined) return;
-    const grade = gradeFn(val);
-    const clr = { good: 'var(--good)', warn: 'var(--warn)', bad: 'var(--bad)' }[grade];
-    const dot = document.getElementById(dId);
-    dot.style.background = clr;
-    dot.style.boxShadow = `0 0 6px ${clr}`;
+function setNetVal(id, val, colorFn) {
+    const el = document.getElementById(id);
+    if (val === null || val === undefined) {
+        el.textContent = '—';
+        el.style.color = '';
+        return;
+    }
+    el.textContent = val + ' ms';
+    el.style.color = colorFn(val);
 }
 
 function applyNetworkData(data) {
-    setNetTile('v-lat', 'd-lat', data.latency, v => v < 50 ? 'good' : v < 120 ? 'warn' : 'bad');
-    setNetTile('v-jit', 'd-jit', data.jitter, v => v < 10 ? 'good' : v < 30 ? 'warn' : 'bad');
+    setNetVal('v-lat', data.latency,
+        v => v <= 30 ? 'var(--good)' : v <= 50 ? 'var(--warn)' : 'var(--bad)');
+    setNetVal('v-jit', data.jitter,
+        v => v === 0 ? 'var(--good)' : v <= 10 ? 'var(--warn)' : 'var(--bad)');
 }
 
 // Pengukuran live langsung via exec() — dipakai tombol refresh manual
@@ -167,13 +170,6 @@ async function loadNetwork() {
         return;
     }
     await measureNetworkLive(); // fallback: cache belum ada
-}
-
-async function refreshNetwork() {
-    const btn = document.getElementById('refreshBtn');
-    btn.classList.add('spinning');
-    await measureNetworkLive(); // refresh manual = selalu live, bukan cache
-    btn.classList.remove('spinning');
 }
 
 /* ─────────────────────────────────────
