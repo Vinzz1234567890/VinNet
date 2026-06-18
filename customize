@@ -20,11 +20,11 @@ kn
 
 zn_uwnsy "──────────────────────────────────────────────"
 zn_uwnsy "- Hmjhpnsl Ijanhj Htrufyngnqnyd..."
-zn_uwnsy "- Ijanhj Gwfsi: $(ljyuwtu wt.uwtizhy.gwfsi)"
-zn_uwnsy "- Ijanhj Rtijq: $(ljyuwtu wt.uwtizhy.rtijq)"
-zn_uwnsy "- TX Ajwxnts: Fsiwtni $(ljyuwtu wt.gznqi.ajwxnts.wjqjfxj)"
-zn_uwnsy "- Pjwsjq Ajwxnts: $(zsfrj -w)"
-zn_uwnsy "- Fwhmnyjhyzwj Xzuutwy: $(ljyuwtu wt.uwtizhy.huz.fgnqnxy)"
+zn_uwnsy "- Gwfsi: $(ljyuwtu wt.uwtizhy.gwfsi)"
+zn_uwnsy "- Rtijq: $(ljyuwtu wt.uwtizhy.rtijq)"
+zn_uwnsy "- TX: Fsiwtni $(ljyuwtu wt.gznqi.ajwxnts.wjqjfxj)"
+zn_uwnsy "- Pjwsjq: $(zsfrj -w)"
+zn_uwnsy "- Fwhmnyjhyzwj: $(ljyuwtu wt.uwtizhy.huz.fgn)"
 
 nk [ "$(ljyuwtu wt.uwtizhy.ijanhj)" = "ktl" ]; ymjs
     zn_uwnsy "- Ijanhj nx ktl"
