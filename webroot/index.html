@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#1C1B1F">
+    <title>VinNet</title>
+    <link rel="preload" href="assets/VinNetBanner.mp4" as="video">
+    <link rel="stylesheet" href="assets/VinNet.css">
+</head>
+
+<body>
+    <div id="loading-screen">
+        <div class="ls-ring"></div>
+        <div class="ls-text">Loading</div>
+    </div>
+
+    <div id="app">
+
+        <div class="topbar">
+            <div class="tb-avatar">
+                <img src="assets/VinNet.jpg"
+                    style="width:100%;height:100%;border-radius:14px;object-fit:cover;display:block;">
+            </div>
+            <div class="tb-info">
+                <div class="tb-name">VinNet</div>
+                <div class="tb-sub">Standalone Implementation of Network Optimization</div>
+            </div>
+        </div>
+
+        <div class="pages">
+
+            <div class="page active" id="pg-dashboard">
+
+                <img src="assets/VinNetBanner.webp"
+                    style="width:100%;height:30%;margin:0 auto;border-radius:28px;display:block;object-fit:cover;">
+
+                <div class="card">
+                    <div class="c-header">
+                        <div class="c-label">
+                            <svg viewBox="0 0 24 24">
+                                <path
+                                    d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8 3 3 3-3a4.237 4.237 0 0 0-6 0zm-4-4 2 2a7.074 7.074 0 0 1 10 0l2-2C15.14 9.14 8.87 9.14 5 13z" />
+                            </svg>
+                            Network Status
+                        </div>
+                        <div class="refresh-btn" id="refreshBtn" onclick="refreshNetwork()">
+                            <svg viewBox="0 0 24 24">
+                                <path
+                                    d="M17.65 6.35A7.958 7.958 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z" />
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="net-grid">
+                        <div class="net-tile">
+                            <div class="nt-val" id="v-lat">—</div>
+                            <div class="nt-unit">ms</div>
+                            <div class="nt-lbl">Latency</div>
+                            <div class="nt-dot" id="d-lat"></div>
+                        </div>
+                        <div class="net-tile">
+                            <div class="nt-val" id="v-jit">—</div>
+                            <div class="nt-unit">ms</div>
+                            <div class="nt-lbl">Jitter</div>
+                            <div class="nt-dot" id="d-jit"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="c-label">
+                        <svg viewBox="0 0 24 24">
+                            <path
+                                d="M17 1.01 7 1c-1.1 0-2 .9-2 2v18c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V3c0-1.1-.9-1.99-2-1.99zM17 19H7V5h10v14z" />
+                        </svg>
+                        Device Info
+                    </div>
+                    <div class="irow"><span class="ir-lbl">Brand</span><span class="ir-val" id="di-brand">—</span></div>
+                    <div class="irow"><span class="ir-lbl">Model</span><span class="ir-val" id="di-model">—</span></div>
+                    <div class="irow"><span class="ir-lbl">Android</span><span class="ir-val" id="di-android">—</span>
+                    </div>
+                    <div class="irow"><span class="ir-lbl">Kernel</span><span class="ir-val" id="di-kernel">—</span>
+                    </div>
+                    <div class="irow"><span class="ir-lbl">Architecture</span><span class="ir-val" id="di-arch">—</span>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="page" id="pg-tweaks">
+                <div class="card">
+                    <div class="c-label">
+                        <svg viewBox="0 0 24 24">
+                            <path
+                                d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8 3 3 3-3a4.237 4.237 0 0 0-6 0zm-4-4 2 2a7.074 7.074 0 0 1 10 0l2-2C15.14 9.14 8.87 9.14 5 13z" />
+                        </svg>
+                        Wi-Fi
+                    </div>
+                    <div class="tweak">
+                        <div class="tw-body">
+                            <div class="tw-name">IP Reachability Disconnect</div>
+                            <div class="tw-desc">Disables Android's IP reachability probe. Prevents unnecessary
+                                disconnects on unstable or hotspot networks.</div>
+                            <code class="tw-code">cmd wifi set-ipreach-disconnect disabled</code>
+                        </div>
+                        <label class="sw">
+                            <input type="checkbox" id="sw-ipreach" onchange="applyTweak('ipreach', this.checked)">
+                            <div class="sw-track">
+                                <div class="sw-thumb"></div>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="page" id="pg-info">
+                <div class="card">
+                    <div class="c-label">
+                        <svg viewBox="0 0 24 24">
+                            <path
+                                d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z" />
+                        </svg>
+                        Metadata
+                    </div>
+                    <div class="irow"><span class="ir-lbl">ID</span><span class="ir-val">VinNet</span></div>
+                    <div class="irow"><span class="ir-lbl">Name</span><span class="ir-val">VinNet</span></div>
+                    <div class="irow"><span class="ir-lbl">Version</span><span class="ir-val">1.1.1-INGALL</span></div>
+                    <div class="irow"><span class="ir-lbl">Version Code</span><span class="ir-val">20260424</span></div>
+                    <div class="irow"><span class="ir-lbl">Author</span><span class="ir-val">Vinzz</span></div>
+                    <div class="irow"><span class="ir-lbl">Description</span><span class="ir-val">Standalone
+                            Implementation of Network Optimization</span></div>
+                </div>
+
+                <div class="card">
+                    <div class="c-label">
+                        <svg viewBox="0 0 24 24">
+                            <path
+                                d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z" />
+                        </svg>
+                        Links
+                    </div>
+                    <div class="irow">
+                        <span class="ir-lbl">Repository</span>
+                        <a class="ir-link" href="https://github.com/Vinzz1234567890/VinNet" target="_blank">GitHub →</a>
+                    </div>
+                    <div class="irow">
+                        <span class="ir-lbl">Telegram Group</span>
+                        <span class="ir-val" style="color:var(--on-surf-var)">—</span>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="c-label">
+                        <svg viewBox="0 0 24 24">
+                            <path
+                                d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z" />
+                        </svg>
+                        Contributors
+                    </div>
+                    <div class="irow">
+                        <span class="ir-lbl">Developer</span>
+                        <span class="ir-val">Vinzz</span>
+                    </div>
+                    <div style="padding-top: 10px;">
+                        <span class="chip">Vinzz</span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="botnav">
+            <div class="nb active" onclick="nav('dashboard', this)">
+                <div class="nb-pill"></div>
+                <svg viewBox="0 0 24 24">
+                    <path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z" />
+                </svg>
+                <span class="nb-lbl">Dashboard</span>
+            </div>
+            <div class="nb" onclick="nav('tweaks', this)">
+                <div class="nb-pill"></div>
+                <svg viewBox="0 0 24 24">
+                    <path
+                        d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z" />
+                </svg>
+                <span class="nb-lbl">Tweaks</span>
+            </div>
+            <div class="nb" onclick="nav('info', this)">
+                <div class="nb-pill"></div>
+                <svg viewBox="0 0 24 24">
+                    <path
+                        d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" />
+                </svg>
+                <span class="nb-lbl">Info</span>
+            </div>
+        </div>
+
+        <div class="snack" id="snack"></div>
+
+    </div>
+    <script src="assets/VinNet.js"></script>
+</body>
+
+</html>
