@@ -248,8 +248,20 @@ const TWEAKS = {
         offCmd: 'cmd wifi set-scan-always-available enabled ; settings put global wifi_scan_always_enabled 1',
     },
     "Restrict Background": {
-            onCmd: 'cmd netpolicy set restrict-background false ; settings put global data_saver_mode 0',
-            offCmd: 'cmd netpolicy set restrict-background true ; settings put global data_saver_mode 1',
+        onCmd: 'cmd netpolicy set restrict-background false ; settings put global data_saver_mode 0',
+        offCmd: 'cmd netpolicy set restrict-background true ; settings put global data_saver_mode 1',
+    },
+    "Power Save": {
+        onCmd: 'iw wlan0 set power_save off',
+        offCmd: 'iw wlan0 set power_save on',
+    },
+    "QDISC": {
+        onCmd: 'tc qdisc replace dev wlan0 root fq_codel quantum 300 noecn',
+        offCmd: 'tc qdisc replace dev wlan0 root pfifo_fast',
+    },
+    "Wi-Fi Force Low Latency Mode": {
+        onCmd: 'cmd wifi force-low-latency-mode enabled ; cmd wifi force-hi-perf-mode enabled',
+        offCmd: 'cmd wifi force-low-latency-mode disabled ; cmd wifi force-hi-perf-mode disabled',
     },
     // contoh tweak baru:
     // tweakbaru: {
