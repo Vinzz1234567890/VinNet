@@ -13,10 +13,16 @@
 - `VinNetBanner.webp`
 - `GoogleSansFlex.ttf`
 - `customize`
+- `wpa_supplicant.conf`
+- `wifi_ipreach_disconnect_enabled`, `wifi_scan_always_enabled`, `data_saver_mode` parameter to global table
+- `restrict-background` tweak via netpolicy command
+- `force-hi-perf-mode` Wi-Fi tweak via CMD
 
 ### 🔄️Changed
 
 - Structure and logic of `customize.sh` script to make it more concise and straightforward
+- Quantum and noecn qdisc configurations for fq_codel
+- Regulatory region for device's Wi-Fi chip to 'US' in `system.prop`
 
 ### 📈Improved
 

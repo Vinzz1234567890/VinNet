@@ -33,13 +33,36 @@ apply_tweak() {
             settings put global wifi_scan_always_enabled 1
         fi
         ;;
-        "Restrict Background")
+    "Restrict Background")
         if [ "$2" = "on" ]; then
             cmd netpolicy set restrict-background false
             settings put global data_saver_mode 0
         else
             cmd netpolicy set restrict-background true
             settings put global data_saver_mode 1
+        fi
+        ;;
+    "Power Save")
+        if [ "$2" = "on" ]; then
+            iw wlan0 set power_save off
+        else
+            iw wlan0 set power_save on
+        fi
+        ;;
+    "QDISC")
+        if [ "$2" = "on" ]; then
+            tc qdisc replace dev wlan0 root fq_codel quantum 300 noecn
+        else
+            tc qdisc replace dev wlan0 root pfifo_fast
+        fi
+        ;;
+    "Wi-Fi Force Low Latency Mode")
+        if [ "$2" = "on" ]; then
+            cmd wifi force-low-latency-mode enabled
+            cmd wifi force-hi-perf-mode enabled
+        else
+            cmd wifi force-low-latency-mode disabled
+            cmd wifi force-hi-perf-mode disabled
         fi
         ;;
         # Contoh tweak baru:
@@ -161,7 +184,7 @@ EOF
 # ── Vendor / Binary Mount Check (logika lama, tidak diubah) ───
 if [ "$(getprop ro.product.device)" != "fog" ]; then
     VMS="Vendor: Fail (Not fog)"
-elif grep -q "VinNet" "/vendor/etc/wifi/WCNSS_qcom_cfg.ini" 2>/dev/null && grep -q "p2p_disabled=1" "/vendor/etc/wifi/wpa_supplicant_overlay.conf" 2>/dev/null; then
+elif grep -q "VinNet" "/vendor/etc/wifi/WCNSS_qcom_cfg.ini" 2>/dev/null && grep -q "p2p_disabled=1" "/vendor/etc/wifi/wpa_supplicant_overlay.conf" 2>/dev/null && grep -q "ap_scan=1" "/vendor/etc/wifi/wpa_supplicant.conf" 2>/dev/null; then
     VMS="Vendor: Success"
 else
     VMS="Vendor: Fail (No Meta)"

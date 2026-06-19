@@ -1,0 +1,2 @@
+ro.boot.wificountrycode=US
+persist.sys.radio.force_lte_ca=true
