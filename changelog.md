@@ -10,10 +10,9 @@
 - `VinNet.css`
 - `VinNet.js`
 - `VinNet.jpg`
-- `VinNetBanner.mp4`
+- `VinNetBanner.webp`
 - `GoogleSansFlex.ttf`
 - `customize`
-- Caesar encode to `customize` and `customize.sh`
 
 ### 🔄️Changed
 
