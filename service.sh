@@ -10,13 +10,80 @@ done
 sleep 3
 
 # ── Terapkan ulang preferensi Tweaks (persisten lintas reboot) ──
+# Tambah tweak baru: tambah 1 baris "case" di apply_tweak() berikut.
 TWEAKS_CONF="$MODDIR/tweaks.conf"
+
+apply_tweak() {
+    case "$1" in
+    "IP Reach Disconnect")
+        if [ "$2" = "on" ]; then
+            cmd wifi set-ipreach-disconnect disabled
+            settings put global wifi_ipreach_disconnect_enabled 0
+        else
+            cmd wifi set-ipreach-disconnect enabled
+            settings put global wifi_ipreach_disconnect_enabled 1
+        fi
+        ;;
+    "Scan Always Available")
+        if [ "$2" = "on" ]; then
+            cmd wifi set-scan-always-available disabled
+            settings put global wifi_scan_always_enabled 0
+        else
+            cmd wifi set-scan-always-available enabled
+            settings put global wifi_scan_always_enabled 1
+        fi
+        ;;
+        "Restrict Background")
+        if [ "$2" = "on" ]; then
+            cmd netpolicy set restrict-background false
+            settings put global data_saver_mode 0
+        else
+            cmd netpolicy set restrict-background true
+            settings put global data_saver_mode 1
+        fi
+        ;;
+        # Contoh tweak baru:
+        # tweakbaru)
+        #     if [ "$2" = "on" ]; then
+        #         <perintah ON>
+        #     else
+        #         <perintah OFF>
+        #     fi
+        #     ;;
+    esac
+}
+
 if [ -f "$TWEAKS_CONF" ]; then
-    IPREACH_STATE=$(grep "^ipreach=" "$TWEAKS_CONF" | cut -d'=' -f2)
-    if [ -n "$IPREACH_STATE" ]; then
-        cmd wifi set-ipreach-disconnect "$IPREACH_STATE"
-        echo "{\"ipreach\":\"$IPREACH_STATE\"}" >"$WEBROOT/tweaks.json"
-    fi
+    while IFS='=' read -r TKEY TVAL; do
+        [ -n "$TKEY" ] && apply_tweak "$TKEY" "$TVAL"
+    done <"$TWEAKS_CONF"
+
+    # Regenerasi tweaks.json otomatis dari tweaks.conf (jumlah tweak berapa pun)
+    JSON="{"
+    FIRST=1
+    while IFS='=' read -r TKEY TVAL; do
+        [ -z "$TKEY" ] && continue
+        [ "$FIRST" -eq 0 ] && JSON="$JSON,"
+        JSON="$JSON\"$TKEY\":\"$TVAL\""
+        FIRST=0
+    done <"$TWEAKS_CONF"
+    JSON="$JSON}"
+    echo "$JSON" >"$WEBROOT/tweaks.json"
+fi
+
+# ── Metadata Cache dari module.prop (sekali per boot) ──
+MODULE_PROP="$MODDIR/module.prop"
+if [ -f "$MODULE_PROP" ]; then
+    cat >"$WEBROOT/metadata.json" <<EOF
+{
+  "id": "$(grep "^id=" "$MODULE_PROP" | cut -d'=' -f2-)",
+  "name": "$(grep "^name=" "$MODULE_PROP" | cut -d'=' -f2-)",
+  "version": "$(grep "^version=" "$MODULE_PROP" | cut -d'=' -f2-)",
+  "versionCode": "$(grep "^versionCode=" "$MODULE_PROP" | cut -d'=' -f2-)",
+  "author": "$(grep "^author=" "$MODULE_PROP" | cut -d'=' -f2-)",
+  "description": "$(grep "^description=" "$MODULE_PROP" | cut -d'=' -f2-)"
+}
+EOF
 fi
 
 # ── Device Info Cache (sekali per boot) ─────────────
