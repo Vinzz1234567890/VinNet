@@ -72,10 +72,12 @@
                     <div class="tweak">
                         <div class="tw-body">
                             <div class="tw-name">Disable IP Reach Disconnect</div>
-                            <div class="tw-desc">Preventing Wi-Fi from suddenly disconnecting when the network is unstable.</div>
+                            <div class="tw-desc">Preventing Wi-Fi from suddenly disconnecting when the network is
+                                unstable.</div>
                         </div>
                         <label class="sw">
-                            <input type="checkbox" id="IP Reach Disconnect" onchange="applyTweak('IP Reach Disconnect', this.checked)">
+                            <input type="checkbox" id="IP Reach Disconnect"
+                                onchange="applyTweak('IP Reach Disconnect', this.checked)">
                             <div class="sw-track">
                                 <div class="sw-thumb"></div>
                             </div>
@@ -87,7 +89,8 @@
                             <div class="tw-desc">Reduces jitter, especially when playing over a Wi-Fi connection.</div>
                         </div>
                         <label class="sw">
-                            <input type="checkbox" id="Scan Always Available" onchange="applyTweak('Scan Always Available', this.checked)">
+                            <input type="checkbox" id="Scan Always Available"
+                                onchange="applyTweak('Scan Always Available', this.checked)">
                             <div class="sw-track">
                                 <div class="sw-thumb"></div>
                             </div>
@@ -99,7 +102,48 @@
                             <div class="tw-desc">Maintain ping stability and prevent jitter.</div>
                         </div>
                         <label class="sw">
-                            <input type="checkbox" id="Restrict Background" onchange="applyTweak('Restrict Background', this.checked)">
+                            <input type="checkbox" id="Restrict Background"
+                                onchange="applyTweak('Restrict Background', this.checked)">
+                            <div class="sw-track">
+                                <div class="sw-thumb"></div>
+                            </div>
+                        </label>
+                    </div>
+                    <div class="tweak">
+                        <div class="tw-body">
+                            <div class="tw-name">Disable Power Save</div>
+                            <div class="tw-desc">Eliminate jitter and maintain stable ping while gaming over a Wi-Fi
+                                connection.</div>
+                        </div>
+                        <label class="sw">
+                            <input type="checkbox" id="Power Save" onchange="applyTweak('Power Save', this.checked)">
+                            <div class="sw-track">
+                                <div class="sw-thumb"></div>
+                            </div>
+                        </label>
+                    </div>
+                    <div class="tweak">
+                        <div class="tw-body">
+                            <div class="tw-name">Optimize QDISC</div>
+                            <div class="tw-desc">Split data traffic into multiple paths and prioritize small data
+                                packets so they aren't held up by large data packets.</div>
+                        </div>
+                        <label class="sw">
+                            <input type="checkbox" id="QDISC" onchange="applyTweak('QDISC', this.checked)">
+                            <div class="sw-track">
+                                <div class="sw-thumb"></div>
+                            </div>
+                        </label>
+                    </div>
+                    <div class="tweak">
+                        <div class="tw-body">
+                            <div class="tw-name">Enable Wi-Fi Force Low Latency Mode</div>
+                            <div class="tw-desc">Force Android to enable built-in low-latency mode at system level.
+                            </div>
+                        </div>
+                        <label class="sw">
+                            <input type="checkbox" id="Wi-Fi Force Low Latency Mode"
+                                onchange="applyTweak('Wi-Fi Force Low Latency Mode', this.checked)">
                             <div class="sw-track">
                                 <div class="sw-thumb"></div>
                             </div>
