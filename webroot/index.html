@@ -69,22 +69,37 @@
 
             <div class="page" id="pg-tweaks">
                 <div class="card">
-                    <div class="c-label">
-                        <svg viewBox="0 0 24 24">
-                            <path
-                                d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8 3 3 3-3a4.237 4.237 0 0 0-6 0zm-4-4 2 2a7.074 7.074 0 0 1 10 0l2-2C15.14 9.14 8.87 9.14 5 13z" />
-                        </svg>
-                        Wi-Fi
+                    <div class="tweak">
+                        <div class="tw-body">
+                            <div class="tw-name">Disable IP Reach Disconnect</div>
+                            <div class="tw-desc">Preventing Wi-Fi from suddenly disconnecting when the network is unstable.</div>
+                        </div>
+                        <label class="sw">
+                            <input type="checkbox" id="IP Reach Disconnect" onchange="applyTweak('IP Reach Disconnect', this.checked)">
+                            <div class="sw-track">
+                                <div class="sw-thumb"></div>
+                            </div>
+                        </label>
                     </div>
                     <div class="tweak">
                         <div class="tw-body">
-                            <div class="tw-name">IP Reachability Disconnect</div>
-                            <div class="tw-desc">Disables Android's IP reachability probe. Prevents unnecessary
-                                disconnects on unstable or hotspot networks.</div>
-                            <code class="tw-code">cmd wifi set-ipreach-disconnect disabled</code>
+                            <div class="tw-name">Disable Scan Always Available</div>
+                            <div class="tw-desc">Reduces jitter, especially when playing over a Wi-Fi connection.</div>
                         </div>
                         <label class="sw">
-                            <input type="checkbox" id="sw-ipreach" onchange="applyTweak('ipreach', this.checked)">
+                            <input type="checkbox" id="Scan Always Available" onchange="applyTweak('Scan Always Available', this.checked)">
+                            <div class="sw-track">
+                                <div class="sw-thumb"></div>
+                            </div>
+                        </label>
+                    </div>
+                    <div class="tweak">
+                        <div class="tw-body">
+                            <div class="tw-name">Disable Restrict Background</div>
+                            <div class="tw-desc">Maintain ping stability and prevent jitter.</div>
+                        </div>
+                        <label class="sw">
+                            <input type="checkbox" id="Restrict Background" onchange="applyTweak('Restrict Background', this.checked)">
                             <div class="sw-track">
                                 <div class="sw-thumb"></div>
                             </div>
@@ -102,13 +117,18 @@
                         </svg>
                         Metadata
                     </div>
-                    <div class="irow"><span class="ir-lbl">ID</span><span class="ir-val">VinNet</span></div>
-                    <div class="irow"><span class="ir-lbl">Name</span><span class="ir-val">VinNet</span></div>
-                    <div class="irow"><span class="ir-lbl">Version</span><span class="ir-val">1.1.1-INGALL</span></div>
-                    <div class="irow"><span class="ir-lbl">Version Code</span><span class="ir-val">20260424</span></div>
-                    <div class="irow"><span class="ir-lbl">Author</span><span class="ir-val">Vinzz</span></div>
-                    <div class="irow"><span class="ir-lbl">Description</span><span class="ir-val">Standalone
-                            Implementation of Network Optimization</span></div>
+                    <div class="irow"><span class="ir-lbl">ID</span><span class="ir-val" id="meta-id">VinNet</span>
+                    </div>
+                    <div class="irow"><span class="ir-lbl">Name</span><span class="ir-val" id="meta-name">VinNet</span>
+                    </div>
+                    <div class="irow"><span class="ir-lbl">Version</span><span class="ir-val"
+                            id="meta-version">1.1.1-INGALL</span></div>
+                    <div class="irow"><span class="ir-lbl">Version Code</span><span class="ir-val"
+                            id="meta-vcode">20260424</span></div>
+                    <div class="irow"><span class="ir-lbl">Author</span><span class="ir-val"
+                            id="meta-author">Vinzz</span></div>
+                    <div class="irow"><span class="ir-lbl">Description</span><span class="ir-val"
+                            id="meta-desc">Standalone Implementation of Network Optimization</span></div>
                 </div>
 
                 <div class="card">
@@ -141,9 +161,6 @@
                     </div>
                     <div class="irow">
                         <span class="ir-lbl">Developer</span>
-                        <span class="ir-val">Vinzz</span>
-                    </div>
-                    <div style="padding-top: 10px;">
                         <span class="chip">Vinzz</span>
                     </div>
                 </div>
