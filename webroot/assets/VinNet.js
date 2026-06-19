@@ -33,6 +33,18 @@ function toast(msg) {
 }
 
 /* ─────────────────────────────────────
+   OPEN LINK DI BROWSER SISTEM
+   target="_blank" cuma buka tab di dalam WebView KSU.
+   Pakai Intent ACTION_VIEW via shell agar buka browser default.
+───────────────────────────────────── */
+function openExternal(url) {
+    exec(`am start -a android.intent.action.VIEW -d "${url}"`).catch(() => {
+        toast('Gagal membuka link');
+    });
+    return false; // cegah navigasi default WebView
+}
+
+/* ─────────────────────────────────────
    JSON CACHE READER (ditulis service.sh)
 ───────────────────────────────────── */
 async function fetchJSON(path) {
@@ -201,9 +213,15 @@ function stopLiveTicker() {
    TWEAKS
 ───────────────────────────────────── */
 async function loadTweaks() {
+    const cached = await fetchJSON('tweaks.json');
+    if (cached && cached.ipreach) {
+        document.getElementById('sw-ipreach').checked = cached.ipreach === 'disabled';
+        return;
+    }
     try {
         const out = await exec('cmd wifi get-ipreach-disconnect');
-        document.getElementById('sw-ipreach').checked = out.includes('disabled');
+        // Output asli: "IPREACH_DISCONNECT state is false/true" — bukan "disabled"
+        document.getElementById('sw-ipreach').checked = out.includes('false');
     } catch { }
 }
 
@@ -212,6 +230,8 @@ async function applyTweak(id, enabled) {
         const state = enabled ? 'disabled' : 'enabled';
         try {
             await exec(`cmd wifi set-ipreach-disconnect ${state}`);
+            await exec(`echo "ipreach=${state}" > /data/adb/modules/VinNet/tweaks.conf`);
+            await exec(`echo '{"ipreach":"${state}"}' > /data/adb/modules/VinNet/webroot/tweaks.json`);
             toast(`IP Reachability Disconnect → ${state}`);
         } catch {
             toast('Failed to apply tweak');
