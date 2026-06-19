@@ -132,6 +132,27 @@ async function loadDevice() {
 }
 
 /* ─────────────────────────────────────
+   METADATA (dari module.prop via metadata.json)
+───────────────────────────────────── */
+const META_ROWS = [
+    ['meta-id', 'id'],
+    ['meta-name', 'name'],
+    ['meta-version', 'version'],
+    ['meta-vcode', 'versionCode'],
+    ['meta-author', 'author'],
+    ['meta-desc', 'description'],
+];
+
+async function loadMetadata() {
+    const cached = await fetchJSON('metadata.json');
+    if (!cached) return; // belum ada cache, HTML tetap tampil apa adanya
+    for (const [id, key] of META_ROWS) {
+        const el = document.getElementById(id);
+        if (el && cached[key]) el.textContent = cached[key];
+    }
+}
+
+/* ─────────────────────────────────────
    NETWORK MEASUREMENT
 ───────────────────────────────────── */
 const PING_TARGETS = ['1.1.1.1', '8.8.8.8', '114.114.114.114'];
@@ -210,33 +231,65 @@ function stopLiveTicker() {
 }
 
 /* ─────────────────────────────────────
-   TWEAKS
+   TWEAKS REGISTRY
+   Tambah tweak baru → 3 langkah:
+   1. Tambah blok HTML .tweak baru (lihat contoh ipreach)
+   2. Tambah 1 entry di object TWEAKS di bawah ini
+   3. Tambah 1 baris case di service.sh (apply_tweak)
+   id, key HTML (sw-id), dan key TWEAKS harus sama persis.
 ───────────────────────────────────── */
+const TWEAKS = {
+    "IP Reach Disconnect": {
+        onCmd: 'cmd wifi set-ipreach-disconnect disabled ; settings put global wifi_ipreach_disconnect_enabled 0',
+        offCmd: 'cmd wifi set-ipreach-disconnect enabled ; settings put global wifi_ipreach_disconnect_enabled 1',
+    },
+    "Scan Always Available": {
+        onCmd: 'cmd wifi set-scan-always-available disabled ; settings put global wifi_scan_always_enabled 0',
+        offCmd: 'cmd wifi set-scan-always-available enabled ; settings put global wifi_scan_always_enabled 1',
+    },
+    "Restrict Background": {
+            onCmd: 'cmd netpolicy set restrict-background false ; settings put global data_saver_mode 0',
+            offCmd: 'cmd netpolicy set restrict-background true ; settings put global data_saver_mode 1',
+    },
+    // contoh tweak baru:
+    // tweakbaru: {
+    //     onCmd:  'perintah saat toggle ON',
+    //     offCmd: 'perintah saat toggle OFF',
+    // },
+};
+
 async function loadTweaks() {
-    const cached = await fetchJSON('tweaks.json');
-    if (cached && cached.ipreach) {
-        document.getElementById('sw-ipreach').checked = cached.ipreach === 'disabled';
-        return;
+    const cached = await fetchJSON('tweaks.json') || {};
+    for (const id of Object.keys(TWEAKS)) {
+        const el = document.getElementById('sw-' + id);
+        if (el && cached[id] !== undefined) {
+            el.checked = cached[id] === 'on';
+        }
     }
-    try {
-        const out = await exec('cmd wifi get-ipreach-disconnect');
-        // Output asli: "IPREACH_DISCONNECT state is false/true" — bukan "disabled"
-        document.getElementById('sw-ipreach').checked = out.includes('false');
-    } catch { }
 }
 
 async function applyTweak(id, enabled) {
-    if (id === 'ipreach') {
-        const state = enabled ? 'disabled' : 'enabled';
-        try {
-            await exec(`cmd wifi set-ipreach-disconnect ${state}`);
-            await exec(`echo "ipreach=${state}" > /data/adb/modules/VinNet/tweaks.conf`);
-            await exec(`echo '{"ipreach":"${state}"}' > /data/adb/modules/VinNet/webroot/tweaks.json`);
-            toast(`IP Reachability Disconnect → ${state}`);
-        } catch {
-            toast('Failed to apply tweak');
-            document.getElementById('sw-ipreach').checked = !enabled;
-        }
+    const t = TWEAKS[id];
+    if (!t) return;
+    try {
+        const cmd = enabled ? t.onCmd : t.offCmd;
+        await exec(cmd);
+
+        const state = await fetchJSON('tweaks.json') || {};
+        state[id] = enabled ? 'on' : 'off';
+        const json = JSON.stringify(state).replace(/"/g, '\\"');
+        await exec(`echo "${json}" > /data/adb/modules/VinNet/webroot/tweaks.json`);
+
+        await exec(`grep -v "^${id}=" /data/adb/modules/VinNet/tweaks.conf 2>/dev/null > /data/adb/modules/VinNet/tweaks.conf.tmp; echo "${id}=${enabled ? 'on' : 'off'}" >> /data/adb/modules/VinNet/tweaks.conf.tmp; mv /data/adb/modules/VinNet/tweaks.conf.tmp /data/adb/modules/VinNet/tweaks.conf`);
+
+        // Ambil kata "disabled"/"enabled" langsung dari command asli, fallback On/Off
+        const label = cmd.includes('disabled') ? 'Disabled'
+            : cmd.includes('enabled') ? 'Enabled'
+                : (enabled ? 'On' : 'Off');
+        toast(`${id} → ${label}`);
+    } catch {
+        toast('Gagal menerapkan tweak');
+        document.getElementById('sw-' + id).checked = !enabled;
     }
 }
 
@@ -345,6 +398,7 @@ async function boot() {
         loadMonetColors(),
         loadDevice(),
         loadNetwork(),
+        loadMetadata(),
         ksuReady.then(loadTweaks),
     ]);
 
