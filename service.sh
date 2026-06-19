@@ -9,6 +9,16 @@ done
 # Stabilization delay — biar wifi/system service settle dulu
 sleep 3
 
+# ── Terapkan ulang preferensi Tweaks (persisten lintas reboot) ──
+TWEAKS_CONF="$MODDIR/tweaks.conf"
+if [ -f "$TWEAKS_CONF" ]; then
+    IPREACH_STATE=$(grep "^ipreach=" "$TWEAKS_CONF" | cut -d'=' -f2)
+    if [ -n "$IPREACH_STATE" ]; then
+        cmd wifi set-ipreach-disconnect "$IPREACH_STATE"
+        echo "{\"ipreach\":\"$IPREACH_STATE\"}" >"$WEBROOT/tweaks.json"
+    fi
+fi
+
 # ── Device Info Cache (sekali per boot) ─────────────
 cat >"$WEBROOT/device.json" <<EOF
 {
