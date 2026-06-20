@@ -242,38 +242,52 @@ const TWEAKS = {
     "IP Reach Disconnect": {
         onCmd: 'cmd wifi set-ipreach-disconnect disabled ; settings put global wifi_ipreach_disconnect_enabled 0',
         offCmd: 'cmd wifi set-ipreach-disconnect enabled ; settings put global wifi_ipreach_disconnect_enabled 1',
+        onLabel: 'Disabled',
+        offLabel: 'Enabled',
     },
     "Scan Always Available": {
         onCmd: 'cmd wifi set-scan-always-available disabled ; settings put global wifi_scan_always_enabled 0',
         offCmd: 'cmd wifi set-scan-always-available enabled ; settings put global wifi_scan_always_enabled 1',
+        onLabel: 'Disabled',
+        offLabel: 'Enabled',
     },
     "Restrict Background": {
         onCmd: 'cmd netpolicy set restrict-background false ; settings put global data_saver_mode 0',
         offCmd: 'cmd netpolicy set restrict-background true ; settings put global data_saver_mode 1',
+        onLabel: 'Disabled',
+        offLabel: 'Enabled',
     },
     "Power Save": {
         onCmd: 'iw wlan0 set power_save off',
         offCmd: 'iw wlan0 set power_save on',
+        onLabel: 'Disabled',
+        offLabel: 'Enabled',
     },
     "QDISC": {
-        onCmd: 'tc qdisc replace dev wlan0 root fq_codel quantum 300 noecn',
-        offCmd: 'tc qdisc replace dev wlan0 root pfifo_fast',
+        onCmd: 'tc qdisc replace dev wlan0 root fq_codel quantum 300 noecn ; tc qdisc replace dev rmnet_data0 root fq_codel quantum 300 noecn ; tc qdisc replace dev rmnet_ipa0 root fq_codel quantum 300 noecn',
+        offCmd: 'tc qdisc replace dev wlan0 root pfifo_fast ; tc qdisc replace dev rmnet_data0 root pfifo_fast ; tc qdisc replace dev rmnet_ipa0 root pfifo_fast',
+        onLabel: 'Optimized',
+        offLabel: 'Unoptimized',
     },
     "Wi-Fi Force Low Latency Mode": {
         onCmd: 'cmd wifi force-low-latency-mode enabled ; cmd wifi force-hi-perf-mode enabled',
         offCmd: 'cmd wifi force-low-latency-mode disabled ; cmd wifi force-hi-perf-mode disabled',
+        onLabel: 'Enabled',
+        offLabel: 'Disabled',
     },
     // contoh tweak baru:
     // tweakbaru: {
-    //     onCmd:  'perintah saat toggle ON',
-    //     offCmd: 'perintah saat toggle OFF',
+    //     onCmd:    'perintah saat toggle ON',
+    //     offCmd:   'perintah saat toggle OFF',
+    //     onLabel:  'Teks toast saat ON',
+    //     offLabel: 'Teks toast saat OFF',
     // },
 };
 
 async function loadTweaks() {
     const cached = await fetchJSON('tweaks.json') || {};
     for (const id of Object.keys(TWEAKS)) {
-        const el = document.getElementById('sw-' + id);
+        const el = document.getElementById(id);
         if (el && cached[id] !== undefined) {
             el.checked = cached[id] === 'on';
         }
@@ -284,8 +298,7 @@ async function applyTweak(id, enabled) {
     const t = TWEAKS[id];
     if (!t) return;
     try {
-        const cmd = enabled ? t.onCmd : t.offCmd;
-        await exec(cmd);
+        await exec(enabled ? t.onCmd : t.offCmd);
 
         const state = await fetchJSON('tweaks.json') || {};
         state[id] = enabled ? 'on' : 'off';
@@ -294,14 +307,11 @@ async function applyTweak(id, enabled) {
 
         await exec(`grep -v "^${id}=" /data/adb/modules/VinNet/tweaks.conf 2>/dev/null > /data/adb/modules/VinNet/tweaks.conf.tmp; echo "${id}=${enabled ? 'on' : 'off'}" >> /data/adb/modules/VinNet/tweaks.conf.tmp; mv /data/adb/modules/VinNet/tweaks.conf.tmp /data/adb/modules/VinNet/tweaks.conf`);
 
-        // Ambil kata "disabled"/"enabled" langsung dari command asli, fallback On/Off
-        const label = cmd.includes('disabled') ? 'Disabled'
-            : cmd.includes('enabled') ? 'Enabled'
-                : (enabled ? 'On' : 'Off');
+        const label = enabled ? t.onLabel : t.offLabel;
         toast(`${id} → ${label}`);
     } catch {
         toast('Gagal menerapkan tweak');
-        document.getElementById('sw-' + id).checked = !enabled;
+        document.getElementById(id).checked = !enabled;
     }
 }
 
