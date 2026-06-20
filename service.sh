@@ -98,17 +98,24 @@ if [ -f "$TWEAKS_CONF" ]; then
     echo "$JSON" >"$WEBROOT/tweaks.json"
 fi
 
-# ── Power Save: re-apply periodik ──
-# iw power_save bersifat interface-level — reset sendiri saat wlan0
-# reinit (toggle Wi-Fi, ganti SSID, reconnect, dll), beda dari cmd
-# wifi/settings put yang persisten di level framework. Loop ini
-# jaga settingnya tetap nempel kalau tweak sedang aktif.
+# ── Re-apply periodik untuk tweak yang volatile di level interface ──
+# iw power_save dan tc qdisc terikat ke state kernel interface —
+# bisa ke-reset sendiri saat interface reinit (toggle Wi-Fi, ganti
+# SSID, rmnet baru siap setelah RIL connect, dll), bukan cuma saat
+# reboot. Loop ini jaga supaya tetap nempel selama tweak aktif.
 (
     while true; do
         sleep 10
         if [ -f "$TWEAKS_CONF" ]; then
             PS_STATE=$(grep "^Power Save=" "$TWEAKS_CONF" | cut -d'=' -f2)
-            [ "$PS_STATE" = "on" ] && iw wlan0 set power_save off
+            [ "$PS_STATE" = "on" ] && iw wlan0 set power_save off 2>/dev/null
+
+            QD_STATE=$(grep "^QDISC=" "$TWEAKS_CONF" | cut -d'=' -f2)
+            if [ "$QD_STATE" = "on" ]; then
+                tc qdisc replace dev wlan0 root fq_codel quantum 300 noecn 2>/dev/null
+                tc qdisc replace dev rmnet_data0 root fq_codel quantum 300 noecn 2>/dev/null
+                tc qdisc replace dev rmnet_ipa0 root fq_codel quantum 300 noecn 2>/dev/null
+            fi
         fi
     done
 ) &
