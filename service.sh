@@ -52,8 +52,12 @@ apply_tweak() {
     "QDISC")
         if [ "$2" = "on" ]; then
             tc qdisc replace dev wlan0 root fq_codel quantum 300 noecn
+            tc qdisc replace dev rmnet_data0 root fq_codel quantum 300 noecn
+            tc qdisc replace dev rmnet_ipa0 root fq_codel quantum 300 noecn
         else
             tc qdisc replace dev wlan0 root pfifo_fast
+            tc qdisc replace dev rmnet_data0 root pfifo_fast
+            tc qdisc replace dev rmnet_ipa0 root pfifo_fast
         fi
         ;;
     "Wi-Fi Force Low Latency Mode")
@@ -93,6 +97,21 @@ if [ -f "$TWEAKS_CONF" ]; then
     JSON="$JSON}"
     echo "$JSON" >"$WEBROOT/tweaks.json"
 fi
+
+# ── Power Save: re-apply periodik ──
+# iw power_save bersifat interface-level — reset sendiri saat wlan0
+# reinit (toggle Wi-Fi, ganti SSID, reconnect, dll), beda dari cmd
+# wifi/settings put yang persisten di level framework. Loop ini
+# jaga settingnya tetap nempel kalau tweak sedang aktif.
+(
+    while true; do
+        sleep 10
+        if [ -f "$TWEAKS_CONF" ]; then
+            PS_STATE=$(grep "^Power Save=" "$TWEAKS_CONF" | cut -d'=' -f2)
+            [ "$PS_STATE" = "on" ] && iw wlan0 set power_save off
+        fi
+    done
+) &
 
 # ── Metadata Cache dari module.prop (sekali per boot) ──
 MODULE_PROP="$MODDIR/module.prop"
@@ -184,7 +203,7 @@ EOF
 # ── Vendor / Binary Mount Check (logika lama, tidak diubah) ───
 if [ "$(getprop ro.product.device)" != "fog" ]; then
     VMS="Vendor: Fail (Not fog)"
-elif grep -q "VinNet" "/vendor/etc/wifi/WCNSS_qcom_cfg.ini" 2>/dev/null && grep -q "p2p_disabled=1" "/vendor/etc/wifi/wpa_supplicant_overlay.conf" 2>/dev/null && grep -q "ap_scan=1" "/vendor/etc/wifi/wpa_supplicant.conf" 2>/dev/null; then
+elif grep -q "VinNet" "/vendor/etc/wifi/WCNSS_qcom_cfg.ini" 2>/dev/null && grep -q "p2p_disabled=1" "/vendor/etc/wifi/wpa_supplicant_overlay.conf" 2>/dev/null; then
     VMS="Vendor: Success"
 else
     VMS="Vendor: Fail (No Meta)"
