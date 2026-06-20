@@ -17,6 +17,7 @@
 - `wifi_ipreach_disconnect_enabled`, `wifi_scan_always_enabled`, `data_saver_mode` parameter to global table
 - `restrict-background` tweak via netpolicy command
 - `force-hi-perf-mode` Wi-Fi tweak via CMD
+- Scripts for removing database tweaks and property tweaks to `uninstall.sh`
 
 ### 🔄️Changed
 
