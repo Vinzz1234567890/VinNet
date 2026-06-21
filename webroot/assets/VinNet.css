@@ -15,7 +15,6 @@
 }
 
 :root {
-    /* M3 Baseline Dark · Neutral (KernelSU-style) */
     --pri: #AACAE9;
     --on-pri: #10334C;
     --pri-con: #2A4964;
@@ -60,9 +59,6 @@ body {
     opacity: 1;
 }
 
-/* ═══════════════════════════════
-   TOP BAR
-═══════════════════════════════ */
 .topbar {
     display: flex;
     align-items: center;
@@ -121,9 +117,6 @@ body {
     flex-shrink: 0;
 }
 
-/* ═══════════════════════════════
-   PAGES
-═══════════════════════════════ */
 .pages {
     flex: 1;
     position: relative;
@@ -155,9 +148,6 @@ body {
     transform: none;
 }
 
-/* ═══════════════════════════════
-   BOTTOM NAV
-═══════════════════════════════ */
 .botnav {
     background: var(--surf-lo);
     border-top: 1px solid var(--out-var);
@@ -218,9 +208,6 @@ body {
     font-weight: 700;
 }
 
-/* ═══════════════════════════════
-   SHARED CARD
-═══════════════════════════════ */
 .card {
     background: var(--surf-c);
     border-radius: 24px;
@@ -236,7 +223,6 @@ body {
     font-weight: 800;
     color: var(--on-surf);
     letter-spacing: -0.3px;
-    text-transform: none;
     display: flex;
     align-items: center;
     gap: 8px;
@@ -250,9 +236,6 @@ body {
     flex-shrink: 0;
 }
 
-/* ═══════════════════════════════
-   HERO CARD
-═══════════════════════════════ */
 .hero {
     background: linear-gradient(145deg, #0A1020 0%, #0F1D3A 60%, var(--pri-con) 100%);
     border-radius: 28px;
@@ -305,9 +288,6 @@ body {
     line-height: 1.5;
 }
 
-/* ═══════════════════════════════
-   INFO ROWS
-═══════════════════════════════ */
 .irow {
     display: flex;
     align-items: flex-start;
@@ -346,28 +326,6 @@ body {
     text-decoration: none;
 }
 
-/* ═══════════════════════════════
-   PAGE HEADER
-═══════════════════════════════ */
-.pg-head {
-    padding: 2px 4px 2px;
-}
-
-.pg-ttl {
-    font-size: 24px;
-    font-weight: 800;
-    letter-spacing: -0.4px;
-}
-
-.pg-sub {
-    font-size: 12px;
-    color: var(--on-surf-var);
-    margin-top: 3px;
-}
-
-/* ═══════════════════════════════
-   TWEAK ITEM
-═══════════════════════════════ */
 .tweak {
     display: flex;
     align-items: flex-start;
@@ -415,9 +373,6 @@ body {
     border-radius: 8px;
 }
 
-/* ═══════════════════════════════
-   M3 TOGGLE SWITCH
-═══════════════════════════════ */
 .sw {
     position: relative;
     width: 52px;
@@ -453,10 +408,7 @@ body {
     background: var(--outline);
     transform: translateY(-50%);
     pointer-events: none;
-    transition:
-        left 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
-        width 0.2s ease, height 0.2s ease,
-        background 0.2s ease;
+    transition: left 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), width 0.2s, height 0.2s, background 0.2s;
 }
 
 .sw input:checked~.sw-track {
@@ -471,9 +423,6 @@ body {
     background: var(--on-pri);
 }
 
-/* ═══════════════════════════════
-   CHIP
-═══════════════════════════════ */
 .chip {
     display: inline-block;
     padding: 5px 14px;
@@ -490,9 +439,6 @@ body {
     margin: 0;
 }
 
-/* ═══════════════════════════════
-   SNACKBAR
-═══════════════════════════════ */
 .snack {
     position: fixed;
     bottom: 80px;
@@ -523,9 +469,6 @@ body {
     }
 }
 
-/* ═══════════════════════════════
-   LOADING SCREEN
-═══════════════════════════════ */
 #loading-screen {
     position: fixed;
     inset: 0;
