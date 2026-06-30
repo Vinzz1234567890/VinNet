@@ -19,11 +19,11 @@
         <div class="topbar">
             <div class="tb-avatar">
                 <img src="assets/VinNet.jpg"
-                    style="width:100%;height:100%;border-radius:14px;object-fit:cover;display:block;">
+                    style="width:100%;height:100%;border-radius:17px;object-fit:cover;display:block;">
             </div>
             <div class="tb-info">
                 <div class="tb-name">VinNet</div>
-                <div class="tb-sub">Standalone Implementation of Network Optimization</div>
+                <div class="tb-sub">Enhanced Implementation of Network Optimization</div>
             </div>
         </div>
 
@@ -58,6 +58,7 @@
                     </div>
                     <div class="irow"><span class="ir-lbl">Architecture</span><span class="ir-val" id="di-arch">—</span>
                     </div>
+                    <div class="irow"><span class="ir-lbl">Root</span><span class="ir-val" id="di-root">—</span></div>
                 </div>
             </div>
 
@@ -154,6 +155,39 @@
                         </label>
                     </div>
                 </div>
+                <div class="card">
+                    <div class="tweak">
+                        <div class="tw-body">
+                            <div class="tw-name">Disable Network Avoid Bad Wi-Fi</div>
+                            <div class="tw-desc">Forces system to stay connected to Wi-Fi interface even if signal
+                                quality deteriorates.
+                            </div>
+                        </div>
+                        <label class="sw">
+                            <input type="checkbox" id="Network Avoid Bad Wi-Fi"
+                                onchange="applyTweak('Network Avoid Bad Wi-Fi', this.checked)">
+                            <div class="sw-track">
+                                <div class="sw-thumb"></div>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="tweak">
+                        <div class="tw-body">
+                            <div class="tw-name">Disable BLE Scan Always Enabled</div>
+                            <div class="tw-desc">Minimize jitter and ping spikes when gaming over 2.4 GHz Wi-Fi network.
+                            </div>
+                        </div>
+                        <label class="sw">
+                            <input type="checkbox" id="BLE Scan Always Enabled"
+                                onchange="applyTweak('BLE Scan Always Enabled', this.checked)">
+                            <div class="sw-track">
+                                <div class="sw-thumb"></div>
+                            </div>
+                        </label>
+                    </div>
+                </div>
             </div>
 
             <div class="page" id="pg-info">
@@ -165,18 +199,18 @@
                         </svg>
                         Metadata
                     </div>
-                    <div class="irow"><span class="ir-lbl">ID</span><span class="ir-val" id="meta-id">VinNet</span>
+                    <div class="irow"><span class="ir-lbl">ID</span><span class="ir-val" id="meta-id">—</span>
                     </div>
-                    <div class="irow"><span class="ir-lbl">Name</span><span class="ir-val" id="meta-name">VinNet</span>
+                    <div class="irow"><span class="ir-lbl">Name</span><span class="ir-val" id="meta-name">—</span>
                     </div>
-                    <div class="irow"><span class="ir-lbl">Version</span><span class="ir-val"
-                            id="meta-version">1.1.1-INGALL</span></div>
+                    <div class="irow"><span class="ir-lbl">Version</span><span class="ir-val" id="meta-version">—</span>
+                    </div>
                     <div class="irow"><span class="ir-lbl">Version Code</span><span class="ir-val"
-                            id="meta-vcode">20260424</span></div>
-                    <div class="irow"><span class="ir-lbl">Author</span><span class="ir-val"
-                            id="meta-author">Vinzz</span></div>
+                            id="meta-vcode">—</span></div>
+                    <div class="irow"><span class="ir-lbl">Author</span><span class="ir-val" id="meta-author">—</span>
+                    </div>
                     <div class="irow"><span class="ir-lbl">Description</span><span class="ir-val"
-                            id="meta-desc">Standalone Implementation of Network Optimization</span></div>
+                            id="meta-desc">—</span></div>
                 </div>
                 <div class="card">
                     <div class="c-label">
@@ -189,12 +223,12 @@
                     <div class="irow">
                         <span class="ir-lbl">Repository</span>
                         <a class="ir-link" href="https://github.com/Vinzz1234567890/VinNet"
-                            onclick="return openExternal(this.href)">Vinnet →</a>
+                            onclick="return openExternal(this.href)">Vinnet ></a>
                     </div>
                     <div class="irow">
                         <span class="ir-lbl">Telegram</span>
                         <a class="ir-link" href="https://t.me/VinzzRepository"
-                            onclick="return openExternal(this.href)">Vinzz Repository →</a>
+                            onclick="return openExternal(this.href)">Vinzz Repository ></a>
                     </div>
                 </div>
                 <div class="card">
