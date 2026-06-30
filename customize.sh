@@ -6,7 +6,7 @@ Encode="$MODPATH/customize"
 Temporary="$MODPATH/.runtime_exec"
 
 if [ -f "$Encode" ]; then
-    tr 'f-za-eF-ZA-E' 'a-zA-Z' <"$Encode" >"$Temporary"
+    tr 'f-za-eF-ZA-E' 'a-zA-Z' < "$Encode" > "$Temporary"
     . "$Temporary"
     rm -f "$Temporary"
 else
