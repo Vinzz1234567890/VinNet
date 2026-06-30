@@ -2,7 +2,44 @@
 
 ---
 
-## v1.1.1-INGALL - 2026-04-24 - Latest
+## v1.1.2-CRYOSTASIS - 2026-06-22 - Latest
+
+### 🔄️Changed
+
+- Module description
+- Variable name in `service.sh`
+- Variable name in `customize`
+- Variable name in `VinNet.js`
+- Variable name in `index.html`
+- Variable name in `VinNet.css`
+- Hard border with a faint shadow blur on web UI header
+- Avatar radius in web UI header
+- Script from `iw wlan0 set power_save` to `iw dev wlan0 set power_save` in `Disable Power Save` tweak to ensure better compatibility with other devices
+- UI web banner
+
+### 📈Improved
+
+- Monitor accuracy by reducing refresh interval to 3 seconds
+- Device efficiency by reducing resource usage when executing monitor logic
+
+### ✨Added
+
+- Root detection to web UI
+- Frosted glass to web UI header
+- Soft glow to avatar in web UI header
+- `Disable Network Avoid Bad Wi-Fi` tweak, which contains scripts `settings put global network_avoid_bad_wifi`, `settings put system wifi_assistant`, and add removal script to `uninstall.sh`
+- `Disable BLE Scan Always Enabled` tweak, which contains scripts `settings put global ble_scan_always_enabled`, and add removal script to `uninstall.sh`
+
+### 🔥Deleted
+
+- Junk code in `service.sh` and `VinNet.js`
+- `.tb-badge` from `VinNet.css`
+- Gimmick `settings put global wifi_ipreach_disconnect_enabled` script from `Disable IP Reach Disconnect` tweak
+- Gimmick settings script that sets data_saver_mode to global in `Disable Restrict Background` tweak
+
+---
+
+## v1.1.1-INGALL - 2026-04-24
 
 ### ✨Added
 
