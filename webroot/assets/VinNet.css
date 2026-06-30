@@ -15,6 +15,7 @@
 }
 
 :root {
+    --topbar-h: 84px;
     --pri: #AACAE9;
     --on-pri: #10334C;
     --pri-con: #2A4964;
@@ -39,7 +40,7 @@ body {
     height: 100%;
     background: var(--bg);
     color: var(--on-surf);
-    font-family: 'Google Sans Flex', 'Google Sans', system-ui, sans-serif;
+    font-family: 'Google Sans Flex';
     -webkit-font-smoothing: antialiased;
     overscroll-behavior: none;
     user-select: none;
@@ -51,6 +52,7 @@ body {
     height: 100%;
     max-width: 540px;
     margin: 0 auto;
+    position: relative;
     opacity: 0;
     transition: opacity 0.25s ease;
 }
@@ -60,22 +62,37 @@ body {
 }
 
 .topbar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 5;
     display: flex;
     align-items: center;
     gap: 12px;
     padding: 18px 18px 16px;
-    background: var(--surf-lo);
-    border-bottom: 1px solid var(--out-var);
-    flex-shrink: 0;
-    position: relative;
-    z-index: 2;
+    background: color-mix(in srgb, var(--surf-lo) 80%, transparent);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+}
+
+.topbar::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -8px;
+    height: 8px;
+    background: linear-gradient(to bottom, rgba(0, 0, 0, 0.12), transparent);
+    pointer-events: none;
 }
 
 .tb-avatar {
     width: 50px;
     height: 50px;
-    border-radius: 16px;
+    border-radius: 20px;
     background: var(--pri-con);
+    box-shadow: 0 0 16px 2px color-mix(in srgb, var(--pri) 45%, transparent);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -106,17 +123,6 @@ body {
     margin-top: 3px;
 }
 
-.tb-badge {
-    background: var(--pri-con);
-    color: var(--on-pri-con);
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.4px;
-    padding: 4px 10px;
-    border-radius: 20px;
-    flex-shrink: 0;
-}
-
 .pages {
     flex: 1;
     position: relative;
@@ -127,7 +133,7 @@ body {
     position: absolute;
     inset: 0;
     overflow-y: auto;
-    padding: 16px 14px 12px;
+    padding: calc(var(--topbar-h) + 16px) 14px 12px;
     display: flex;
     flex-direction: column;
     gap: 12px;
