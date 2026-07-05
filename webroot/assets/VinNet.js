@@ -1,14 +1,35 @@
+const CORE_PATH = '/data/adb/modules/VinNet/webroot/Core';
+
 const PAGE_META = {
     dashboard: { name: 'VinNet', sub: 'Enhanced Implementation of Network Optimization' },
     tweaks: { name: 'Tweaks', sub: 'Apply Network Optimization Tweaks' },
     info: { name: 'Info', sub: 'Details about Module' },
 };
 
+function movePill(btn, instant) {
+    const pill = document.getElementById('nbPill');
+    if (!pill) return;
+    if (instant) pill.style.transition = 'none';
+    const pillWidth = pill.offsetWidth;
+    const centerX = btn.offsetLeft + btn.offsetWidth / 2;
+    pill.style.transform = `translateX(${centerX - pillWidth / 2}px)`;
+    if (instant) requestAnimationFrame(() => { pill.style.transition = ''; });
+}
+
+function updateNavIcons() {
+    document.querySelectorAll('.nb svg[data-fill]').forEach(svg => {
+        const active = svg.closest('.nb').classList.contains('active');
+        svg.querySelector('path').setAttribute('d', svg.dataset[active ? 'fill' : 'outline']);
+    });
+}
+
 function nav(id, btn) {
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
     document.querySelectorAll('.nb').forEach(b => b.classList.remove('active'));
     document.getElementById('pg-' + id).classList.add('active');
     btn.classList.add('active');
+    movePill(btn);
+    updateNavIcons();
     const meta = PAGE_META[id];
     if (meta) {
         document.querySelector('.tb-name').textContent = meta.name;
@@ -83,8 +104,8 @@ async function loadEnvironment() {
 }
 
 const META_ROWS = [
-    ['meta-id', 'id'], ['meta-name', 'name'], ['meta-version', 'version'],
-    ['meta-vcode', 'versionCode'], ['meta-author', 'author'], ['meta-desc', 'description'],
+    ['meta-id', 'id'], ['meta-name', 'name'],
+    ['meta-author', 'author'], ['meta-desc', 'description'],
 ];
 
 async function loadMetadata() {
@@ -94,15 +115,22 @@ async function loadMetadata() {
         const el = document.getElementById(id);
         if (el && cached[key]) el.textContent = cached[key];
     }
+    const vEl = document.getElementById('meta-version');
+    if (vEl && cached.version) {
+        vEl.textContent = cached.versionCode ? `${cached.version} (${cached.versionCode})` : cached.version;
+    }
 }
 
 const PING_TARGETS = ['1.1.1.1'];
 
 function setNetVal(id, val, colorFn) {
     const el = document.getElementById(id);
-    if (val == null) { el.textContent = '—'; el.style.color = ''; return; }
-    el.textContent = val + ' ms';
-    el.style.color = colorFn(val);
+    const next = val == null ? '—' : val + ' ms';
+    const changed = el.textContent !== next;
+    if (changed) el.style.opacity = '0.3';
+    el.textContent = next;
+    el.style.color = val == null ? '' : colorFn(val);
+    if (changed) requestAnimationFrame(() => { el.style.opacity = '1'; });
 }
 
 function applyNetworkData(data) {
@@ -129,7 +157,7 @@ async function measureNetworkLive() {
 }
 
 function sendDetect() {
-    exec(`date +%s > /data/adb/modules/VinNet/webroot/Core/Detect.txt`).catch(() => { });
+    exec(`date +%s > ${CORE_PATH}/Detect.txt`).catch(() => { });
 }
 
 async function loadMonitor() {
@@ -222,17 +250,21 @@ async function loadTweaks() {
 async function applyTweak(id, enabled) {
     const t = TWEAKS[id];
     if (!t) return;
+    const el = document.getElementById(id);
+    el.disabled = true;
     try {
         await exec(enabled ? t.onCmd : t.offCmd);
         const state = await fetchJSON('Core/Tweaks.json') || {};
         state[id] = enabled ? 'on' : 'off';
         const json = JSON.stringify(state).replace(/"/g, '\\"');
-        await exec(`echo "${json}" > /data/adb/modules/VinNet/webroot/Core/Tweaks.json`);
-        await exec(`grep -v "^${id}=" /data/adb/modules/VinNet/webroot/Core/VinNet.conf 2>/dev/null > /data/adb/modules/VinNet/webroot/Core/VinNet.conf.tmp; echo "${id}=${enabled ? 'on' : 'off'}" >> /data/adb/modules/VinNet/webroot/Core/VinNet.conf.tmp; mv /data/adb/modules/VinNet/webroot/Core/VinNet.conf.tmp /data/adb/modules/VinNet/webroot/Core/VinNet.conf`);
+        await exec(`echo "${json}" > ${CORE_PATH}/Tweaks.json`);
+        await exec(`grep -v "^${id}=" ${CORE_PATH}/VinNet.conf 2>/dev/null > ${CORE_PATH}/VinNet.conf.tmp; echo "${id}=${enabled ? 'on' : 'off'}" >> ${CORE_PATH}/VinNet.conf.tmp; mv ${CORE_PATH}/VinNet.conf.tmp ${CORE_PATH}/VinNet.conf`);
         toast(`${id} > ${enabled ? t.onLabel : t.offLabel}`);
     } catch {
         toast('Unable to apply tweak');
-        document.getElementById(id).checked = !enabled;
+        el.checked = !enabled;
+    } finally {
+        el.disabled = false;
     }
 }
 
@@ -246,13 +278,17 @@ async function boot() {
         loadMonitor(),
         loadMetadata(),
         ksuReady.then(loadTweaks),
+        new Promise(r => setTimeout(r, 300)),
     ]);
 
     document.getElementById('app').classList.add('ready');
+    const activeNb = document.querySelector('.nb.active');
+    if (activeNb) movePill(activeNb, true);
+    updateNavIcons();
     const ls = document.getElementById('loading-screen');
     if (ls) {
+        ls.addEventListener('transitionend', () => ls.remove(), { once: true });
         ls.classList.add('hide');
-        setTimeout(() => ls.remove(), 350);
     }
     startLiveTicker();
 }

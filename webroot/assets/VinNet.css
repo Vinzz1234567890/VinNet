@@ -16,6 +16,8 @@
 
 :root {
     --topbar-h: 84px;
+    --botnav-h: 68px;
+    --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
     --pri: #AACAE9;
     --on-pri: #10334C;
     --pri-con: #2A4964;
@@ -99,6 +101,14 @@ body {
     flex-shrink: 0;
 }
 
+.tb-avatar img {
+    width: 100%;
+    height: 100%;
+    border-radius: 17px;
+    object-fit: cover;
+    display: block;
+}
+
 .tb-avatar svg {
     width: 22px;
     height: 22px;
@@ -124,8 +134,8 @@ body {
 }
 
 .pages {
-    flex: 1;
     position: relative;
+    flex: 1;
     overflow: hidden;
 }
 
@@ -133,7 +143,7 @@ body {
     position: absolute;
     inset: 0;
     overflow-y: auto;
-    padding: calc(var(--topbar-h) + 16px) 14px 12px;
+    padding: calc(var(--topbar-h) + 16px) 14px calc(var(--botnav-h) + 12px);
     display: flex;
     flex-direction: column;
     gap: 12px;
@@ -155,11 +165,27 @@ body {
 }
 
 .botnav {
-    background: var(--surf-lo);
-    border-top: 1px solid var(--out-var);
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 5;
+    background: color-mix(in srgb, var(--surf-lo) 80%, transparent);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
     display: flex;
-    flex-shrink: 0;
     padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+.botnav::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: -8px;
+    height: 8px;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.12), transparent);
+    pointer-events: none;
 }
 
 .nb {
@@ -169,22 +195,24 @@ body {
     align-items: center;
     padding: 10px 0 14px;
     cursor: pointer;
-    position: relative;
     gap: 4px;
+    transition: transform 0.15s ease;
+}
+
+.nb:active {
+    transform: scale(0.94);
 }
 
 .nb-pill {
     position: absolute;
-    top: 7px;
+    top: 4px;
+    left: 0;
     width: 60px;
-    height: 30px;
+    height: 34px;
     border-radius: 20px;
-    background: transparent;
-    transition: background 0.22s ease;
-}
-
-.nb.active .nb-pill {
-    background: var(--pri-con);
+    background: linear-gradient(135deg, var(--pri-con), color-mix(in srgb, var(--pri-con) 60%, var(--pri)));
+    transition: transform 0.32s var(--spring);
+    pointer-events: none;
 }
 
 .nb svg {
@@ -193,10 +221,11 @@ body {
     fill: var(--on-surf-var);
     position: relative;
     z-index: 1;
-    transition: fill 0.2s;
+    transition: fill 0.2s, transform 0.32s var(--spring);
 }
 
 .nb.active svg {
+    transform: scale(1.15);
     fill: var(--on-pri-con);
 }
 
@@ -204,24 +233,30 @@ body {
     font-size: 11px;
     font-weight: 500;
     color: var(--on-surf-var);
+    opacity: .7;
     position: relative;
     z-index: 1;
-    transition: color 0.2s, font-weight 0.2s;
+    transition: color 0.2s, font-weight 0.2s, opacity 0.2s;
 }
 
 .nb.active .nb-lbl {
     color: var(--on-pri-con);
     font-weight: 700;
+    opacity: 1;
+}
+
+.banner {
+    width: 100%;
+    height: 30%;
+    border-radius: 32px;
+    display: block;
+    object-fit: cover;
 }
 
 .card {
     background: var(--surf-c);
     border-radius: 24px;
     padding: 18px;
-}
-
-.card-hi {
-    background: var(--surf-hi);
 }
 
 .c-label {
@@ -240,58 +275,6 @@ body {
     height: 18px;
     fill: var(--pri);
     flex-shrink: 0;
-}
-
-.hero {
-    background: linear-gradient(145deg, #0A1020 0%, #0F1D3A 60%, var(--pri-con) 100%);
-    border-radius: 28px;
-    padding: 22px 20px;
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    position: relative;
-    overflow: hidden;
-}
-
-.hero::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: radial-gradient(ellipse at 80% 20%, rgba(194, 217, 255, .12) 0%, transparent 60%);
-    pointer-events: none;
-}
-
-.hero-ico {
-    width: 58px;
-    height: 58px;
-    border-radius: 18px;
-    background: rgba(194, 217, 255, .14);
-    border: 1px solid rgba(194, 217, 255, .2);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-}
-
-.hero-ico svg {
-    width: 30px;
-    height: 30px;
-    fill: var(--pri);
-}
-
-.hero-name {
-    font-size: 28px;
-    font-weight: 900;
-    color: var(--on-pri-con);
-    letter-spacing: -0.5px;
-    line-height: 1;
-}
-
-.hero-sub {
-    font-size: 11px;
-    color: rgba(194, 217, 255, .5);
-    margin-top: 5px;
-    line-height: 1.5;
 }
 
 .irow {
@@ -325,11 +308,42 @@ body {
     text-align: right;
 }
 
+#v-lat,
+#v-jit {
+    transition: opacity .15s ease;
+    font-variant-numeric: tabular-nums;
+}
+
 .ir-link {
     font-size: 13px;
     font-weight: 600;
     color: var(--pri);
     text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: transform 0.15s ease;
+}
+
+.ir-link svg {
+    flex-shrink: 0;
+}
+
+.ir-icon-github {
+    fill: var(--on-surf);
+}
+
+.ir-icon-telegram {
+    fill: #26A5E4;
+}
+
+.ir-chevron {
+    fill: currentColor;
+    margin-left: auto;
+}
+
+.ir-link:active {
+    transform: scale(0.94);
 }
 
 .tweak {
@@ -339,6 +353,17 @@ body {
     gap: 14px;
     padding: 14px 0;
     border-bottom: 1px solid var(--out-var);
+}
+
+.tw-icon {
+    width: 20px;
+    height: 20px;
+    padding: 8px;
+    box-sizing: content-box;
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--pri) 14%, transparent);
+    fill: var(--pri);
+    flex-shrink: 0;
 }
 
 .tweak:last-child {
@@ -368,17 +393,6 @@ body {
     line-height: 1.45;
 }
 
-.tw-code {
-    display: inline-block;
-    margin-top: 8px;
-    font-size: 10px;
-    font-family: 'Courier New', monospace;
-    color: var(--pri);
-    background: var(--surf-xhi);
-    padding: 4px 10px;
-    border-radius: 8px;
-}
-
 .sw {
     position: relative;
     width: 52px;
@@ -404,6 +418,12 @@ body {
     transition: background 0.22s, border-color 0.22s;
 }
 
+.sw:has(input:disabled) .sw-track {
+    opacity: .5;
+    cursor: default;
+}
+
+
 .sw-thumb {
     position: absolute;
     top: 50%;
@@ -414,11 +434,11 @@ body {
     background: var(--outline);
     transform: translateY(-50%);
     pointer-events: none;
-    transition: left 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), width 0.2s, height 0.2s, background 0.2s;
+    transition: left 0.25s var(--spring), width 0.2s, height 0.2s, background 0.2s;
 }
 
 .sw input:checked~.sw-track {
-    background: var(--pri);
+    background: linear-gradient(135deg, var(--pri), color-mix(in srgb, var(--pri) 60%, var(--pri-con)));
     border-color: var(--pri);
 }
 
@@ -430,7 +450,9 @@ body {
 }
 
 .chip {
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     padding: 5px 14px;
     background: var(--surf-hi);
     border: 1px solid var(--out-var);
@@ -439,6 +461,20 @@ body {
     font-size: 12px;
     font-weight: 600;
     margin: 4px 4px 0 0;
+    text-decoration: none;
+    cursor: pointer;
+    transition: transform 0.15s ease;
+}
+
+.chip-avatar {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.chip:active {
+    transform: scale(0.94);
 }
 
 .irow .chip {
@@ -505,17 +541,10 @@ body {
     position: absolute;
     inset: 0;
     border-radius: 50%;
-    border: 2px solid var(--surf-hi);
-    border-top-color: var(--pri);
+    background: conic-gradient(from 0deg, transparent, var(--pri));
+    -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 2px));
+    mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 2px));
     animation: spin 0.8s linear infinite;
-}
-
-.ls-logo {
-    width: 48px;
-    height: 48px;
-    border-radius: 14px;
-    object-fit: cover;
-    display: block;
 }
 
 .ls-text {
