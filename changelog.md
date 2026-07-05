@@ -35,6 +35,7 @@
 - Checked switch with gradient in toggle tweak on web UI
 - Navbar tweaks icon from tune to gear
 - Arrow with chevron SVG on links in web UI
+- Banner
 
 ### 📈Improved
 - Synchronize transition duration of web UI loading screen in VinNet.js with transition duration of loading screen in VinNet.css
