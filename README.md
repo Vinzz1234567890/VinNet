@@ -27,7 +27,7 @@
 > Remove all conflicting network modules before proceeding.
 
 * Rooted Android Environment.
-* Magisk (Stable, Canary, Alpha, Beta, Delta/Kitsune), KernelSU / KernelSU Next / KowSU / SukiSU-Ultra, APatch / FolkPatch.
+* Magisk (Stable, Canary, Alpha, Beta, Delta/Kitsune), KernelSU / KernelSU Next / KowSU / Wild_KSU / SukiSU-Ultra / ReSukiSU, APatch / FolkPatch.
 
 ---
 
