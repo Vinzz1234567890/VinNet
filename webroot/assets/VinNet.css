@@ -1,7 +1,8 @@
 @font-face {
     font-family: 'Google Sans Flex';
-    src: url('assets/GoogleSansFlex.ttf') format('truetype');
+    src: url('assets/GoogleSansFlex.woff2') format('woff2');
     font-weight: 100 900;
+    font-display: swap;
 }
 
 *,
@@ -40,9 +41,10 @@
 html,
 body {
     height: 100%;
+    overflow: hidden;
     background: var(--bg);
     color: var(--on-surf);
-    font-family: 'Google Sans Flex';
+    font-family: 'Google Sans Flex', sans-serif;
     -webkit-font-smoothing: antialiased;
     overscroll-behavior: none;
     user-select: none;
@@ -57,6 +59,7 @@ body {
     position: relative;
     opacity: 0;
     transition: opacity 0.25s ease;
+    overscroll-behavior: none;
 }
 
 #app.ready {
@@ -73,9 +76,8 @@ body {
     align-items: center;
     gap: 12px;
     padding: 18px 18px 16px;
-    background: color-mix(in srgb, var(--surf-lo) 80%, transparent);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
+    background: var(--surf-lo);
+    touch-action: none;
 }
 
 .topbar::after {
@@ -136,21 +138,30 @@ body {
 .pages {
     position: relative;
     flex: 1;
-    overflow: hidden;
+    display: flex;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-snap-type: x mandatory;
+    scroll-behavior: smooth;
+    scrollbar-width: none;
+    overscroll-behavior-x: none;
+}
+
+.pages::-webkit-scrollbar {
+    display: none;
 }
 
 .page {
-    position: absolute;
-    inset: 0;
+    flex: 0 0 100%;
+    width: 100%;
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
     overflow-y: auto;
+    overscroll-behavior-y: none;
     padding: calc(var(--topbar-h) + 16px) 14px calc(var(--botnav-h) + 12px);
     display: flex;
     flex-direction: column;
     gap: 12px;
-    opacity: 0;
-    pointer-events: none;
-    transform: translateY(10px);
-    transition: opacity 0.2s ease, transform 0.2s ease;
     scrollbar-width: none;
 }
 
@@ -158,11 +169,6 @@ body {
     display: none;
 }
 
-.page.active {
-    opacity: 1;
-    pointer-events: auto;
-    transform: none;
-}
 
 .botnav {
     position: absolute;
@@ -170,11 +176,10 @@ body {
     right: 0;
     bottom: 0;
     z-index: 5;
-    background: color-mix(in srgb, var(--surf-lo) 80%, transparent);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
+    background: var(--surf-lo);
     display: flex;
     padding-bottom: env(safe-area-inset-bottom, 0);
+    touch-action: none;
 }
 
 .botnav::before {
@@ -185,6 +190,17 @@ body {
     top: -8px;
     height: 8px;
     background: linear-gradient(to top, rgba(0, 0, 0, 0.12), transparent);
+    pointer-events: none;
+}
+
+.botnav::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -2px;
+    height: 2px;
+    background: var(--surf-lo);
     pointer-events: none;
 }
 
@@ -203,18 +219,6 @@ body {
     transform: scale(0.94);
 }
 
-.nb-pill {
-    position: absolute;
-    top: 4px;
-    left: 0;
-    width: 60px;
-    height: 34px;
-    border-radius: 20px;
-    background: linear-gradient(135deg, var(--pri-con), color-mix(in srgb, var(--pri-con) 60%, var(--pri)));
-    transition: transform 0.32s var(--spring);
-    pointer-events: none;
-}
-
 .nb svg {
     width: 22px;
     height: 22px;
@@ -226,7 +230,8 @@ body {
 
 .nb.active svg {
     transform: scale(1.15);
-    fill: var(--on-pri-con);
+    fill: var(--pri);
+    filter: drop-shadow(0 0 6px color-mix(in srgb, var(--pri) 40%, transparent));
 }
 
 .nb-lbl {
@@ -240,15 +245,23 @@ body {
 }
 
 .nb.active .nb-lbl {
-    color: var(--on-pri-con);
+    color: var(--pri);
     font-weight: 700;
     opacity: 1;
 }
 
+.banner-wrap {
+    position: relative;
+    width: 100%;
+    height: 28%;
+    border-radius: 32px;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
 .banner {
     width: 100%;
-    height: 30%;
-    border-radius: 32px;
+    height: 100%;
     display: block;
     object-fit: cover;
 }
@@ -257,6 +270,7 @@ body {
     background: var(--surf-c);
     border-radius: 24px;
     padding: 18px;
+    contain: layout style;
 }
 
 .c-label {
@@ -279,7 +293,7 @@ body {
 
 .irow {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     justify-content: space-between;
     gap: 16px;
     padding: 10px 0;
@@ -438,7 +452,7 @@ body {
 }
 
 .sw input:checked~.sw-track {
-    background: linear-gradient(135deg, var(--pri), color-mix(in srgb, var(--pri) 60%, var(--pri-con)));
+    background: var(--pri);
     border-color: var(--pri);
 }
 
@@ -522,6 +536,7 @@ body {
     gap: 14px;
     z-index: 9999;
     transition: opacity 0.3s ease;
+    touch-action: none;
 }
 
 #loading-screen.hide {
@@ -552,4 +567,37 @@ body {
     font-weight: 600;
     color: var(--on-surf-var);
     letter-spacing: 0.3px;
+}
+
+.proc-overlay {
+    position: absolute;
+    bottom: 14px;
+    left: 14px;
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    padding: 7px 12px;
+    background: rgba(0, 0, 0, 0.45);
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+}
+
+.proc-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.5);
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    line-height: 1;
+}
+
+.proc-value {
+    font-size: 11px;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.5);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.5px;
+    line-height: 1;
+    transition: opacity 0.15s ease;
 }

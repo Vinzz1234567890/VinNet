@@ -6,9 +6,13 @@ const PAGE_META = {
     info: { name: 'Info', sub: 'Details about Module' },
 };
 
+let currentPageId = null;
+let activePageTimer = null;
+let navOperationId = 0;
+
 function movePill(btn, instant) {
     const pill = document.getElementById('nbPill');
-    if (!pill) return;
+    if (!pill || !btn) return;
     if (instant) pill.style.transition = 'none';
     const pillWidth = pill.offsetWidth;
     const centerX = btn.offsetLeft + btn.offsetWidth / 2;
@@ -23,19 +27,83 @@ function updateNavIcons() {
     });
 }
 
-function nav(id, btn) {
-    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-    document.querySelectorAll('.nb').forEach(b => b.classList.remove('active'));
-    document.getElementById('pg-' + id).classList.add('active');
-    btn.classList.add('active');
-    movePill(btn);
-    updateNavIcons();
-    const meta = PAGE_META[id];
-    if (meta) {
-        document.querySelector('.tb-name').textContent = meta.name;
-        document.querySelector('.tb-sub').textContent = meta.sub;
+const PAGE_ORDER = ['dashboard', 'tweaks', 'info'];
+
+let programmaticScroll = false;
+
+function setActivePage(id) {
+    if (id === currentPageId) return;
+    clearTimeout(activePageTimer);
+    activePageTimer = setTimeout(() => {
+        currentPageId = id;
+        document.querySelectorAll('.nb').forEach(b => b.classList.remove('active'));
+        const btn = document.querySelector(`.nb[data-page="${id}"]`);
+        if (!btn) return;
+        btn.classList.add('active');
+        movePill(btn);
+        updateNavIcons();
+        const meta = PAGE_META[id];
+        if (meta) {
+            document.querySelector('.tb-name').textContent = meta.name;
+            document.querySelector('.tb-sub').textContent = meta.sub;
+        }
+        if (id === 'dashboard') {
+            loadEnvironment();
+            loadMonitor();
+            loadProcess();
+        }
+    }, 100);
+}
+
+function nav(id) {
+    const thisOp = ++navOperationId;
+    programmaticScroll = true;
+    document.getElementById('pg-' + id).scrollIntoView({ behavior: 'smooth', inline: 'start', block: 'nearest' });
+    setActivePage(id);
+    const el = document.querySelector('.pages');
+    if ('onscrollend' in el) {
+        el.addEventListener('scrollend', () => {
+            if (thisOp === navOperationId) programmaticScroll = false;
+        }, { once: true });
+    } else {
+        setTimeout(() => {
+            if (thisOp === navOperationId) programmaticScroll = false;
+        }, 400);
     }
 }
+
+const pageObserver = new IntersectionObserver((entries) => {
+    if (programmaticScroll) return;
+    entries.forEach(entry => {
+        if (entry.isIntersecting && entry.intersectionRatio >= 0.75) {
+            setActivePage(entry.target.id.replace('pg-', ''));
+        }
+    });
+}, { root: document.querySelector('.pages'), threshold: [0.5, 0.75, 1.0] });
+
+document.querySelectorAll('.page').forEach(page => pageObserver.observe(page));
+
+(() => {
+    const pagesEl = document.querySelector('.pages');
+    let touchStartX = 0;
+    let touchStartY = 0;
+
+    pagesEl.addEventListener('touchstart', (e) => {
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+    }, { passive: true });
+
+    pagesEl.addEventListener('touchmove', (e) => {
+        const deltaX = e.touches[0].clientX - touchStartX;
+        const deltaY = e.touches[0].clientY - touchStartY;
+        if (Math.abs(deltaY) > Math.abs(deltaX)) return;
+        const atStart = pagesEl.scrollLeft <= 0;
+        const atEnd = pagesEl.scrollLeft >= pagesEl.scrollWidth - pagesEl.clientWidth - 1;
+        if ((atStart && deltaX > 0) || (atEnd && deltaX < 0)) {
+            e.preventDefault();
+        }
+    }, { passive: false });
+})();
 
 let snackTimer;
 function toast(msg) {
@@ -59,10 +127,11 @@ async function fetchJSON(path) {
     } catch { return null; }
 }
 
+let cbCounter = 0;
 function exec(cmd) {
     return new Promise((resolve, reject) => {
         if (window.ksu && typeof ksu.exec === 'function') {
-            const cbName = `__exec_cb_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+            const cbName = `__exec_cb_${++cbCounter}`;
             window[cbName] = (code, out, err) => {
                 delete window[cbName];
                 code === 0 ? resolve((out || '').trim()) : reject((err || '').trim());
@@ -84,12 +153,12 @@ function exec(cmd) {
 }
 
 const DEVICE_ROWS = [
-    ['di-brand', 'brand', 'getprop ro.product.brand'],
-    ['di-model', 'model', 'getprop ro.product.model'],
-    ['di-android', 'android', 'getprop ro.build.version.release'],
-    ['di-kernel', 'kernel', 'uname -r'],
-    ['di-arch', 'arch', 'getprop ro.product.cpu.abi'],
-    ['di-root', 'root', 'command -v ksud >/dev/null 2>&1 && echo KernelSU || (command -v apd >/dev/null 2>&1 && echo APatch || (command -v magisk >/dev/null 2>&1 && echo Magisk || echo Unknown))'],
+    ['di-brand', 'Brand', 'getprop ro.product.brand'],
+    ['di-model', 'Model', 'getprop ro.product.model'],
+    ['di-android', 'Android', 'getprop ro.build.version.release'],
+    ['di-kernel', 'Kernel', 'uname -r'],
+    ['di-arch', 'Architecture', 'getprop ro.product.cpu.abi'],
+    ['di-root', 'Root', 'command -v ksud >/dev/null 2>&1 && echo KernelSU || (command -v apd >/dev/null 2>&1 && echo APatch || (command -v magisk >/dev/null 2>&1 && echo Magisk || echo Unknown))'],
 ];
 
 async function loadEnvironment() {
@@ -104,8 +173,8 @@ async function loadEnvironment() {
 }
 
 const META_ROWS = [
-    ['meta-id', 'id'], ['meta-name', 'name'],
-    ['meta-author', 'author'], ['meta-desc', 'description'],
+    ['meta-id', 'ID'], ['meta-name', 'Name'],
+    ['meta-author', 'Author'], ['meta-desc', 'Description'],
 ];
 
 async function loadMetadata() {
@@ -116,44 +185,31 @@ async function loadMetadata() {
         if (el && cached[key]) el.textContent = cached[key];
     }
     const vEl = document.getElementById('meta-version');
-    if (vEl && cached.version) {
-        vEl.textContent = cached.versionCode ? `${cached.version} (${cached.versionCode})` : cached.version;
+    if (vEl && cached.Version) {
+        vEl.textContent = cached.VersionCode ? `${cached.Version} (${cached.VersionCode})` : cached.Version;
     }
 }
 
-const PING_TARGETS = ['1.1.1.1'];
+const elCache = {};
+function getEl(id) {
+    return elCache[id] || (elCache[id] = document.getElementById(id));
+}
 
 function setNetVal(id, val, colorFn) {
-    const el = document.getElementById(id);
-    const next = val == null ? '—' : val + ' ms';
+    const el = getEl(id);
+    const next = (val == null || val === '—') ? '—' : val + ' ms';
     const changed = el.textContent !== next;
     if (changed) el.style.opacity = '0.3';
     el.textContent = next;
-    el.style.color = val == null ? '' : colorFn(val);
+    el.style.color = (val == null || val === '—') ? '' : colorFn(val);
     if (changed) requestAnimationFrame(() => { el.style.opacity = '1'; });
 }
 
 function applyNetworkData(data) {
-    setNetVal('v-lat', data.latency,
+    setNetVal('v-lat', data.Latency,
         v => v <= 30 ? 'var(--good)' : v <= 50 ? 'var(--warn)' : 'var(--bad)');
-    setNetVal('v-jit', data.jitter,
+    setNetVal('v-jit', data.Jitter,
         v => v === 0 ? 'var(--good)' : v <= 10 ? 'var(--warn)' : 'var(--bad)');
-}
-
-async function measureNetworkLive() {
-    const pings = await Promise.allSettled(PING_TARGETS.map(t => exec(`ping -c 3 -W 1 ${t}`)));
-    const results = [];
-    for (const p of pings) {
-        if (p.status === 'fulfilled') {
-            const m = p.value.match(/(\d+\.?\d*)\/(\d+\.?\d*)\/(\d+\.?\d*)/);
-            if (m) results.push({ min: +m[1], avg: +m[2], max: +m[3] });
-        }
-    }
-    if (!results.length) return;
-    applyNetworkData({
-        latency: Math.round(results.reduce((s, r) => s + r.avg, 0) / results.length),
-        jitter: Math.round(results.reduce((s, r) => s + (r.max - r.min), 0) / results.length / 2),
-    });
 }
 
 function sendDetect() {
@@ -163,11 +219,18 @@ function sendDetect() {
 async function loadMonitor() {
     sendDetect();
     const cached = await fetchJSON('Core/Monitor.json');
-    if (cached && cached.latency != null && cached.latency !== undefined) {
+    if (cached && cached.Latency != null && cached.Latency !== undefined) {
         applyNetworkData(cached);
-        return;
     }
-    await measureNetworkLive();
+}
+
+async function loadProcess() {
+    const cached = await fetchJSON('Core/Process.json');
+    const pidEl = getEl('proc-pid');
+    if (!pidEl) return;
+    if (cached && cached.PID != null) {
+        pidEl.textContent = cached.PID;
+    }
 }
 
 let liveTickInterval = null;
@@ -176,8 +239,9 @@ function startLiveTicker() {
     liveTickInterval = setInterval(async () => {
         sendDetect();
         const cached = await fetchJSON('Core/Monitor.json');
-        if (cached && cached.latency != null && cached.latency !== undefined) applyNetworkData(cached);
-    }, 3000);
+        if (cached && cached.Latency != null && cached.Latency !== undefined) applyNetworkData(cached);
+        loadProcess();
+    }, 4000);
 }
 
 function stopLiveTicker() {
@@ -228,13 +292,18 @@ const TWEAKS = {
         onLabel: 'Enabled', offLabel: 'Disabled',
     },
     "Network Avoid Bad Wi-Fi": {
-        onCmd: 'settings put global network_avoid_bad_wifi 0 ; settings put system wifi_assistant 0',
-        offCmd: 'settings put global network_avoid_bad_wifi 1 ; settings put system wifi_assistant 1',
+        onCmd: 'settings put global network_avoid_bad_wifi 0',
+        offCmd: 'settings put global network_avoid_bad_wifi 1',
         onLabel: 'Disabled', offLabel: 'Enabled',
     },
     "BLE Scan Always Enabled": {
         onCmd: 'settings put global ble_scan_always_enabled 0',
         offCmd: 'settings put global ble_scan_always_enabled 1',
+        onLabel: 'Disabled', offLabel: 'Enabled',
+    },
+    "Mobile Data Always ON": {
+        onCmd: 'settings put global mobile_data_always_on 0',
+        offCmd: 'settings put global mobile_data_always_on 1',
         onLabel: 'Disabled', offLabel: 'Enabled',
     },
 };
@@ -247,37 +316,38 @@ async function loadTweaks() {
     }
 }
 
+let tweakQueue = Promise.resolve();
+
 async function applyTweak(id, enabled) {
     const t = TWEAKS[id];
     if (!t) return;
     const el = document.getElementById(id);
     el.disabled = true;
-    try {
-        await exec(enabled ? t.onCmd : t.offCmd);
-        const state = await fetchJSON('Core/Tweaks.json') || {};
-        state[id] = enabled ? 'on' : 'off';
-        const json = JSON.stringify(state).replace(/"/g, '\\"');
-        await exec(`echo "${json}" > ${CORE_PATH}/Tweaks.json`);
-        await exec(`grep -v "^${id}=" ${CORE_PATH}/VinNet.conf 2>/dev/null > ${CORE_PATH}/VinNet.conf.tmp; echo "${id}=${enabled ? 'on' : 'off'}" >> ${CORE_PATH}/VinNet.conf.tmp; mv ${CORE_PATH}/VinNet.conf.tmp ${CORE_PATH}/VinNet.conf`);
-        toast(`${id} > ${enabled ? t.onLabel : t.offLabel}`);
-    } catch {
-        toast('Unable to apply tweak');
-        el.checked = !enabled;
-    } finally {
-        el.disabled = false;
-    }
+    tweakQueue = tweakQueue.then(async () => {
+        try {
+            await exec(enabled ? t.onCmd : t.offCmd);
+            const state = await fetchJSON('Core/Tweaks.json') || {};
+            state[id] = enabled ? 'on' : 'off';
+            const json = JSON.stringify(state).replace(/"/g, '\\"');
+            await exec(`echo "${json}" > ${CORE_PATH}/Tweaks.json`);
+            await exec(`grep -v "^${id}=" ${CORE_PATH}/VinNet.conf 2>/dev/null > ${CORE_PATH}/VinNet.conf.tmp; echo "${id}=${enabled ? 'on' : 'off'}" >> ${CORE_PATH}/VinNet.conf.tmp; mv ${CORE_PATH}/VinNet.conf.tmp ${CORE_PATH}/VinNet.conf`);
+            toast(`${id} > ${enabled ? t.onLabel : t.offLabel}`);
+        } catch {
+            toast('Unable to apply tweak');
+            el.checked = !enabled;
+        } finally {
+            el.disabled = false;
+        }
+    });
 }
 
 async function boot() {
-    const ksuReady = (async () => {
-        for (let i = 0; i < 10 && !window.ksu; i++) await new Promise(r => setTimeout(r, 200));
-    })();
-
-    await Promise.all([
+    await Promise.allSettled([
         loadEnvironment(),
         loadMonitor(),
         loadMetadata(),
-        ksuReady.then(loadTweaks),
+        loadProcess(),
+        loadTweaks(),
         new Promise(r => setTimeout(r, 300)),
     ]);
 
