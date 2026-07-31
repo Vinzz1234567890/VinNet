@@ -2,7 +2,51 @@
 
 ---
 
-## v1.1.3-ORIGIN - 2026-07-01 - Latest
+## v1.1.4-Syrica - 2026-07-05 - Latest
+
+### ✨Added
+- `Mobile Data Always ON` tweak to Web UI
+- Process monitor (PID) on Web UI banner
+- Horizontal swipe navigation between Web UI pages
+- Scroll-based page detection with automatic navigation synchronization
+- `Vinzz1234567890.png` local contributor avatar asset
+- `GoogleSansFlex.woff2` font for improved loading performance
+
+### 🔄️Changed
+- Replace `GoogleSansFlex.ttf` with `GoogleSansFlex.woff2`
+- Navigation logic from button state switching to scroll-driven navigation
+- Web UI page layout from stacked pages to horizontal snap scrolling
+- Navigation icons to use reusable SVG symbols (`<use>`)
+- Local contributor avatar instead of GitHub image request
+- Device and metadata labels use proper title case
+- Monitor JSON keys to PascalCase
+- Toggle execution process is now queued to prevent race conditions
+- Dashboard automatically refreshes process information
+- Network monitor refresh interval from 3 seconds to 4 seconds
+- `Disable Network Avoid Bad Wi-Fi` tweak no longer modifies `wifi_assistant`
+- Navigation icon highlight from filled pill background to accent-colored icon with glow
+- Top bar and bottom navigation background from frosted glass to solid surface
+- Banner structure to support process overlay
+
+### 📈Improved
+- Reduce DOM lookups by caching frequently accessed elements
+- Improve Web UI responsiveness with scroll snapping and overscroll prevention
+- Improve font rendering using `font-display: swap`
+- Improve callback generation efficiency for KernelSU execution
+- Improve boot sequence reliability using `Promise.allSettled()`
+- Improve process monitoring integration
+- Improve touch handling to prevent overscroll and accidental gestures
+- General UI optimization, refactoring, and code cleanup
+
+### 🔥Deleted
+- `GoogleSansFlex.ttf`
+- Live ping measurement fallback from Web UI
+- Pill background indicator on bottom navigation
+- Dependency on remote GitHub avatar image
+
+---
+
+## v1.1.3-ORIGIN - 2026-07-01
 
 ### 🔥Deleted
 - Hard border on web UI navigation bar
