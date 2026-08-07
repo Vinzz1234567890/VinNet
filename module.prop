@@ -1,7 +1,7 @@
 id=VinNet
 name=VinNet
-version=1.1.4-Syrica
-versionCode=20260705
+version=1.1.5-Kurst
+versionCode=20260801
 author=Vinzz
 description=Enhanced Implementation of Network Optimization
 webuiIcon=webroot/assets/VinNet.jpg

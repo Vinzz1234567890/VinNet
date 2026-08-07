@@ -2,7 +2,75 @@
 
 ---
 
-## v1.1.4-Syrica - 2026-07-05 - Latest
+## v1.1.5-Kurst - 2026-08-01 - Latest
+
+### ✨Added
+- Dynamic rendering system for Web UI tweaks
+- Dynamic rendering system for Web UI information page
+- Centralized metadata for Web UI navigation pages
+- Centralized links configuration for Web UI information page
+- Centralized contributors configuration for Web UI information page
+- Dynamic process ID overlay on Web UI dashboard banner
+- Reusable SVG icon system for Web UI components
+- CSS color-mix variables for primary color transparency
+- Cursor feedback for navigation bars, switches, and contributor chips
+- Other additions
+
+### 🔄️Changed
+- Module version from `1.1.4-Syrica` to `1.1.5-Kurst`
+- Module version code from `20260705` to `20260801`
+- Process state file from `Process.json` to `ProcessID.json`
+- Service lock mechanism to use `ProcessID.json`
+- Process generation function from `GenerateProcess()` to `ProcessID()`
+- Web UI navigation state class from `.nb` to `.NavigationBar` and `.NavigationBarActive`
+- Web UI page identifiers to PascalCase naming
+- Web UI DOM identifiers and CSS classes to PascalCase naming
+- Navigation icon identifiers to descriptive names
+- Navigation icon rendering to use shared SVG symbols
+- Web UI tweaks from static HTML elements to dynamically generated components
+- Web UI information page from static HTML elements to dynamically generated components
+- Tweak configuration to include display labels, icons, and descriptions
+- Tweak element IDs to use the `tw-` prefix
+- Tweak status notifications to use the configured display label
+- Process monitor loading to create the PID overlay dynamically when required
+- Process monitor refresh handling to separate process loading from network monitor updates
+- Web UI boot sequence to render dynamic content before loading module data
+- Web UI loading sequence to use `Promise.allSettled()`
+- Google Sans Flex font path to load directly from the `webroot/assets` directory
+- Primary color transparency handling to use reusable CSS variables
+- Toggle switch animation from `left` positioning to `transform`
+- Tweak icon size from `20px` to `36px`
+- Web UI layout containment added to the header and navigation components
+- CSS logical properties used for selected spacing and positioning rules
+- Process ID storage and cleanup logic to use the new process state file
+- `gEnableDFSChnlScan` from `0` to `1` in `WCNSS_qcom_cfg.ini`
+- DFS channel scanning is now enabled in the Qualcomm Wi-Fi configuration
+- Other changes
+
+### 📈Improved
+- Web UI maintainability by separating data configuration from HTML markup
+- Web UI scalability through dynamic rendering of tweaks, links, and contributors
+- Reduce duplicated HTML markup in `index.html`
+- Reduce repeated SVG markup through reusable SVG symbols
+- Navigation state management and synchronization
+- Dashboard process monitoring behavior
+- Web UI initialization reliability
+- Tweak element lookup consistency
+- CSS organization through reusable color-mix variables
+- Toggle animation implementation
+- General Web UI code structure, refactoring, and naming consistency
+- Other improvements
+
+### 🔧Fixed
+- Process state handling by replacing the dedicated `.service.lock` file with `ProcessID.json`
+- Dynamic Web UI elements no longer depend on hardcoded tweak and information-page markup
+- PID monitor overlay is now recreated when required instead of relying on permanently embedded markup
+- Bug related to an incorrect path definition that caused GoogleSansFlex.woff2 to never be used
+- Other fixes
+
+---
+
+## v1.1.4-Syrica - 2026-07-05
 
 ### ✨Added
 - `Mobile Data Always ON` tweak to Web UI

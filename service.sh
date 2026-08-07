@@ -7,21 +7,20 @@ Monitor="$Core/Monitor.json"
 Environment="$Core/Environment.json"
 Metadata="$Core/Metadata.json"
 Tweaks="$Core/Tweaks.json"
-Process="$Core/Process.json"
+ProcessID="$Core/ProcessID.json"
 Identity="$Directory/module.prop"
-Lock="$Core/.service.lock"
 
-if [ -f "$Lock" ]; then
-    read -r OldPID < "$Lock" 2> /dev/null
+if [ -f "$ProcessID" ]; then
+    read -r OldPID < "$ProcessID" 2> /dev/null
     [ -n "$OldPID" ] && kill -0 "$OldPID" 2> /dev/null && exit 0
 fi
-printf '%s\n' $$ > "$Lock"
+printf '%s\n' $$ > "$ProcessID"
 
 until [ "$(getprop sys.boot_completed)" = "1" ]; do sleep 3; done
 sleep 3
 
 Cleanup() {
-    rm -f "$Lock" "$Detect" "$Core"/*.tmp.$$ 2> /dev/null
+    rm -f "$ProcessID" "$Detect" "$Core"/*.tmp.$$ 2> /dev/null
     exit 0
 }
 trap Cleanup TERM EXIT INT
@@ -29,8 +28,8 @@ trap Cleanup TERM EXIT INT
 [ -d "$Core" ] || mkdir -p "$Core"
 
 Write() {
-    local dest="$1" Temporary="${dest}.tmp.$$"
-    cat > "$Temporary" && mv -f "$Temporary" "$dest"
+    local Destination="$1" Temporary="${Destination}.tmp.$$"
+    cat > "$Temporary" && mv -f "$Temporary" "$Destination"
 }
 
 ApplyTweaks() {
@@ -118,8 +117,8 @@ Environment() {
         "$(uname -r)" "$(getprop ro.product.cpu.abi)" "$RootImplementation" | Write "$Environment"
 }
 
-GenerateProcess() {
-    printf '{"PID":%s,"Timestamp":%s}\n' "$$" "$(date +%s)" | Write "$Process"
+ProcessID() {
+    printf '{"PID":%s,"Timestamp":%s}\n' "$$" "$(date +%s)" | Write "$ProcessID"
 }
 
 LastLatency="x"
@@ -182,7 +181,7 @@ fi
 GenerateTweaks
 Metadata
 Environment
-GenerateProcess
+ProcessID
 Monitor "$(date +%s)"
 
 VMS="Vendor: Fail (Not fog)"
@@ -223,7 +222,7 @@ while true; do
     fi
 
     if [ "$WebUI" -eq 1 ]; then
-        GenerateProcess
+        ProcessID
         GenerateTweaks
         Monitor "$Now"
         sleep 5
