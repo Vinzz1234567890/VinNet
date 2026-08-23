@@ -1,122 +1,156 @@
-const CORE_PATH = '/data/adb/modules/VinNet/webroot/Core';
-let programmaticScroll = false;
+const Core = '/data/adb/modules/VinNet/webroot/Core';
+const LogPath = '/storage/emulated/0/Download/VinNet.log';
+const LogCache = new Map();
+const Log = (Tag, Data) => {
+    const Content = JSON.stringify(Data);
+    if (LogCache.get(Tag) === Content) return;
+    LogCache.set(Tag, Content);
+    exec(`grep -v "^\\[.*\\] ${Tag}:" ${LogPath} 2>/dev/null > ${LogPath}.tmp; echo "[$(date +%T)] ${Tag}: ${Content}" >> ${LogPath}.tmp; mv ${LogPath}.tmp ${LogPath}`).catch(() => {});
+};
+let ProgrammaticScroll = false;
 
-const PAGE_META = {
-    Dashboard: { name: 'VinNet', sub: 'Enhanced Implementation of Network Optimization' },
-    Tweaks: { name: 'Tweaks', sub: 'Apply Network Optimization Tweaks' },
-    Info: { name: 'Info', sub: 'Details about Module' },
+const Page = {
+    Dashboard: { Title: 'VinNet', Description: 'Enhanced Implementation of Network Optimization' },
+    Tweaks: { Title: 'Tweaks', Description: 'Apply Network Optimization Tweaks' },
+    Info: { Title: 'Info', Description: 'Details about Module' },
 };
 
-const INFO_LINKS = [
-    { label: 'Repository', href: 'https://github.com/Vinzz1234567890/VinNet', icon: 'Repository', text: 'Vinnet' },
-    { label: 'Telegram', href: 'https://t.me/VinzzRepository', icon: 'Telegram', text: 'Vinzz Repository' },
-];
+let CurrentPageID = null;
+let ActivePageTimer = null;
+let NavigationOperationID = 0;
 
-const CONTRIBUTORS = [
-    { label: 'Developer', href: 'https://github.com/Vinzz1234567890', avatar: 'assets/Vinzz1234567890.png', name: 'Vinzz' },
-];
+let NavigationButtons = null;
+let TableName = null;
+let TableSubordinate = null;
+const PagesElement = document.querySelector('.Pages');
+let NavigationButtonMap = null;
+let NavigationSVGS = null;
+let NavigationSVGButtonMap = null;
+let PageElementMap = null;
+let LastMonitor = { Latency: null, Jitter: null };
 
-let currentPageId = null;
-let activePageTimer = null;
-let navOperationId = 0;
+const LatencyColor = v => v <= 30 ? 'var(--Good)' : v <= 50 ? 'var(--Warn)' : 'var(--Bad)';
+const JitterColor = v => v === 0 ? 'var(--Good)' : v <= 10 ? 'var(--Warn)' : 'var(--Bad)';
 
-let navBtns = null;
-let tbName = null;
-let tbSub = null;
-
-function updateNavIcons() {
-    document.querySelectorAll('.NavigationBar svg[data-fill], .NavigationBarActive svg[data-fill]').forEach(svg => {
-        const active = svg.closest('.NavigationBar, .NavigationBarActive').classList.contains('NavigationBarActive');
-        svg.querySelector('path').setAttribute('d', svg.dataset[active ? 'fill' : 'outline']);
+function UpdateNavigationIcons() {
+    if (!NavigationSVGS) {
+        NavigationSVGS = document.querySelectorAll('.NavigationBar svg[data-fill], .NavigationBarActive svg[data-fill]');
+        NavigationSVGButtonMap = new Map([...NavigationSVGS].map(svg => [svg, svg.closest('.NavigationBar, .NavigationBarActive')]));
+    }
+    NavigationSVGS.forEach(SVG => {
+        const Button = NavigationSVGButtonMap.get(SVG);
+        const Active = Button.classList.contains('NavigationBarActive');
+        SVG.querySelector('path').setAttribute('d', SVG.dataset[Active ? 'fill' : 'outline']);
     });
 }
 
-function setActivePage(id) {
-    if (id === currentPageId) return;
-    clearTimeout(activePageTimer);
-    activePageTimer = setTimeout(() => {
-        currentPageId = id;
-        if (!navBtns) navBtns = document.querySelectorAll('.NavigationBar, .NavigationBarActive');
-        navBtns.forEach(b => { b.classList.remove('NavigationBarActive'); b.classList.add('NavigationBar'); });
-        const btn = document.querySelector(`.NavigationBar[data-page="${id}"], .NavigationBarActive[data-page="${id}"]`);
-        if (!btn) return;
-        btn.classList.remove('NavigationBar');
-        btn.classList.add('NavigationBarActive');
-        updateNavIcons();
-        const meta = PAGE_META[id];
-        if (meta) {
-            if (!tbName) tbName = document.querySelector('.HeaderTitle');
-            if (!tbSub) tbSub = document.querySelector('.HeaderDescription');
-            if (tbName) tbName.textContent = meta.name;
-            if (tbSub) tbSub.textContent = meta.sub;
+function SetActivePage(ID) {
+    if (ID === CurrentPageID) return;
+    clearTimeout(ActivePageTimer);
+    ActivePageTimer = setTimeout(() => {
+        const Previous = CurrentPageID;
+        CurrentPageID = ID;
+        if (!NavigationButtons) {
+            NavigationButtons = document.querySelectorAll('.NavigationBar, .NavigationBarActive');
+            NavigationButtonMap = new Map([...NavigationButtons].map(B => [B.dataset.page, B]));
         }
-        if (id === 'Dashboard') {
+        if (Previous) { const P = NavigationButtonMap.get(Previous); if (P) { P.classList.replace('NavigationBarActive', 'NavigationBar'); } }
+        const Button = NavigationButtonMap.get(ID);
+        if (!Button) return;
+        Button.classList.replace('NavigationBar', 'NavigationBarActive');
+        UpdateNavigationIcons();
+        const Meta = Page[ID];
+        if (Meta) {
+            if (!TableName) TableName = document.querySelector('.HeaderTitle');
+            if (!TableSubordinate) TableSubordinate = document.querySelector('.HeaderDescription');
+            if (TableName) TableName.textContent = Meta.Title;
+            if (TableSubordinate) TableSubordinate.textContent = Meta.Description;
+        }
+        if (ID === 'Dashboard') {
             loadProcess();
         }
     }, 100);
 }
 
-function nav(id) {
-    const thisOp = ++navOperationId;
-    programmaticScroll = true;
-    document.getElementById('Page' + id).scrollIntoView({ behavior: 'smooth', inline: 'start', block: 'nearest' });
-    setActivePage(id);
-    const el = document.querySelector('.Pages');
-    if ('onscrollend' in el) {
-        el.addEventListener('scrollend', () => {
-            if (thisOp === navOperationId) programmaticScroll = false;
+function Navigation(ID) {
+    const ThisOperation = ++NavigationOperationID;
+    ProgrammaticScroll = true;
+    if (!PageElementMap) {
+        PageElementMap = new Map([
+            ['Dashboard', document.getElementById('PageDashboard')],
+            ['Tweaks', document.getElementById('PageTweaks')],
+            ['Info', document.getElementById('PageInfo')]
+        ]);
+    }
+    PageElementMap.get(ID).scrollIntoView({ behavior: 'smooth', inline: 'start', block: 'nearest' });
+    SetActivePage(ID);
+    if ('onscrollend' in PagesElement) {
+        PagesElement.addEventListener('scrollend', () => {
+            if (ThisOperation === NavigationOperationID) ProgrammaticScroll = false;
         }, { once: true });
     } else {
         setTimeout(() => {
-            if (thisOp === navOperationId) programmaticScroll = false;
+            if (ThisOperation === NavigationOperationID) ProgrammaticScroll = false;
         }, 400);
     }
 }
 
-const pageObserver = new IntersectionObserver((entries) => {
-    if (programmaticScroll) return;
-    entries.forEach(entry => {
-        if (entry.isIntersecting && entry.intersectionRatio >= 0.75) {
-            setActivePage(entry.target.id.replace('Page', ''));
+const PageObserver = new IntersectionObserver((Entries) => {
+    if (ProgrammaticScroll) return;
+    Entries.forEach(Entry => {
+        if (Entry.isIntersecting && Entry.intersectionRatio >= 0.75) {
+            SetActivePage(Entry.target.id.replace('Page', ''));
         }
     });
-}, { root: document.querySelector('.Pages'), threshold: [0.5, 0.75, 1.0] });
+}, { root: PagesElement, threshold: 0.75 });
 
-document.querySelectorAll('.Page, .ActivePage').forEach(page => pageObserver.observe(page));
+document.addEventListener('dragstart', E => E.preventDefault());
+
+document.getElementById('Navigation').addEventListener('click', E => {
+    const Button = E.target.closest('.NavigationBar, .NavigationBarActive');
+    if (Button && Button.dataset.page) Navigation(Button.dataset.page);
+});
+
+document.querySelectorAll('.Page, .ActivePage').forEach(Page => PageObserver.observe(Page));
 
 (() => {
-    const pagesEl = document.querySelector('.Pages');
-    let touchStartX = 0;
-    let touchStartY = 0;
+    let TouchStartX = 0;
+    let TouchStartY = 0;
 
-    pagesEl.addEventListener('touchstart', (e) => {
-        touchStartX = e.touches[0].clientX;
-        touchStartY = e.touches[0].clientY;
+    PagesElement.addEventListener('touchstart', (E) => {
+        if (E.touches.length > 1) {
+            const Pages = ['Dashboard', 'Tweaks', 'Info'];
+            const Nearest = Math.round(PagesElement.scrollLeft / PagesElement.clientWidth);
+            Navigation(Pages[Math.max(0, Math.min(Nearest, Pages.length - 1))]);
+            return;
+        }
+        TouchStartX = E.touches[0].clientX;
+        TouchStartY = E.touches[0].clientY;
     }, { passive: true });
 
-    pagesEl.addEventListener('touchmove', (e) => {
-        const deltaX = e.touches[0].clientX - touchStartX;
-        const deltaY = e.touches[0].clientY - touchStartY;
-        if (Math.abs(deltaY) > Math.abs(deltaX)) return;
-        const atStart = pagesEl.scrollLeft <= 0;
-        const atEnd = pagesEl.scrollLeft >= pagesEl.scrollWidth - pagesEl.clientWidth - 1;
-        if ((atStart && deltaX > 0) || (atEnd && deltaX < 0)) {
-            e.preventDefault();
+    PagesElement.addEventListener('touchmove', (E) => {
+        const DeltaX = E.touches[0].clientX - TouchStartX;
+        const DeltaY = E.touches[0].clientY - TouchStartY;
+        if (Math.abs(DeltaY) > Math.abs(DeltaX)) return;
+        const AtStart = PagesElement.scrollLeft <= 0;
+        const AtEnd = PagesElement.scrollLeft >= PagesElement.scrollWidth - PagesElement.clientWidth - 1;
+        if ((AtStart && DeltaX > 0) || (AtEnd && DeltaX < 0)) {
+            E.preventDefault();
         }
     }, { passive: false });
 })();
 
-let snackTimer;
-function toast(msg) {
-    const el = document.getElementById('Snack');
-    el.textContent = msg;
-    el.classList.add('show');
-    clearTimeout(snackTimer);
-    snackTimer = setTimeout(() => el.classList.remove('show'), 2400);
+const SnackElement = document.getElementById('Snack');
+let SnackTimer;
+function Toast(Message) {
+    SnackElement.textContent = Message;
+    SnackElement.classList.add('Show');
+    clearTimeout(SnackTimer);
+    SnackTimer = setTimeout(() => SnackElement.classList.remove('Show'), 2400);
 }
 
 function openExternal(url) {
-    exec(`am start -a android.intent.action.VIEW -d "${url}"`).catch(() => toast('Unable to open link'));
+    exec(`am start -a android.intent.action.VIEW -d "${url}"`).catch(() => Toast('Unable to open link'));
     return false;
 }
 
@@ -162,15 +196,32 @@ const DEVICE_ROWS = [
     ['Root', 'Root', 'command -v ksud >/dev/null 2>&1 && echo KernelSU || (command -v apd >/dev/null 2>&1 && echo APatch || (command -v magisk >/dev/null 2>&1 && echo Magisk || echo Unknown))'],
 ];
 
+const RUNTIME_ROWS = [
+    ['Vendor', '[ "$(getprop ro.product.device)" = "fog" ] && { grep -q "VinNet" /vendor/etc/wifi/WCNSS_qcom_cfg.ini 2>/dev/null && grep -q "p2p_disabled=1" /vendor/etc/wifi/wpa_supplicant_overlay.conf 2>/dev/null && grep -q "ap_scan=1" /vendor/etc/wifi/wpa_supplicant.conf 2>/dev/null && echo Mounted || echo Unmounted; } || echo Unmounted'],
+    ['Binary', 'command -v iw >/dev/null 2>&1 && echo Mounted || echo Unmounted'],
+];
+
 async function loadEnvironment() {
     const cached = await fetchJSON('Core/Environment.json');
+    Log('Environment', cached);
     if (cached) {
-        for (const [id, key] of DEVICE_ROWS) document.getElementById(id).textContent = cached[key] || '—';
-        return;
+        requestAnimationFrame(() => {
+            for (const [id, key] of DEVICE_ROWS) document.getElementById(id).textContent = cached[key] || '—';
+        });
+    } else {
+        const results = await Promise.all(DEVICE_ROWS.map(async ([id, , cmd]) => {
+            try { return [id, await exec(cmd) || '—']; } catch { return [id, '—']; }
+        }));
+        requestAnimationFrame(() => {
+            for (const [id, text] of results) document.getElementById(id).textContent = text;
+        });
     }
-    await Promise.all(DEVICE_ROWS.map(async ([id, , cmd]) => {
-        try { document.getElementById(id).textContent = await exec(cmd) || '—'; } catch { document.getElementById(id).textContent = '—'; }
+    const runtimeResults = await Promise.all(RUNTIME_ROWS.map(async ([id, cmd]) => {
+        try { return [id, await exec(cmd) || '—']; } catch { return [id, '—']; }
     }));
+    requestAnimationFrame(() => {
+        for (const [id, text] of runtimeResults) document.getElementById(id).textContent = text;
+    });
 }
 
 const META_ROWS = [
@@ -180,6 +231,7 @@ const META_ROWS = [
 
 async function loadMetadata() {
     const cached = await fetchJSON('Core/Metadata.json');
+    Log('Metadata', cached);
     if (!cached) return;
     for (const [id, key] of META_ROWS) {
         const el = document.getElementById(id);
@@ -191,9 +243,10 @@ async function loadMetadata() {
     }
 }
 
-const elCache = {};
+const elCache = new Map();
 function getEl(id) {
-    return elCache[id] || (elCache[id] = document.getElementById(id));
+    if (!elCache.has(id)) elCache.set(id, document.getElementById(id));
+    return elCache.get(id);
 }
 
 function setNetVal(id, val, colorFn) {
@@ -202,55 +255,55 @@ function setNetVal(id, val, colorFn) {
     const changed = el.textContent !== next;
     if (changed) el.style.opacity = '0.3';
     el.textContent = next;
-    el.style.color = (val == null || val === '—') ? '' : colorFn(val);
+    const nextColor = (val == null || val === '—') ? '' : colorFn(val);
+    if (el.style.color !== nextColor) el.style.color = nextColor;
     if (changed) requestAnimationFrame(() => { el.style.opacity = '1'; });
 }
 
 function applyNetworkData(data) {
-    setNetVal('Latency', data.Latency,
-        v => v <= 30 ? 'var(--good)' : v <= 50 ? 'var(--warn)' : 'var(--bad)');
-    setNetVal('Jitter', data.Jitter,
-        v => v === 0 ? 'var(--good)' : v <= 10 ? 'var(--warn)' : 'var(--bad)');
+    if (data.Latency === LastMonitor.Latency && data.Jitter === LastMonitor.Jitter) return;
+    LastMonitor = { Latency: data.Latency, Jitter: data.Jitter };
+    setNetVal('Latency', data.Latency, LatencyColor);
+    setNetVal('Jitter', data.Jitter, JitterColor);
 }
 
 function sendDetect() {
-    exec(`date +%s > ${CORE_PATH}/Detect.txt`).catch(() => { });
+    exec(`date +%s > ${Core}/Detect.txt`).catch(() => { });
 }
 
-async function loadMonitor() {
+async function fetchMonitor() {
     sendDetect();
     const cached = await fetchJSON('Core/Monitor.json');
-    if (cached && cached.Latency != null && cached.Latency !== undefined) {
-        applyNetworkData(cached);
-    }
+    Log('Monitor', cached);
+    if (cached && cached.Latency != null) applyNetworkData(cached);
 }
+
+let procPidEl = null;
 
 async function loadProcess() {
     const cached = await fetchJSON('Core/ProcessID.json');
-    const bannerWrap = document.querySelector('#PageDashboard .BannerWrap');
-    if (!bannerWrap) return;
-
-    let overlay = bannerWrap.querySelector('.proc-overlay');
-    if (!overlay) {
-        overlay = document.createElement('div');
-        overlay.className = 'proc-overlay';
-        overlay.innerHTML = `<span class="proc-label">PID</span><span class="proc-value" id="proc-pid">—</span>`;
-        bannerWrap.appendChild(overlay);
+    Log('ProcessID', cached);
+    if (!procPidEl) {
+        const bannerWrap = document.querySelector('#PageDashboard .BannerWrap');
+        if (!bannerWrap) return;
+        let overlay = bannerWrap.querySelector('.proc-overlay');
+        if (!overlay) {
+            overlay = document.createElement('div');
+            overlay.className = 'proc-overlay';
+            overlay.innerHTML = `<span class="proc-label">PID</span><span class="proc-value" id="proc-pid">—</span>`;
+            bannerWrap.appendChild(overlay);
+        }
+        procPidEl = overlay.querySelector('#proc-pid');
     }
-    const pidEl = overlay.querySelector('#proc-pid');
-    if (cached && cached.PID != null) {
-        pidEl.textContent = cached.PID;
-    }
+    if (cached && cached.PID != null) procPidEl.textContent = cached.PID;
 }
+
+let tweakState = null;
 
 let liveTickInterval = null;
 function startLiveTicker() {
     if (liveTickInterval) return;
-    liveTickInterval = setInterval(async () => {
-        sendDetect();
-        const cached = await fetchJSON('Core/Monitor.json');
-        if (cached && cached.Latency != null && cached.Latency !== undefined) applyNetworkData(cached);
-    }, 4000);
+    liveTickInterval = setInterval(fetchMonitor, 4000);
 }
 
 function stopLiveTicker() {
@@ -282,6 +335,7 @@ const TWEAKS = {
         label: 'Disable Scan Always Available',
         icon: 'ScanAlwaysAvailable',
         desc: 'Reduces jitter, especially when playing over Wi-Fi connection.',
+        warn: 'May cause location services to not function properly',
         onCmd: 'cmd wifi set-scan-always-available disabled ; settings put global wifi_scan_always_enabled 0',
         offCmd: 'cmd wifi set-scan-always-available enabled ; settings put global wifi_scan_always_enabled 1',
         onLabel: 'Disabled', offLabel: 'Enabled',
@@ -342,95 +396,63 @@ const TWEAKS = {
         offCmd: 'settings put global mobile_data_always_on 1',
         onLabel: 'Disabled', offLabel: 'Enabled',
     },
+    "Wi-Fi Country Code": {
+        label: 'Change Wi-Fi Country Code',
+        icon: 'Wi-FiCountryCode',
+        desc: 'Change country code to “US” to bypass certain restrictions on Wi-Fi.',
+        onCmd: 'resetprop ro.boot.wificountrycode US',
+        offCmd: 'resetprop ro.boot.wificountrycode 00',
+        onLabel: 'Changed', offLabel: 'Unchanged',
+    },
+    "Force LTE CA": {
+        label: 'Enable Force LTE CA',
+        icon: 'ForceLTECA',
+        desc: 'Combines two or more cellular frequency bands simultaneously, resulting in significantly faster internet speeds and more stable connection on 4G or 4G+ networks.',
+        onCmd: 'resetprop -p persist.sys.radio.force_lte_ca true',
+        offCmd: 'resetprop -p persist.sys.radio.force_lte_ca false',
+        onLabel: 'Enabled', offLabel: 'Disabled',
+    },
 };
 
-function renderTweaks() {
+async function renderTweaks() {
     const container = document.getElementById('PageTweaks');
-    container.innerHTML = '';
+    const template = document.getElementById('TweakCardTemplate');
+    tweakState = await fetchJSON('Core/Tweaks.json') || {};
+    Log('Tweaks', tweakState);
+
+    container.replaceChildren();
     for (const [id, t] of Object.entries(TWEAKS)) {
-        const card = document.createElement('div');
-        card.className = 'Card';
-        card.innerHTML = `<div class="tweak">
-            <svg class="tw-icon" viewBox="0 0 24 24"><use href="#${t.icon}"/></svg>
-            <div class="tw-body">
-                <div class="tw-name">${t.label || id}</div>
-                <div class="tw-desc">${t.desc}</div>
-            </div>
-            <label class="sw">
-                <input type="checkbox" id="tw-${id}" onchange="applyTweak('${id.replace(/'/g, "\\'")}', this.checked)">
-                <div class="sw-track"><div class="sw-thumb"></div></div>
-            </label>
-        </div>`;
+        const card = template.content.cloneNode(true);
+        card.querySelector('.TweakIcon use').setAttribute('href', '#' + t.icon);
+        card.querySelector('.TweakName').textContent = t.label || id;
+        card.querySelector('.TweakDescription').textContent = t.desc;
+        if (t.warn) {
+            const w = document.createElement('div');
+            w.className = 'TweakWarn';
+            w.textContent = t.warn;
+            card.querySelector('.TweakBody').appendChild(w);
+        }
+        const input = card.querySelector('input');
+        input.id = 'tw-' + id;
+        input.checked = tweakState[id] === 'on';
+        input.dataset.tweakId = id;
         container.appendChild(card);
     }
 }
 
-function renderInfo() {
-    const container = document.getElementById('PageInfo');
-    container.innerHTML = '';
-
-    const metaCard = document.createElement('div');
-    metaCard.className = 'Card';
-    metaCard.innerHTML = `<div class="CardLabel">
-        <svg viewBox="0 0 24 24"><use href="#Metadata"/></svg>
-        Metadata
-    </div>
-    <div class="IndexRow"><span class="IndexRowlabel">ID</span><span class="IndexRowValue" id="meta-id">—</span></div>
-    <div class="IndexRow"><span class="IndexRowlabel">Name</span><span class="IndexRowValue" id="meta-name">—</span></div>
-    <div class="IndexRow"><span class="IndexRowlabel">Version</span><span class="IndexRowValue" id="meta-version">—</span></div>
-    <div class="IndexRow"><span class="IndexRowlabel">Author</span><span class="IndexRowValue" id="meta-author">—</span></div>
-    <div class="IndexRow"><span class="IndexRowlabel">Description</span><span class="IndexRowValue" id="meta-desc">—</span></div>`;
-    container.appendChild(metaCard);
-
-    const linksCard = document.createElement('div');
-    linksCard.className = 'Card';
-    let linksHTML = `<div class="CardLabel">
-        <svg viewBox="0 0 24 24"><use href="#Links"/></svg>
-        Links
-    </div>`;
-    for (const link of INFO_LINKS) {
-        linksHTML += `<div class="IndexRow">
-            <span class="IndexRowlabel">${link.label}</span>
-            <a class="ir-link" href="${link.href}" onclick="return openExternal(this.href)">
-                <svg viewBox="0 0 24 24" width="14" height="14" class="ir-icon-${link.icon === 'Repository' ? 'github' : 'telegram'}">
-                    <use href="#${link.icon}"></use>
-                </svg>
-                ${link.text}
-                <svg viewBox="0 0 24 24" width="14" height="14" class="ir-chevron">
-                    <use href="#Chevron"></use>
-                </svg>
-            </a>
-        </div>`;
+document.addEventListener('change', e => {
+    if (e.target.matches('#PageTweaks input[type="checkbox"]')) {
+        applyTweak(e.target.dataset.tweakId, e.target.checked);
     }
-    linksCard.innerHTML = linksHTML;
-    container.appendChild(linksCard);
+});
 
-    const contribCard = document.createElement('div');
-    contribCard.className = 'Card';
-    let contribHTML = `<div class="CardLabel">
-        <svg viewBox="0 0 24 24"><use href="#Contributors"/></svg>
-        Contributors
-    </div>`;
-    for (const c of CONTRIBUTORS) {
-        contribHTML += `<div class="IndexRow">
-            <span class="IndexRowlabel">${c.label}</span>
-            <a class="chip" href="${c.href}" onclick="return openExternal(this.href)">
-                <img src="${c.avatar}" class="chip-avatar" alt="${c.name} Avatar" width="18" height="18" loading="lazy" decoding="async" onerror="this.remove()">
-                ${c.name}
-            </a>
-        </div>`;
+document.addEventListener('click', e => {
+    const link = e.target.closest('#PageInfo a[href]');
+    if (link) {
+        e.preventDefault();
+        openExternal(link.href);
     }
-    contribCard.innerHTML = contribHTML;
-    container.appendChild(contribCard);
-}
-
-async function loadTweaks() {
-    const cached = await fetchJSON('Core/Tweaks.json') || {};
-    for (const id of Object.keys(TWEAKS)) {
-        const el = document.getElementById('tw-' + id);
-        if (el && cached[id] !== undefined) el.checked = cached[id] === 'on';
-    }
-}
+});
 
 let tweakQueue = Promise.resolve();
 
@@ -442,14 +464,18 @@ async function applyTweak(id, enabled) {
     tweakQueue = tweakQueue.then(async () => {
         try {
             await exec(enabled ? t.onCmd : t.offCmd);
-            const state = await fetchJSON('Core/Tweaks.json') || {};
-            state[id] = enabled ? 'on' : 'off';
-            const json = JSON.stringify(state).replace(/"/g, '\\"');
-            await exec(`echo "${json}" > ${CORE_PATH}/Tweaks.json`);
-            await exec(`grep -v "^${id}=" ${CORE_PATH}/VinNet.conf 2>/dev/null > ${CORE_PATH}/VinNet.conf.tmp; echo "${id}=${enabled ? 'on' : 'off'}" >> ${CORE_PATH}/VinNet.conf.tmp; mv ${CORE_PATH}/VinNet.conf.tmp ${CORE_PATH}/VinNet.conf`);
-            toast(`${t.label || id} > ${enabled ? t.onLabel : t.offLabel}`);
+            if (!tweakState) tweakState = {};
+            tweakState[id] = enabled ? 'on' : 'off';
+            const val = enabled ? 'on' : 'off';
+            const json = JSON.stringify(tweakState).replace(/"/g, '\\"');
+            await Promise.all([
+                exec(`echo "${json}" > ${Core}/Tweaks.json`),
+                exec(`grep -v "^${id}=" ${Core}/VinNet.conf 2>/dev/null > ${Core}/VinNet.conf.tmp; echo "${id}=${val}" >> ${Core}/VinNet.conf.tmp; mv ${Core}/VinNet.conf.tmp ${Core}/VinNet.conf`),
+            ]);
+            Log('Tweaks', tweakState);
+            Toast(`${t.label || id} > ${enabled ? t.onLabel : t.offLabel}`);
         } catch {
-            toast('Unable to apply tweak');
+            Toast('Unable to apply tweak');
             el.checked = !enabled;
         } finally {
             el.disabled = false;
@@ -457,20 +483,34 @@ async function applyTweak(id, enabled) {
     });
 }
 
+async function DecodeImage(ImageElement) {
+    if (!ImageElement) return;
+    try {
+        if (ImageElement.complete) {
+            if (ImageElement.decode) await ImageElement.decode();
+        } else {
+            await new Promise((resolve) => {
+                ImageElement.onload = () => { ImageElement.decode ? ImageElement.decode().then(resolve, resolve) : resolve(); };
+                ImageElement.onerror = resolve;
+            });
+        }
+    } catch { }
+}
+
 async function boot() {
-    renderTweaks();
-    renderInfo();
     await Promise.allSettled([
         loadEnvironment(),
-        loadMonitor(),
+        fetchMonitor(),
         loadMetadata(),
         loadProcess(),
-        loadTweaks(),
+        renderTweaks(),
+        DecodeImage(document.querySelector('.HeaderLogo img')),
+        DecodeImage(document.querySelector('.Banner')),
         new Promise(r => setTimeout(r, 300)),
     ]);
 
     document.getElementById('WebUI').classList.add('ready');
-    updateNavIcons();
+    UpdateNavigationIcons();
     const ls = document.getElementById('LoadingScreen');
     if (ls) {
         ls.addEventListener('transitionend', () => ls.remove(), { once: true });
