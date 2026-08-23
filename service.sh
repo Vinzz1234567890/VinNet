@@ -76,6 +76,20 @@ ApplyTweaks() {
         "Mobile Data Always ON")
             settings put global mobile_data_always_on $([ "$2" = "on" ] && echo 0 || echo 1)
             ;;
+        "Wi-Fi Country Code")
+            if [ "$2" = "on" ]; then
+                resetprop ro.boot.wificountrycode US
+            else
+                resetprop ro.boot.wificountrycode 00
+            fi
+            ;;
+        "Force LTE CA")
+            if [ "$2" = "on" ]; then
+                resetprop -p persist.sys.radio.force_lte_ca true
+            else
+                resetprop -p persist.sys.radio.force_lte_ca false
+            fi
+            ;;
     esac
 }
 
@@ -183,25 +197,6 @@ Metadata
 Environment
 ProcessID
 Monitor "$(date +%s)"
-
-VMS="Vendor: Fail (Not fog)"
-if [ "$(getprop ro.product.device)" = "fog" ]; then
-    if grep -q "VinNet" "/vendor/etc/wifi/WCNSS_qcom_cfg.ini" 2> /dev/null \
-        && grep -q "p2p_disabled=1" "/vendor/etc/wifi/wpa_supplicant_overlay.conf" 2> /dev/null \
-        && grep -q "ap_scan=1" "/vendor/etc/wifi/wpa_supplicant.conf" 2> /dev/null; then
-        VMS="Vendor: Success"
-    else
-        VMS="Vendor: Fail (No Meta)"
-    fi
-fi
-
-if command -v iw > /dev/null 2>&1; then
-    BMS="Binary: Success"
-else
-    BMS="Binary: Fail (No Meta)"
-fi
-
-su shell -c "cmd notification post -S bigtext -t 'VinNet' 'Mount Status' '$VMS | $BMS'" > /dev/null 2>&1
 
 LastMonitorSave=0
 
