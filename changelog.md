@@ -2,7 +2,53 @@
 
 ---
 
-## v1.1.5-Kurst - 2026-08-01 - Latest
+## v1.1.6-Gresde - 2026-08-08 - Latest
+
+### ✨Added
+- Simple logging system
+- `Change Wi-Fi Country Code` tweak to Web UI
+- `Enable Force LTE CA` tweak to Web UI
+- Runtime Vendor and Binary status to Web UI
+- Other additions
+
+### 🔄️Changed
+- Module version from `1.1.5-Kurst` to `1.1.6-Gresde`
+- Module version code from `20260801` to `20260808`
+- All image assets to WebP
+- Banner from dynamic to static
+- Web UI image loading to use preload
+- Web UI tweak rendering to use reusable templates
+- Web UI event handling and DOM lookup to use cached/delegated references
+- Web UI navigation and touch handling
+- Tweak state loading and synchronization
+- Other changes
+
+### 📈Improved
+- Web UI loading performance
+- Web UI navigation and touch responsiveness
+- Web UI DOM and event handling efficiency
+- Monitor rendering efficiency
+- Tweak rendering and state management
+- General code structure and refactoring
+
+### 🔧Fixed
+- Header logo and banner appearing late
+- Web UI becoming unresponsive after dragging the banner
+- Web UI freezing after additional touch input during swipe navigation
+- Unnecessary monitor DOM updates
+- Other fixes
+
+### 🔥Deleted
+- `system.prop`
+- `VinNet.jpg`
+- `Vinzz1234567890.png`
+- Legacy encoded installation script
+- Mount status notification
+- Other obsolete code
+
+---
+
+## v1.1.5-Kurst - 2026-08-01
 
 ### ✨Added
 - Dynamic rendering system for Web UI tweaks
