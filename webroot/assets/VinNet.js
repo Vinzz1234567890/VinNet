@@ -5,7 +5,7 @@ const Log = (Tag, Data) => {
     const Content = JSON.stringify(Data);
     if (LogCache.get(Tag) === Content) return;
     LogCache.set(Tag, Content);
-    exec(`grep -v "^\\[.*\\] ${Tag}:" ${LogPath} 2>/dev/null > ${LogPath}.tmp; echo "[$(date +%T)] ${Tag}: ${Content}" >> ${LogPath}.tmp; mv ${LogPath}.tmp ${LogPath}`).catch(() => {});
+    exec(`grep -v "^\\[.*\\] ${Tag}:" ${LogPath} 2>/dev/null > ${LogPath}.tmp; echo "[$(date +%T)] ${Tag}: ${Content}" >> ${LogPath}.tmp; mv ${LogPath}.tmp ${LogPath}`).catch(() => { });
 };
 let ProgrammaticScroll = false;
 
@@ -149,29 +149,29 @@ function Toast(Message) {
     SnackTimer = setTimeout(() => SnackElement.classList.remove('Show'), 2400);
 }
 
-function openExternal(url) {
-    exec(`am start -a android.intent.action.VIEW -d "${url}"`).catch(() => Toast('Unable to open link'));
+function OpenLink(URL) {
+    exec(`am start -a android.intent.action.VIEW -d "${URL}"`).catch(() => Toast('Unable to open link'));
     return false;
 }
 
-async function fetchJSON(path) {
+async function FetchJSON(Path) {
     try {
-        const res = await fetch(path, { cache: 'no-store' });
-        if (!res.ok) return null;
-        return await res.json();
+        const Response = await fetch(Path, { cache: 'no-store' });
+        if (!Response.ok) return null;
+        return await Response.json();
     } catch { return null; }
 }
 
-let cbCounter = 0;
+let CallbackCounter = 0;
 function exec(cmd) {
     return new Promise((resolve, reject) => {
         if (window.ksu && typeof ksu.exec === 'function') {
-            const cbName = `__exec_cb_${++cbCounter}`;
-            window[cbName] = (code, out, err) => {
-                delete window[cbName];
-                code === 0 ? resolve((out || '').trim()) : reject((err || '').trim());
+            const CallbackName = `__exec_cb_${++CallbackCounter}`;
+            window[CallbackName] = (Code, Output, Error) => {
+                delete window[CallbackName];
+                Code === 0 ? resolve((Output || '').trim()) : reject((Error || '').trim());
             };
-            try { ksu.exec(cmd, JSON.stringify({}), cbName); } catch (e) { delete window[cbName]; reject(String(e)); }
+            try { ksu.exec(cmd, JSON.stringify({}), CallbackName); } catch (e) { delete window[CallbackName]; reject(String(e)); }
         } else {
             const MOCK = {
                 'getprop ro.product.brand': '—',
@@ -181,13 +181,13 @@ function exec(cmd) {
                 'getprop ro.product.cpu.abi': '—',
             };
             if (MOCK[cmd] !== undefined) { resolve(MOCK[cmd]); return; }
-            if (cmd.startsWith('ping')) { resolve('—'); return; }
+            if (cmd.toLowerCase().startsWith('ping')) { resolve('—'); return; }
             resolve('');
         }
     });
 }
 
-const DEVICE_ROWS = [
+const Environment = [
     ['Brand', 'Brand', 'getprop ro.product.brand'],
     ['Model', 'Model', 'getprop ro.product.model'],
     ['Android', 'Android', 'getprop ro.build.version.release'],
@@ -196,48 +196,48 @@ const DEVICE_ROWS = [
     ['Root', 'Root', 'command -v ksud >/dev/null 2>&1 && echo KernelSU || (command -v apd >/dev/null 2>&1 && echo APatch || (command -v magisk >/dev/null 2>&1 && echo Magisk || echo Unknown))'],
 ];
 
-const RUNTIME_ROWS = [
+const VendorBinary = [
     ['Vendor', '[ "$(getprop ro.product.device)" = "fog" ] && { grep -q "VinNet" /vendor/etc/wifi/WCNSS_qcom_cfg.ini 2>/dev/null && grep -q "p2p_disabled=1" /vendor/etc/wifi/wpa_supplicant_overlay.conf 2>/dev/null && grep -q "ap_scan=1" /vendor/etc/wifi/wpa_supplicant.conf 2>/dev/null && echo Mounted || echo Unmounted; } || echo Unmounted'],
     ['Binary', 'command -v iw >/dev/null 2>&1 && echo Mounted || echo Unmounted'],
 ];
 
-async function loadEnvironment() {
-    const cached = await fetchJSON('Core/Environment.json');
-    Log('Environment', cached);
-    if (cached) {
+async function LoadEnvironment() {
+    const Cached = await FetchJSON('Core/Environment.json');
+    Log('Environment', Cached);
+    if (Cached) {
         requestAnimationFrame(() => {
-            for (const [id, key] of DEVICE_ROWS) document.getElementById(id).textContent = cached[key] || '—';
+            for (const [ID, Key] of Environment) document.getElementById(ID).textContent = Cached[Key] || '—';
         });
     } else {
-        const results = await Promise.all(DEVICE_ROWS.map(async ([id, , cmd]) => {
-            try { return [id, await exec(cmd) || '—']; } catch { return [id, '—']; }
+        const Results = await Promise.all(Environment.map(async ([ID, Key, CMD]) => {
+            try { return [ID, await exec(CMD) || '—']; } catch { return [ID, '—']; }
         }));
         requestAnimationFrame(() => {
-            for (const [id, text] of results) document.getElementById(id).textContent = text;
+            for (const [ID, text] of Results) document.getElementById(ID).textContent = text;
         });
     }
-    const runtimeResults = await Promise.all(RUNTIME_ROWS.map(async ([id, cmd]) => {
-        try { return [id, await exec(cmd) || '—']; } catch { return [id, '—']; }
+    const VendorBinaryResults = await Promise.all(VendorBinary.map(async ([ID, CMD]) => {
+        try { return [ID, await exec(CMD) || '—']; } catch { return [ID, '—']; }
     }));
     requestAnimationFrame(() => {
-        for (const [id, text] of runtimeResults) document.getElementById(id).textContent = text;
+        for (const [ID, Text] of VendorBinaryResults) document.getElementById(ID).textContent = Text;
     });
 }
 
-const META_ROWS = [
-    ['meta-id', 'ID'], ['meta-name', 'Name'],
-    ['meta-author', 'Author'], ['meta-desc', 'Description'],
+const Metadata = [
+    ['MetadataID', 'ID'], ['MetadataName', 'Name'],
+    ['MetadataAuthor', 'Author'], ['MetadataDescription', 'Description'],
 ];
 
 async function loadMetadata() {
-    const cached = await fetchJSON('Core/Metadata.json');
+    const cached = await FetchJSON('Core/Metadata.json');
     Log('Metadata', cached);
     if (!cached) return;
-    for (const [id, key] of META_ROWS) {
+    for (const [id, key] of Metadata) {
         const el = document.getElementById(id);
         if (el && cached[key]) el.textContent = cached[key];
     }
-    const vEl = document.getElementById('meta-version');
+    const vEl = document.getElementById('MetadataVersion');
     if (vEl && cached.Version) {
         vEl.textContent = cached.VersionCode ? `${cached.Version} (${cached.VersionCode})` : cached.Version;
     }
@@ -273,7 +273,7 @@ function sendDetect() {
 
 async function fetchMonitor() {
     sendDetect();
-    const cached = await fetchJSON('Core/Monitor.json');
+    const cached = await FetchJSON('Core/Monitor.json');
     Log('Monitor', cached);
     if (cached && cached.Latency != null) applyNetworkData(cached);
 }
@@ -281,7 +281,7 @@ async function fetchMonitor() {
 let procPidEl = null;
 
 async function loadProcess() {
-    const cached = await fetchJSON('Core/ProcessID.json');
+    const cached = await FetchJSON('Core/ProcessID.json');
     Log('ProcessID', cached);
     if (!procPidEl) {
         const bannerWrap = document.querySelector('#PageDashboard .BannerWrap');
@@ -417,7 +417,7 @@ const TWEAKS = {
 async function renderTweaks() {
     const container = document.getElementById('PageTweaks');
     const template = document.getElementById('TweakCardTemplate');
-    tweakState = await fetchJSON('Core/Tweaks.json') || {};
+    tweakState = await FetchJSON('Core/Tweaks.json') || {};
     Log('Tweaks', tweakState);
 
     container.replaceChildren();
@@ -450,7 +450,7 @@ document.addEventListener('click', e => {
     const link = e.target.closest('#PageInfo a[href]');
     if (link) {
         e.preventDefault();
-        openExternal(link.href);
+        OpenLink(link.href);
     }
 });
 
@@ -499,7 +499,7 @@ async function DecodeImage(ImageElement) {
 
 async function boot() {
     await Promise.allSettled([
-        loadEnvironment(),
+        LoadEnvironment(),
         fetchMonitor(),
         loadMetadata(),
         loadProcess(),
