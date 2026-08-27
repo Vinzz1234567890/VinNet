@@ -21,7 +21,6 @@ else
     SKIPMOUNT=false
 fi
 
-ui_print "──────────────────────────────────────────────"
 ui_print "- Checking Device Compatibility..."
 ui_print "- Brand: $(getprop ro.product.brand)"
 ui_print "- Model: $(getprop ro.product.model)"
@@ -37,7 +36,6 @@ else
     rm -rf "$MODPATH/system/vendor"
 fi
 
-ui_print "──────────────────────────────────────────────"
 ui_print "Checking Binary Dependencies..."
 
 Binary=true
@@ -56,14 +54,13 @@ if [ "$Binary" = "true" ]; then
     esac
 fi
 
-ui_print "──────────────────────────────────────────────"
 ui_print "- Credit: Vinzz"
 ui_print "- TikTok: @vinzz.fog"
 ui_print "- GitHub: @Vinzz1234567890"
-
-ui_print "──────────────────────────────────────────────"
-ui_print "- Setting Permissions..."
-set_perm "$MODPATH/system/bin/iw" 0 0 0755
+if [ "$Binary" = true ]; then
+    ui_print "- Setting Permissions..."
+    set_perm "$MODPATH/system/bin/iw" 0 0 0755
+fi
 ui_print "- Configurating Network..."
 ui_print "- Installing VinNet..."
 ui_print "──────────────────────────────────────────────"
