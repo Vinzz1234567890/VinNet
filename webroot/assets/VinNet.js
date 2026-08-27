@@ -501,7 +501,7 @@ async function boot() {
     await Promise.allSettled([
         LoadEnvironment(),
         fetchMonitor(),
-        loadMetadata(),
+        LoadMetadata(),
         loadProcess(),
         renderTweaks(),
         DecodeImage(document.querySelector('.HeaderLogo img')),
