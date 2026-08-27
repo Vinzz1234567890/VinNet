@@ -229,17 +229,17 @@ const Metadata = [
     ['MetadataAuthor', 'Author'], ['MetadataDescription', 'Description'],
 ];
 
-async function loadMetadata() {
-    const cached = await FetchJSON('Core/Metadata.json');
-    Log('Metadata', cached);
-    if (!cached) return;
-    for (const [id, key] of Metadata) {
-        const el = document.getElementById(id);
-        if (el && cached[key]) el.textContent = cached[key];
+async function LoadMetadata() {
+    const Cached = await FetchJSON('Core/Metadata.json');
+    Log('Metadata', Cached);
+    if (!Cached) return;
+    for (const [ID, Key] of Metadata) {
+        const Element = document.getElementById(ID);
+        if (Element && Cached[Key]) Element.textContent = Cached[Key];
     }
-    const vEl = document.getElementById('MetadataVersion');
-    if (vEl && cached.Version) {
-        vEl.textContent = cached.VersionCode ? `${cached.Version} (${cached.VersionCode})` : cached.Version;
+    const VersionElement = document.getElementById('MetadataVersion');
+    if (VersionElement && Cached.Version) {
+        VersionElement.textContent = Cached.VersionCode ? `${Cached.Version} (${Cached.VersionCode})` : Cached.Version;
     }
 }
 
