@@ -243,14 +243,14 @@ async function LoadMetadata() {
     }
 }
 
-const elCache = new Map();
-function getEl(id) {
-    if (!elCache.has(id)) elCache.set(id, document.getElementById(id));
-    return elCache.get(id);
+const ElementCache = new Map();
+function GetElement(ID) {
+    if (!ElementCache.has(ID)) ElementCache.set(ID, document.getElementById(ID));
+    return ElementCache.get(ID);
 }
 
 function setNetVal(id, val, colorFn) {
-    const el = getEl(id);
+    const el = GetElement(id);
     const next = (val == null || val === '—') ? '—' : val + ' ms';
     const changed = el.textContent !== next;
     if (changed) el.style.opacity = '0.3';
