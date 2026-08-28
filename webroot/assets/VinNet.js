@@ -249,22 +249,22 @@ function GetElement(ID) {
     return ElementCache.get(ID);
 }
 
-function setNetVal(id, val, colorFn) {
-    const el = GetElement(id);
-    const next = (val == null || val === '—') ? '—' : val + ' ms';
-    const changed = el.textContent !== next;
-    if (changed) el.style.opacity = '0.3';
-    el.textContent = next;
-    const nextColor = (val == null || val === '—') ? '' : colorFn(val);
-    if (el.style.color !== nextColor) el.style.color = nextColor;
-    if (changed) requestAnimationFrame(() => { el.style.opacity = '1'; });
+function SetNetworkValue(ID, Value, Color) {
+    const Element = GetElement(ID);
+    const Next = (Value == null || Value === '—') ? '—' : Value + ' ms';
+    const Changed = Element.textContent !== Next;
+    if (Changed) Element.style.opacity = '0.3';
+    Element.textContent = Next;
+    const NextColor = (Value == null || Value === '—') ? '' : Color(Value);
+    if (Element.style.color !== NextColor) Element.style.color = NextColor;
+    if (Changed) requestAnimationFrame(() => { Element.style.opacity = '1'; });
 }
 
 function applyNetworkData(data) {
     if (data.Latency === LastMonitor.Latency && data.Jitter === LastMonitor.Jitter) return;
     LastMonitor = { Latency: data.Latency, Jitter: data.Jitter };
-    setNetVal('Latency', data.Latency, LatencyColor);
-    setNetVal('Jitter', data.Jitter, JitterColor);
+    SetNetworkValue('Latency', data.Latency, LatencyColor);
+    SetNetworkValue('Jitter', data.Jitter, JitterColor);
 }
 
 function sendDetect() {
