@@ -249,7 +249,7 @@ function GetElement(ID) {
     return ElementCache.get(ID);
 }
 
-function SetNetworkValue(ID, Value, Color) {
+function SetMonitorValue(ID, Value, Color) {
     const Element = GetElement(ID);
     const Next = (Value == null || Value === '—') ? '—' : Value + ' ms';
     const Changed = Element.textContent !== Next;
@@ -260,22 +260,22 @@ function SetNetworkValue(ID, Value, Color) {
     if (Changed) requestAnimationFrame(() => { Element.style.opacity = '1'; });
 }
 
-function applyNetworkData(data) {
-    if (data.Latency === LastMonitor.Latency && data.Jitter === LastMonitor.Jitter) return;
-    LastMonitor = { Latency: data.Latency, Jitter: data.Jitter };
-    SetNetworkValue('Latency', data.Latency, LatencyColor);
-    SetNetworkValue('Jitter', data.Jitter, JitterColor);
+function ApplyMonitor(Data) {
+    if (Data.Latency === LastMonitor.Latency && Data.Jitter === LastMonitor.Jitter) return;
+    LastMonitor = { Latency: Data.Latency, Jitter: Data.Jitter };
+    SetMonitorValue('Latency', Data.Latency, LatencyColor);
+    SetMonitorValue('Jitter', Data.Jitter, JitterColor);
 }
 
-function sendDetect() {
+function Detect() {
     exec(`date +%s > ${Core}/Detect.txt`).catch(() => { });
 }
 
 async function fetchMonitor() {
-    sendDetect();
+    Detect();
     const cached = await FetchJSON('Core/Monitor.json');
     Log('Monitor', cached);
-    if (cached && cached.Latency != null) applyNetworkData(cached);
+    if (cached && cached.Latency != null) ApplyMonitor(cached);
 }
 
 let procPidEl = null;
@@ -317,7 +317,7 @@ document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
         stopLiveTicker();
     } else {
-        sendDetect();
+        Detect();
         startLiveTicker();
     }
 });
