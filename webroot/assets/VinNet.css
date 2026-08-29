@@ -566,7 +566,7 @@ img {
     letter-spacing: 0.3px;
 }
 
-.proc-overlay {
+.ProcessOverlay {
     position: absolute;
     bottom: 14px;
     left: 14px;
@@ -580,20 +580,20 @@ img {
     box-shadow: 0 4px 16px rgb(0 0 0 / 0.35);
 }
 
-.proc-label,
-.proc-value {
+.ProcessLabel,
+.ProcessValue {
     font-size: 11px;
     font-weight: 700;
     color: rgb(255 255 255 / 0.5);
     line-height: 1;
 }
 
-.proc-label {
+.ProcessLabel {
     letter-spacing: 0.8px;
     text-transform: uppercase;
 }
 
-.proc-value {
+.ProcessValue {
     font-variant-numeric: tabular-nums;
     letter-spacing: 0.5px;
     transition: opacity 0.15s;
