@@ -67,7 +67,7 @@ function SetActivePage(ID) {
             if (TableSubordinate) TableSubordinate.textContent = Meta.Description;
         }
         if (ID === 'Dashboard') {
-            loadProcess();
+            LoadProcessID();
         }
     }, 100);
 }
@@ -271,31 +271,31 @@ function Detect() {
     exec(`date +%s > ${Core}/Detect.txt`).catch(() => { });
 }
 
-async function fetchMonitor() {
+async function FetchMonitor() {
     Detect();
-    const cached = await FetchJSON('Core/Monitor.json');
-    Log('Monitor', cached);
-    if (cached && cached.Latency != null) ApplyMonitor(cached);
+    const Cached = await FetchJSON('Core/Monitor.json');
+    Log('Monitor', Cached);
+    if (Cached && Cached.Latency != null) ApplyMonitor(Cached);
 }
 
-let procPidEl = null;
+let ProcessID = null;
 
-async function loadProcess() {
-    const cached = await FetchJSON('Core/ProcessID.json');
-    Log('ProcessID', cached);
-    if (!procPidEl) {
-        const bannerWrap = document.querySelector('#PageDashboard .BannerWrap');
-        if (!bannerWrap) return;
-        let overlay = bannerWrap.querySelector('.proc-overlay');
-        if (!overlay) {
-            overlay = document.createElement('div');
-            overlay.className = 'proc-overlay';
-            overlay.innerHTML = `<span class="proc-label">PID</span><span class="proc-value" id="proc-pid">—</span>`;
-            bannerWrap.appendChild(overlay);
+async function LoadProcessID() {
+    const Cached = await FetchJSON('Core/ProcessID.json');
+    Log('ProcessID', Cached);
+    if (!ProcessID) {
+        const BannerWrap = document.querySelector('#PageDashboard .BannerWrap');
+        if (!BannerWrap) return;
+        let Overlay = BannerWrap.querySelector('.ProcessOverlay');
+        if (!Overlay) {
+            Overlay = document.createElement('div');
+            Overlay.className = 'ProcessOverlay';
+            Overlay.innerHTML = `<span class="ProcessLabel">PID</span><span class="ProcessValue" id="ProcessID">—</span>`;
+            BannerWrap.appendChild(Overlay);
         }
-        procPidEl = overlay.querySelector('#proc-pid');
+        ProcessID = Overlay.querySelector('#ProcessID');
     }
-    if (cached && cached.PID != null) procPidEl.textContent = cached.PID;
+    if (Cached && Cached.PID != null) ProcessID.textContent = Cached.PID;
 }
 
 let tweakState = null;
@@ -303,7 +303,7 @@ let tweakState = null;
 let liveTickInterval = null;
 function startLiveTicker() {
     if (liveTickInterval) return;
-    liveTickInterval = setInterval(fetchMonitor, 4000);
+    liveTickInterval = setInterval(FetchMonitor, 4000);
 }
 
 function stopLiveTicker() {
@@ -500,9 +500,9 @@ async function DecodeImage(ImageElement) {
 async function boot() {
     await Promise.allSettled([
         LoadEnvironment(),
-        fetchMonitor(),
+        FetchMonitor(),
         LoadMetadata(),
-        loadProcess(),
+        LoadProcessID(),
         renderTweaks(),
         DecodeImage(document.querySelector('.HeaderLogo img')),
         DecodeImage(document.querySelector('.Banner')),
