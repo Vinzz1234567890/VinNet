@@ -298,143 +298,143 @@ async function LoadProcessID() {
     if (Cached && Cached.PID != null) ProcessID.textContent = Cached.PID;
 }
 
-let tweakState = null;
+let TweakState = null;
 
-let liveTickInterval = null;
-function startLiveTicker() {
-    if (liveTickInterval) return;
-    liveTickInterval = setInterval(FetchMonitor, 4000);
+let LiveTickInterval = null;
+function StartLiveTicker() {
+    if (LiveTickInterval) return;
+    LiveTickInterval = setInterval(FetchMonitor, 4000);
 }
 
-function stopLiveTicker() {
-    if (liveTickInterval) {
-        clearInterval(liveTickInterval);
-        liveTickInterval = null;
+function StopLiveTicker() {
+    if (LiveTickInterval) {
+        clearInterval(LiveTickInterval);
+        LiveTickInterval = null;
     }
 }
 
 document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
-        stopLiveTicker();
+        StopLiveTicker();
     } else {
         Detect();
-        startLiveTicker();
+        StartLiveTicker();
     }
 });
 
-const TWEAKS = {
+const Tweaks = {
     "IP Reach Disconnect": {
-        label: 'Disable IP Reach Disconnect',
-        icon: 'Monitor,IPReachDisconnect',
-        desc: 'Preventing Wi-Fi from suddenly disconnecting when network is unstable.',
-        onCmd: 'cmd wifi set-ipreach-disconnect disabled',
-        offCmd: 'cmd wifi set-ipreach-disconnect enabled',
-        onLabel: 'Disabled', offLabel: 'Enabled',
+        Label: 'Disable IP Reach Disconnect',
+        Icon: 'Monitor,IPReachDisconnect',
+        Description: 'Preventing Wi-Fi from suddenly disconnecting when network is unstable.',
+        ONCommand: 'cmd wifi set-ipreach-disconnect disabled',
+        OFFCommand: 'cmd wifi set-ipreach-disconnect enabled',
+        ONLabel: 'Disabled', OFFLabel: 'Enabled',
     },
     "Scan Always Available": {
-        label: 'Disable Scan Always Available',
-        icon: 'ScanAlwaysAvailable',
-        desc: 'Reduces jitter, especially when playing over Wi-Fi connection.',
-        warn: 'May cause location services to not function properly',
-        onCmd: 'cmd wifi set-scan-always-available disabled ; settings put global wifi_scan_always_enabled 0',
-        offCmd: 'cmd wifi set-scan-always-available enabled ; settings put global wifi_scan_always_enabled 1',
-        onLabel: 'Disabled', offLabel: 'Enabled',
+        Label: 'Disable Scan Always Available',
+        Icon: 'ScanAlwaysAvailable',
+        Description: 'Reduces jitter, especially when playing over Wi-Fi connection.',
+        Warn: 'May cause location services to not function properly',
+        ONCommand: 'cmd wifi set-scan-always-available disabled ; settings put global wifi_scan_always_enabled 0',
+        OFFCommand: 'cmd wifi set-scan-always-available enabled ; settings put global wifi_scan_always_enabled 1',
+        ONLabel: 'Disabled', OFFLabel: 'Enabled',
     },
     "Restrict Background": {
-        label: 'Disable Restrict Background',
-        icon: 'RestrictBackground',
-        desc: 'Maintain ping stability and prevent jitter.',
-        onCmd: 'cmd netpolicy set restrict-background false',
-        offCmd: 'cmd netpolicy set restrict-background true',
-        onLabel: 'Disabled', offLabel: 'Enabled',
+        Label: 'Disable Restrict Background',
+        Icon: 'RestrictBackground',
+        Description: 'Maintain ping stability and prevent jitter.',
+        ONCommand: 'cmd netpolicy set restrict-background false',
+        OFFCommand: 'cmd netpolicy set restrict-background true',
+        ONLabel: 'Disabled', OFFLabel: 'Enabled',
     },
     "Power Save": {
-        label: 'Disable Power Save',
-        icon: 'PowerSave',
-        desc: 'Eliminate jitter and maintain stable ping while gaming over Wi-Fi connection.',
-        onCmd: 'iw dev wlan0 set power_save off',
-        offCmd: 'iw dev wlan0 set power_save on',
-        onLabel: 'Disabled', offLabel: 'Enabled',
+        Label: 'Disable Power Save',
+        Icon: 'PowerSave',
+        Description: 'Eliminate jitter and maintain stable ping while gaming over Wi-Fi connection.',
+        ONCommand: 'iw dev wlan0 set power_save off',
+        OFFCommand: 'iw dev wlan0 set power_save on',
+        ONLabel: 'Disabled', OFFLabel: 'Enabled',
     },
     "QDISC": {
-        label: 'Optimize QDISC',
-        icon: 'QDISC',
-        desc: 'Split data traffic into multiple paths and prioritize small data packets so they aren\'t held up by large data packets.',
-        onCmd: 'tc qdisc replace dev wlan0 root fq_codel quantum 300 noecn ; tc qdisc replace dev rmnet_data0 root fq_codel quantum 300 noecn ; tc qdisc replace dev rmnet_ipa0 root fq_codel quantum 300 noecn',
-        offCmd: 'tc qdisc replace dev wlan0 root pfifo_fast ; tc qdisc replace dev rmnet_data0 root pfifo_fast ; tc qdisc replace dev rmnet_ipa0 root pfifo_fast',
-        onLabel: 'Optimized', offLabel: 'Unoptimized',
+        Label: 'Optimize QDISC',
+        Icon: 'QDISC',
+        Description: 'Split data traffic into multiple paths and prioritize small data packets so they aren\'t held up by large data packets.',
+        ONCommand: 'tc qdisc replace dev wlan0 root fq_codel quantum 300 noecn ; tc qdisc replace dev rmnet_data0 root fq_codel quantum 300 noecn ; tc qdisc replace dev rmnet_ipa0 root fq_codel quantum 300 noecn',
+        OFFCommand: 'tc qdisc replace dev wlan0 root pfifo_fast ; tc qdisc replace dev rmnet_data0 root pfifo_fast ; tc qdisc replace dev rmnet_ipa0 root pfifo_fast',
+        ONLabel: 'Optimized', OFFLabel: 'Unoptimized',
     },
     "Wi-Fi Force Low Latency Mode": {
-        label: 'Enable Wi-Fi Force Low Latency Mode',
-        icon: 'Wi-FiForceLowLatencyMode',
-        desc: 'Force Android to enable built-in low-latency mode at system level.',
-        onCmd: 'cmd wifi force-low-latency-mode enabled ; cmd wifi force-hi-perf-mode enabled',
-        offCmd: 'cmd wifi force-low-latency-mode disabled ; cmd wifi force-hi-perf-mode disabled',
-        onLabel: 'Enabled', offLabel: 'Disabled',
+        Label: 'Enable Wi-Fi Force Low Latency Mode',
+        Icon: 'Wi-FiForceLowLatencyMode',
+        Description: 'Force Android to enable built-in low-latency mode at system level.',
+        ONCommand: 'cmd wifi force-low-latency-mode enabled ; cmd wifi force-hi-perf-mode enabled',
+        OFFCommand: 'cmd wifi force-low-latency-mode disabled ; cmd wifi force-hi-perf-mode disabled',
+        ONLabel: 'Enabled', OFFLabel: 'Disabled',
     },
     "Network Avoid Bad Wi-Fi": {
-        label: 'Disable Network Avoid Bad Wi-Fi',
-        icon: 'NetworkAvoidBadWi-Fi',
-        desc: 'Forces system to stay connected to Wi-Fi interface even if signal quality deteriorates.',
-        onCmd: 'settings put global network_avoid_bad_wifi 0',
-        offCmd: 'settings put global network_avoid_bad_wifi 1',
-        onLabel: 'Disabled', offLabel: 'Enabled',
+        Label: 'Disable Network Avoid Bad Wi-Fi',
+        Icon: 'NetworkAvoidBadWi-Fi',
+        Description: 'Forces system to stay connected to Wi-Fi interface even if signal quality deteriorates.',
+        ONCommand: 'settings put global network_avoid_bad_wifi 0',
+        OFFCommand: 'settings put global network_avoid_bad_wifi 1',
+        ONLabel: 'Disabled', OFFLabel: 'Enabled',
     },
     "BLE Scan Always Enabled": {
-        label: 'Disable BLE Scan Always Enabled',
-        icon: 'BLEScanAlwaysEnabled',
-        desc: 'Minimize jitter and ping spikes when gaming over 2.4 GHz Wi-Fi network.',
-        onCmd: 'settings put global ble_scan_always_enabled 0',
-        offCmd: 'settings put global ble_scan_always_enabled 1',
-        onLabel: 'Disabled', offLabel: 'Enabled',
+        Label: 'Disable BLE Scan Always Enabled',
+        Icon: 'BLEScanAlwaysEnabled',
+        Description: 'Minimize jitter and ping spikes when gaming over 2.4 GHz Wi-Fi network.',
+        ONCommand: 'settings put global ble_scan_always_enabled 0',
+        OFFCommand: 'settings put global ble_scan_always_enabled 1',
+        ONLabel: 'Disabled', OFFLabel: 'Enabled',
     },
     "Mobile Data Always ON": {
-        label: 'Disable Mobile Data Always ON',
-        icon: 'MobileDataAlwaysON',
-        desc: 'Disable functions that are likely to disrupt transmission stability.',
-        onCmd: 'settings put global mobile_data_always_on 0',
-        offCmd: 'settings put global mobile_data_always_on 1',
-        onLabel: 'Disabled', offLabel: 'Enabled',
+        Label: 'Disable Mobile Data Always ON',
+        Icon: 'MobileDataAlwaysON',
+        Description: 'Disable functions that are likely to disrupt transmission stability.',
+        ONCommand: 'settings put global mobile_data_always_on 0',
+        OFFCommand: 'settings put global mobile_data_always_on 1',
+        ONLabel: 'Disabled', OFFLabel: 'Enabled',
     },
     "Wi-Fi Country Code": {
-        label: 'Change Wi-Fi Country Code',
-        icon: 'Wi-FiCountryCode',
-        desc: 'Change country code to “US” to bypass certain restrictions on Wi-Fi.',
-        onCmd: 'resetprop ro.boot.wificountrycode US',
-        offCmd: 'resetprop ro.boot.wificountrycode 00',
-        onLabel: 'Changed', offLabel: 'Unchanged',
+        Label: 'Change Wi-Fi Country Code',
+        Icon: 'Wi-FiCountryCode',
+        Description: 'Change country code to “US” to bypass certain restrictions on Wi-Fi.',
+        ONCommand: 'resetprop ro.boot.wificountrycode US',
+        OFFCommand: 'resetprop ro.boot.wificountrycode 00',
+        ONLabel: 'Changed', OFFLabel: 'Unchanged',
     },
     "Force LTE CA": {
-        label: 'Enable Force LTE CA',
-        icon: 'ForceLTECA',
-        desc: 'Combines two or more cellular frequency bands simultaneously, resulting in significantly faster internet speeds and more stable connection on 4G or 4G+ networks.',
-        onCmd: 'resetprop -p persist.sys.radio.force_lte_ca true',
-        offCmd: 'resetprop -p persist.sys.radio.force_lte_ca false',
-        onLabel: 'Enabled', offLabel: 'Disabled',
+        Label: 'Enable Force LTE CA',
+        Icon: 'ForceLTECA',
+        Description: 'Combines two or more cellular frequency bands simultaneously, resulting in significantly faster internet speeds and more stable connection on 4G or 4G+ networks.',
+        ONCommand: 'resetprop -p persist.sys.radio.force_lte_ca true',
+        OFFCommand: 'resetprop -p persist.sys.radio.force_lte_ca false',
+        ONLabel: 'Enabled', OFFLabel: 'Disabled',
     },
 };
 
 async function renderTweaks() {
     const container = document.getElementById('PageTweaks');
     const template = document.getElementById('TweakCardTemplate');
-    tweakState = await FetchJSON('Core/Tweaks.json') || {};
-    Log('Tweaks', tweakState);
+    TweakState = await FetchJSON('Core/Tweaks.json') || {};
+    Log('Tweaks', TweakState);
 
     container.replaceChildren();
-    for (const [id, t] of Object.entries(TWEAKS)) {
+    for (const [id, t] of Object.entries(Tweaks)) {
         const card = template.content.cloneNode(true);
-        card.querySelector('.TweakIcon use').setAttribute('href', '#' + t.icon);
-        card.querySelector('.TweakName').textContent = t.label || id;
-        card.querySelector('.TweakDescription').textContent = t.desc;
-        if (t.warn) {
+        card.querySelector('.TweakIcon use').setAttribute('href', '#' + t.Icon);
+        card.querySelector('.TweakName').textContent = t.Label || id;
+        card.querySelector('.TweakDescription').textContent = t.Description;
+        if (t.Warn) {
             const w = document.createElement('div');
             w.className = 'TweakWarn';
-            w.textContent = t.warn;
+            w.textContent = t.Warn;
             card.querySelector('.TweakBody').appendChild(w);
         }
         const input = card.querySelector('input');
         input.id = 'tw-' + id;
-        input.checked = tweakState[id] === 'on';
+        input.checked = TweakState[id] === 'on';
         input.dataset.tweakId = id;
         container.appendChild(card);
     }
@@ -457,23 +457,23 @@ document.addEventListener('click', e => {
 let tweakQueue = Promise.resolve();
 
 async function applyTweak(id, enabled) {
-    const t = TWEAKS[id];
+    const t = Tweaks[id];
     if (!t) return;
     const el = document.getElementById('tw-' + id);
     el.disabled = true;
     tweakQueue = tweakQueue.then(async () => {
         try {
-            await exec(enabled ? t.onCmd : t.offCmd);
-            if (!tweakState) tweakState = {};
-            tweakState[id] = enabled ? 'on' : 'off';
+            await exec(enabled ? t.ONCommand : t.OFFCommand);
+            if (!TweakState) TweakState = {};
+            TweakState[id] = enabled ? 'on' : 'off';
             const val = enabled ? 'on' : 'off';
-            const json = JSON.stringify(tweakState).replace(/"/g, '\\"');
+            const json = JSON.stringify(TweakState).replace(/"/g, '\\"');
             await Promise.all([
                 exec(`echo "${json}" > ${Core}/Tweaks.json`),
                 exec(`grep -v "^${id}=" ${Core}/VinNet.conf 2>/dev/null > ${Core}/VinNet.conf.tmp; echo "${id}=${val}" >> ${Core}/VinNet.conf.tmp; mv ${Core}/VinNet.conf.tmp ${Core}/VinNet.conf`),
             ]);
-            Log('Tweaks', tweakState);
-            Toast(`${t.label || id} > ${enabled ? t.onLabel : t.offLabel}`);
+            Log('Tweaks', TweakState);
+            Toast(`${t.Label || id} > ${enabled ? t.ONLabel : t.OFFLabel}`);
         } catch {
             Toast('Unable to apply tweak');
             el.checked = !enabled;
