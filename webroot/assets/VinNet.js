@@ -414,29 +414,29 @@ const Tweaks = {
     },
 };
 
-async function renderTweaks() {
-    const container = document.getElementById('PageTweaks');
-    const template = document.getElementById('TweakCardTemplate');
+async function RenderTweaks() {
+    const Container = document.getElementById('PageTweaks');
+    const Template = document.getElementById('TweakCardTemplate');
     TweakState = await FetchJSON('Core/Tweaks.json') || {};
     Log('Tweaks', TweakState);
 
-    container.replaceChildren();
-    for (const [id, t] of Object.entries(Tweaks)) {
-        const card = template.content.cloneNode(true);
-        card.querySelector('.TweakIcon use').setAttribute('href', '#' + t.Icon);
-        card.querySelector('.TweakName').textContent = t.Label || id;
-        card.querySelector('.TweakDescription').textContent = t.Description;
-        if (t.Warn) {
-            const w = document.createElement('div');
-            w.className = 'TweakWarn';
-            w.textContent = t.Warn;
-            card.querySelector('.TweakBody').appendChild(w);
+    Container.replaceChildren();
+    for (const [ID, Tweak] of Object.entries(Tweaks)) {
+        const Card = Template.content.cloneNode(true);
+        Card.querySelector('.TweakIcon use').setAttribute('href', '#' + Tweak.Icon);
+        Card.querySelector('.TweakName').textContent = Tweak.Label || ID;
+        Card.querySelector('.TweakDescription').textContent = Tweak.Description;
+        if (Tweak.Warn) {
+            const Warn = document.createElement('div');
+            Warn.className = 'TweakWarn';
+            Warn.textContent = Tweak.Warn;
+            Card.querySelector('.TweakBody').appendChild(Warn);
         }
-        const input = card.querySelector('input');
-        input.id = 'tw-' + id;
-        input.checked = TweakState[id] === 'on';
-        input.dataset.tweakId = id;
-        container.appendChild(card);
+        const Input = Card.querySelector('Input');
+        Input.id = 'Tweak-' + ID;
+        Input.checked = TweakState[ID] === 'on';
+        Input.dataset.tweakId = ID;
+        Container.appendChild(Card);
     }
 }
 
@@ -456,24 +456,24 @@ document.addEventListener('click', e => {
 
 let tweakQueue = Promise.resolve();
 
-async function applyTweak(id, enabled) {
-    const t = Tweaks[id];
+async function applyTweak(ID, enabled) {
+    const t = Tweaks[ID];
     if (!t) return;
-    const el = document.getElementById('tw-' + id);
+    const el = document.getElementById('Tweak-' + ID);
     el.disabled = true;
     tweakQueue = tweakQueue.then(async () => {
         try {
             await exec(enabled ? t.ONCommand : t.OFFCommand);
             if (!TweakState) TweakState = {};
-            TweakState[id] = enabled ? 'on' : 'off';
+            TweakState[ID] = enabled ? 'on' : 'off';
             const val = enabled ? 'on' : 'off';
             const json = JSON.stringify(TweakState).replace(/"/g, '\\"');
             await Promise.all([
                 exec(`echo "${json}" > ${Core}/Tweaks.json`),
-                exec(`grep -v "^${id}=" ${Core}/VinNet.conf 2>/dev/null > ${Core}/VinNet.conf.tmp; echo "${id}=${val}" >> ${Core}/VinNet.conf.tmp; mv ${Core}/VinNet.conf.tmp ${Core}/VinNet.conf`),
+                exec(`grep -v "^${ID}=" ${Core}/VinNet.conf 2>/dev/null > ${Core}/VinNet.conf.tmp; echo "${ID}=${val}" >> ${Core}/VinNet.conf.tmp; mv ${Core}/VinNet.conf.tmp ${Core}/VinNet.conf`),
             ]);
             Log('Tweaks', TweakState);
-            Toast(`${t.Label || id} > ${enabled ? t.ONLabel : t.OFFLabel}`);
+            Toast(`${t.Label || ID} > ${enabled ? t.ONLabel : t.OFFLabel}`);
         } catch {
             Toast('Unable to apply tweak');
             el.checked = !enabled;
@@ -503,7 +503,7 @@ async function boot() {
         FetchMonitor(),
         LoadMetadata(),
         LoadProcessID(),
-        renderTweaks(),
+        RenderTweaks(),
         DecodeImage(document.querySelector('.HeaderLogo img')),
         DecodeImage(document.querySelector('.Banner')),
         new Promise(r => setTimeout(r, 300)),
