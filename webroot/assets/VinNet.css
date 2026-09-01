@@ -202,7 +202,8 @@ img {
     pointer-events: none;
 }
 
-.NavigationBar, .NavigationBarActive {
+.NavigationBar,
+.NavigationBarActive {
     flex: 1;
     display: flex;
     flex-direction: column;
@@ -212,11 +213,13 @@ img {
     transition: transform 0.15s;
 }
 
-.NavigationBar:active, .NavigationBarActive:active {
+.NavigationBar:active,
+.NavigationBarActive:active {
     transform: scale(0.94);
 }
 
-.NavigationBar svg, .NavigationBarActive svg {
+.NavigationBar svg,
+.NavigationBarActive svg {
     width: 22px;
     height: 22px;
     fill: var(--on-surf-var);
@@ -254,9 +257,34 @@ img {
 }
 
 .Banner {
+    position: absolute;
+    inset: 0;
     width: 100%;
     height: 100%;
     object-fit: cover;
+    opacity: 0;
+    animation: BannerCrossfade 10.6s infinite;
+}
+
+.Banner:nth-of-type(2) {
+    animation-delay: -5.3s;
+}
+
+@keyframes BannerCrossfade {
+
+    0%,
+    47.2% {
+        opacity: 1;
+    }
+
+    50%,
+    97.2% {
+        opacity: 0;
+    }
+
+    100% {
+        opacity: 1;
+    }
 }
 
 .Card {
