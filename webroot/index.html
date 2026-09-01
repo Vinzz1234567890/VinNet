@@ -9,7 +9,8 @@
     <title>VinNet</title>
     <link rel="preload" href="assets/GoogleSansFlex.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="preload" href="assets/VinNet.webp" as="image" type="image/webp">
-    <link rel="preload" href="assets/VinNetBanner.webp" as="image" type="image/webp">
+    <link rel="preload" href="assets/VinNetBanner1.webp" as="image" type="image/webp">
+    <link rel="preload" href="assets/VinNetBanner2.webp" as="image" type="image/webp">
     <link rel="stylesheet" href="assets/VinNet.css">
 </head>
 
@@ -91,14 +92,18 @@
     <template id="TweakCardTemplate">
         <div class="Card">
             <div class="Tweak">
-                <svg class="TweakIcon" viewBox="0 0 24 24"><use href=""></use></svg>
+                <svg class="TweakIcon" viewBox="0 0 24 24">
+                    <use href=""></use>
+                </svg>
                 <div class="TweakBody">
                     <div class="TweakName"></div>
                     <div class="TweakDescription"></div>
                 </div>
                 <label class="Switch">
                     <input type="checkbox">
-                    <div class="SwitchTrack"><div class="SwitchThumb"></div></div>
+                    <div class="SwitchTrack">
+                        <div class="SwitchThumb"></div>
+                    </div>
                 </label>
             </div>
         </div>
@@ -112,7 +117,8 @@
     <div id="WebUI">
         <div class="Header">
             <div class="HeaderLogo">
-                <img src="assets/VinNet.webp" alt="VinNet Logo" width="50" height="50" decoding="sync" draggable="false">
+                <img src="assets/VinNet.webp" alt="VinNet Logo" width="50" height="50" decoding="sync"
+                    draggable="false">
             </div>
             <div class="HeaderText">
                 <div class="HeaderTitle">VinNet</div>
@@ -123,8 +129,10 @@
         <div class="Pages">
             <div class="ActivePage" id="PageDashboard">
                 <div class="BannerWrap">
-                    <img src="assets/VinNetBanner.webp" alt="VinNet Banner" class="Banner" width="508" height="152"
-                        decoding="sync" fetchpriority="high" draggable="false">
+                    <img src="assets/VinNetBanner1.webp" alt="VinNet Banner" class="Banner" width="508" height="152" decoding="sync"
+                        fetchpriority="high" draggable="false">
+                    <img src="assets/VinNetBanner2.webp" alt="VinNet Banner" class="Banner" width="508" height="152" decoding="async"
+                        fetchpriority="low" draggable="false">
                 </div>
                 <div class="Card">
                     <div class="CardLabel">
@@ -133,8 +141,10 @@
                         </svg>
                         Monitor
                     </div>
-                    <div class="IndexRow"><span class="IndexRowlabel">Latency</span><span class="IndexRowValue" id="Latency">—</span></div>
-                    <div class="IndexRow"><span class="IndexRowlabel">Jitter</span><span class="IndexRowValue" id="Jitter">—</span></div>
+                    <div class="IndexRow"><span class="IndexRowlabel">Latency</span><span class="IndexRowValue"
+                            id="Latency">—</span></div>
+                    <div class="IndexRow"><span class="IndexRowlabel">Jitter</span><span class="IndexRowValue"
+                            id="Jitter">—</span></div>
                 </div>
                 <div class="Card">
                     <div class="CardLabel">
@@ -143,17 +153,25 @@
                         </svg>
                         Environment
                     </div>
-                    <div class="IndexRow"><span class="IndexRowlabel">Brand</span><span class="IndexRowValue" id="Brand">—</span></div>
-                    <div class="IndexRow"><span class="IndexRowlabel">Model</span><span class="IndexRowValue" id="Model">—</span></div>
-                    <div class="IndexRow"><span class="IndexRowlabel">Android</span><span class="IndexRowValue" id="Android">—</span>
+                    <div class="IndexRow"><span class="IndexRowlabel">Brand</span><span class="IndexRowValue"
+                            id="Brand">—</span></div>
+                    <div class="IndexRow"><span class="IndexRowlabel">Model</span><span class="IndexRowValue"
+                            id="Model">—</span></div>
+                    <div class="IndexRow"><span class="IndexRowlabel">Android</span><span class="IndexRowValue"
+                            id="Android">—</span>
                     </div>
-                    <div class="IndexRow"><span class="IndexRowlabel">Kernel</span><span class="IndexRowValue" id="Kernel">—</span>
+                    <div class="IndexRow"><span class="IndexRowlabel">Kernel</span><span class="IndexRowValue"
+                            id="Kernel">—</span>
                     </div>
-                    <div class="IndexRow"><span class="IndexRowlabel">Architecture</span><span class="IndexRowValue" id="Architecture">—</span>
+                    <div class="IndexRow"><span class="IndexRowlabel">Architecture</span><span class="IndexRowValue"
+                            id="Architecture">—</span>
                     </div>
-                    <div class="IndexRow"><span class="IndexRowlabel">Root</span><span class="IndexRowValue" id="Root">—</span></div>
-                    <div class="IndexRow"><span class="IndexRowlabel">Vendor</span><span class="IndexRowValue" id="Vendor">—</span></div>
-                    <div class="IndexRow"><span class="IndexRowlabel">Binary</span><span class="IndexRowValue" id="Binary">—</span></div>
+                    <div class="IndexRow"><span class="IndexRowlabel">Root</span><span class="IndexRowValue"
+                            id="Root">—</span></div>
+                    <div class="IndexRow"><span class="IndexRowlabel">Vendor</span><span class="IndexRowValue"
+                            id="Vendor">—</span></div>
+                    <div class="IndexRow"><span class="IndexRowlabel">Binary</span><span class="IndexRowValue"
+                            id="Binary">—</span></div>
                 </div>
             </div>
 
@@ -162,46 +180,67 @@
             <div class="Page" id="PageInfo">
                 <div class="Card">
                     <div class="CardLabel">
-                        <svg viewBox="0 0 24 24"><use href="#Metadata"/></svg>
+                        <svg viewBox="0 0 24 24">
+                            <use href="#Metadata" />
+                        </svg>
                         Metadata
                     </div>
-                    <div class="IndexRow"><span class="IndexRowlabel">ID</span><span class="IndexRowValue" id="MetadataID">—</span></div>
-                    <div class="IndexRow"><span class="IndexRowlabel">Name</span><span class="IndexRowValue" id="MetadataName">—</span></div>
-                    <div class="IndexRow"><span class="IndexRowlabel">Version</span><span class="IndexRowValue" id="MetadataVersion">—</span></div>
-                    <div class="IndexRow"><span class="IndexRowlabel">Author</span><span class="IndexRowValue" id="MetadataAuthor">—</span></div>
-                    <div class="IndexRow"><span class="IndexRowlabel">Description</span><span class="IndexRowValue" id="MetadataDescription">—</span></div>
+                    <div class="IndexRow"><span class="IndexRowlabel">ID</span><span class="IndexRowValue"
+                            id="MetadataID">—</span></div>
+                    <div class="IndexRow"><span class="IndexRowlabel">Name</span><span class="IndexRowValue"
+                            id="MetadataName">—</span></div>
+                    <div class="IndexRow"><span class="IndexRowlabel">Version</span><span class="IndexRowValue"
+                            id="MetadataVersion">—</span></div>
+                    <div class="IndexRow"><span class="IndexRowlabel">Author</span><span class="IndexRowValue"
+                            id="MetadataAuthor">—</span></div>
+                    <div class="IndexRow"><span class="IndexRowlabel">Description</span><span class="IndexRowValue"
+                            id="MetadataDescription">—</span></div>
                 </div>
                 <div class="Card">
                     <div class="CardLabel">
-                        <svg viewBox="0 0 24 24"><use href="#Links"/></svg>
+                        <svg viewBox="0 0 24 24">
+                            <use href="#Links" />
+                        </svg>
                         Links
                     </div>
                     <div class="IndexRow">
                         <span class="IndexRowlabel">Repository</span>
                         <a class="ir-link" href="https://github.com/Vinzz1234567890/VinNet">
-                            <svg viewBox="0 0 24 24" width="14" height="14" class="ir-icon-github"><use href="#Repository"></use></svg>
+                            <svg viewBox="0 0 24 24" width="14" height="14" class="ir-icon-github">
+                                <use href="#Repository"></use>
+                            </svg>
                             Vinnet
-                            <svg viewBox="0 0 24 24" width="14" height="14" class="ir-chevron"><use href="#Chevron"></use></svg>
+                            <svg viewBox="0 0 24 24" width="14" height="14" class="ir-chevron">
+                                <use href="#Chevron"></use>
+                            </svg>
                         </a>
                     </div>
                     <div class="IndexRow">
                         <span class="IndexRowlabel">Telegram</span>
                         <a class="ir-link" href="https://t.me/VinzzRepository">
-                            <svg viewBox="0 0 24 24" width="14" height="14" class="ir-icon-telegram"><use href="#Telegram"></use></svg>
+                            <svg viewBox="0 0 24 24" width="14" height="14" class="ir-icon-telegram">
+                                <use href="#Telegram"></use>
+                            </svg>
                             Vinzz Repository
-                            <svg viewBox="0 0 24 24" width="14" height="14" class="ir-chevron"><use href="#Chevron"></use></svg>
+                            <svg viewBox="0 0 24 24" width="14" height="14" class="ir-chevron">
+                                <use href="#Chevron"></use>
+                            </svg>
                         </a>
                     </div>
                 </div>
                 <div class="Card">
                     <div class="CardLabel">
-                        <svg viewBox="0 0 24 24"><use href="#Contributors"/></svg>
+                        <svg viewBox="0 0 24 24">
+                            <use href="#Contributors" />
+                        </svg>
                         Contributors
                     </div>
                     <div class="IndexRow">
                         <span class="IndexRowlabel">Developer</span>
                         <a class="chip" href="https://github.com/Vinzz1234567890">
-                            <img src="https://avatars.githubusercontent.com/Vinzz1234567890?v=4&s=72" class="chip-avatar" alt="Vinzz Avatar" width="18" height="18" loading="lazy" decoding="async" onerror="this.remove()" draggable="false">
+                            <img src="https://avatars.githubusercontent.com/Vinzz1234567890?v=4&s=72"
+                                class="chip-avatar" alt="Vinzz Avatar" width="18" height="18" loading="lazy"
+                                decoding="async" onerror="this.remove()" draggable="false">
                             Vinzz
                         </a>
                     </div>
