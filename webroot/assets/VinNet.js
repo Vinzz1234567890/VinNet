@@ -505,7 +505,7 @@ async function boot() {
         LoadProcessID(),
         RenderTweaks(),
         DecodeImage(document.querySelector('.HeaderLogo img')),
-        DecodeImage(document.querySelector('.Banner')),
+        ...Array.from(document.querySelectorAll('.Banner'), DecodeImage),
         new Promise(r => setTimeout(r, 300)),
     ]);
 
