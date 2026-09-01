@@ -16,7 +16,6 @@ const Page = {
 };
 
 let CurrentPageID = null;
-let ActivePageTimer = null;
 let NavigationOperationID = 0;
 
 let NavigationButtons = null;
@@ -44,32 +43,43 @@ function UpdateNavigationIcons() {
     });
 }
 
+const PageList = ['Dashboard', 'Tweaks', 'Info'];
+
+function SyncActivePageFromScroll() {
+    if (!PagesElement || PagesElement.clientWidth === 0) return;
+    const Index = Math.round(PagesElement.scrollLeft / PagesElement.clientWidth);
+    const ClampedIndex = Math.max(0, Math.min(Index, PageList.length - 1));
+    SetActivePage(PageList[ClampedIndex]);
+}
+
 function SetActivePage(ID) {
-    if (ID === CurrentPageID) return;
-    clearTimeout(ActivePageTimer);
-    ActivePageTimer = setTimeout(() => {
-        const Previous = CurrentPageID;
-        CurrentPageID = ID;
-        if (!NavigationButtons) {
-            NavigationButtons = document.querySelectorAll('.NavigationBar, .NavigationBarActive');
-            NavigationButtonMap = new Map([...NavigationButtons].map(B => [B.dataset.page, B]));
+    if (!ID || ID === CurrentPageID) return;
+    CurrentPageID = ID;
+    if (!NavigationButtons) {
+        NavigationButtons = document.querySelectorAll('.NavigationBar, .NavigationBarActive');
+        NavigationButtonMap = new Map([...NavigationButtons].map(B => [B.dataset.page, B]));
+    }
+    NavigationButtons.forEach(B => {
+        const IsActive = B.dataset.page === ID;
+        if (IsActive) {
+            B.classList.remove('NavigationBar');
+            B.classList.add('NavigationBarActive');
+        } else {
+            B.classList.remove('NavigationBarActive');
+            B.classList.add('NavigationBar');
         }
-        if (Previous) { const P = NavigationButtonMap.get(Previous); if (P) { P.classList.replace('NavigationBarActive', 'NavigationBar'); } }
-        const Button = NavigationButtonMap.get(ID);
-        if (!Button) return;
-        Button.classList.replace('NavigationBar', 'NavigationBarActive');
-        UpdateNavigationIcons();
-        const Meta = Page[ID];
-        if (Meta) {
-            if (!TableName) TableName = document.querySelector('.HeaderTitle');
-            if (!TableSubordinate) TableSubordinate = document.querySelector('.HeaderDescription');
-            if (TableName) TableName.textContent = Meta.Title;
-            if (TableSubordinate) TableSubordinate.textContent = Meta.Description;
-        }
-        if (ID === 'Dashboard') {
-            LoadProcessID();
-        }
-    }, 100);
+    });
+    UpdateNavigationIcons();
+    const Meta = Page[ID];
+    if (Meta) {
+        if (!TableName) TableName = document.querySelector('.HeaderTitle');
+        if (!TableSubordinate) TableSubordinate = document.querySelector('.HeaderDescription');
+        if (TableName) TableName.textContent = Meta.Title;
+        if (TableSubordinate) TableSubordinate.textContent = Meta.Description;
+    }
+    if (ID === 'Dashboard') {
+        LoadProcessID();
+    }
 }
 
 function Navigation(ID) {
@@ -82,27 +92,41 @@ function Navigation(ID) {
             ['Info', document.getElementById('PageInfo')]
         ]);
     }
-    PageElementMap.get(ID).scrollIntoView({ behavior: 'smooth', inline: 'start', block: 'nearest' });
-    SetActivePage(ID);
-    if ('onscrollend' in PagesElement) {
-        PagesElement.addEventListener('scrollend', () => {
-            if (ThisOperation === NavigationOperationID) ProgrammaticScroll = false;
-        }, { once: true });
-    } else {
-        setTimeout(() => {
-            if (ThisOperation === NavigationOperationID) ProgrammaticScroll = false;
-        }, 400);
+    const TargetEl = PageElementMap.get(ID);
+    if (TargetEl) {
+        TargetEl.scrollIntoView({ behavior: 'smooth', inline: 'start', block: 'nearest' });
     }
+    SetActivePage(ID);
+    const ResetProgrammatic = () => {
+        if (ThisOperation === NavigationOperationID) {
+            ProgrammaticScroll = false;
+            SyncActivePageFromScroll();
+        }
+    };
+    if ('onscrollend' in PagesElement) {
+        PagesElement.addEventListener('scrollend', ResetProgrammatic, { once: true });
+    }
+    setTimeout(ResetProgrammatic, 350);
 }
 
 const PageObserver = new IntersectionObserver((Entries) => {
     if (ProgrammaticScroll) return;
+    let HighestRatio = 0;
+    let MostVisiblePage = null;
     Entries.forEach(Entry => {
-        if (Entry.isIntersecting && Entry.intersectionRatio >= 0.75) {
-            SetActivePage(Entry.target.id.replace('Page', ''));
+        if (Entry.isIntersecting && Entry.intersectionRatio > HighestRatio) {
+            HighestRatio = Entry.intersectionRatio;
+            MostVisiblePage = Entry.target.id.replace('Page', '');
         }
     });
-}, { root: PagesElement, threshold: 0.75 });
+    if (MostVisiblePage && HighestRatio >= 0.5) {
+        SetActivePage(MostVisiblePage);
+    }
+}, { root: PagesElement, threshold: [0.5, 0.75, 1.0] });
+
+PagesElement.addEventListener('scrollend', () => {
+    if (!ProgrammaticScroll) SyncActivePageFromScroll();
+});
 
 document.addEventListener('dragstart', E => E.preventDefault());
 
@@ -510,6 +534,7 @@ async function boot() {
     ]);
 
     document.getElementById('WebUI').classList.add('ready');
+    SyncActivePageFromScroll();
     UpdateNavigationIcons();
     const ls = document.getElementById('LoadingScreen');
     if (ls) {
