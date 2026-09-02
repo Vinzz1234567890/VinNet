@@ -541,7 +541,7 @@ async function boot() {
         ls.addEventListener('transitionend', () => ls.remove(), { once: true });
         ls.classList.add('hide');
     }
-    startLiveTicker();
+    StartLiveTicker();
 }
 
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => setTimeout(boot, 100));
