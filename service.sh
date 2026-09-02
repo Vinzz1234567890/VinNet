@@ -8,22 +8,8 @@ Environment="$Core/Environment.json"
 Metadata="$Core/Metadata.json"
 Tweaks="$Core/Tweaks.json"
 ProcessID="$Core/ProcessID.json"
+LockFile="$Core/service.pid"
 Identity="$Directory/module.prop"
-
-if [ -f "$ProcessID" ]; then
-    read -r OldPID < "$ProcessID" 2> /dev/null
-    [ -n "$OldPID" ] && kill -0 "$OldPID" 2> /dev/null && exit 0
-fi
-printf '%s\n' $$ > "$ProcessID"
-
-until [ "$(getprop sys.boot_completed)" = "1" ]; do sleep 3; done
-sleep 3
-
-Cleanup() {
-    rm -f "$ProcessID" "$Detect" "$Core"/*.tmp.$$ 2> /dev/null
-    exit 0
-}
-trap Cleanup TERM EXIT INT
 
 [ -d "$Core" ] || mkdir -p "$Core"
 
@@ -31,6 +17,26 @@ Write() {
     local Destination="$1" Temporary="${Destination}.tmp.$$"
     cat > "$Temporary" && mv -f "$Temporary" "$Destination"
 }
+
+ProcessID() {
+    printf '{"PID":%s,"Timestamp":%s}\n' "$$" "$(date +%s)" | Write "$ProcessID"
+}
+
+if [ -f "$LockFile" ]; then
+    read -r OldPID < "$LockFile" 2> /dev/null
+    [ -n "$OldPID" ] && kill -0 "$OldPID" 2> /dev/null && exit 0
+fi
+printf '%s\n' "$$" > "$LockFile"
+ProcessID
+
+until [ "$(getprop sys.boot_completed)" = "1" ]; do sleep 3; done
+sleep 3
+
+Cleanup() {
+    rm -f "$ProcessID" "$LockFile" "$Detect" "$Core"/*.tmp.$$ 2> /dev/null
+    exit 0
+}
+trap Cleanup TERM EXIT INT
 
 ApplyTweaks() {
     case "$1" in
@@ -131,26 +137,27 @@ Environment() {
         "$(uname -r)" "$(getprop ro.product.cpu.abi)" "$RootImplementation" | Write "$Environment"
 }
 
-ProcessID() {
-    printf '{"PID":%s,"Timestamp":%s}\n' "$$" "$(date +%s)" | Write "$ProcessID"
-}
-
 LastLatency="x"
 LastJitter="x"
+LastMonitorWrite=0
 FailCount=0
 
 Monitor() {
-    local Timestamp="$1" Output Latency Jitter
-    Output=$(ping -c 3 -i 0.2 -W 1 -w 2 1.1.1.1 2> /dev/null)
+    local Timestamp="$1" Output Latency Jitter Host RawOutput=""
 
-    if [ $? -eq 0 ]; then
-        set -- $(printf '%s\n' "$Output" | awk -F'time=' '
+    for Host in 8.8.8.8 1.1.1.1 8.8.4.4 1.0.0.1; do
+        Output=$(ping -c 1 -W 1 -w 1 "$Host" 2> /dev/null)
+        [ $? -eq 0 ] && RawOutput="$RawOutput $Output"
+    done
+
+    if [ -n "$RawOutput" ]; then
+        set -- $(printf '%s\n' "$RawOutput" | awk -F'time=' '
             NF > 1 {
                 gsub(/[^0-9.].*$/, "", $2)
                 t[++n] = $2
             }
             END {
-                if (n >= 2) {
+                if (n >= 1) {
                     s = 0
                     for (i = 1; i <= n; i++) s += t[i]
                     lat = int(s / n)
@@ -160,7 +167,8 @@ Monitor() {
                         if (d < 0) d = -d
                         j += d
                     }
-                    print lat, int(j / (n - 1))
+                    div = (n > 1) ? (n - 1) : 1
+                    print lat, int(j / div)
                 }
             }
         ')
@@ -169,9 +177,10 @@ Monitor() {
 
         if [ -n "$Latency" ]; then
             FailCount=0
-            if [ "$Latency" != "$LastLatency" ] || [ "$Jitter" != "$LastJitter" ]; then
+            if [ "$Latency" != "$LastLatency" ] || [ "$Jitter" != "$LastJitter" ] || [ $((Timestamp - LastMonitorWrite)) -ge 20 ]; then
                 LastLatency="$Latency"
                 LastJitter="$Jitter"
+                LastMonitorWrite="$Timestamp"
                 printf '{"Latency":%s,"Jitter":%s,"Timestamp":%s}\n' "$Latency" "$Jitter" "$Timestamp" | Write "$Monitor"
             fi
             return
@@ -179,9 +188,10 @@ Monitor() {
     fi
 
     FailCount=$((FailCount + 1))
-    if [ "$FailCount" -ge 3 ] && [ "$LastLatency" != "—" ]; then
+    if [ "$FailCount" -ge 3 ] && { [ "$LastLatency" != "—" ] || [ $((Timestamp - LastMonitorWrite)) -ge 20 ]; }; then
         LastLatency="—"
         LastJitter="—"
+        LastMonitorWrite="$Timestamp"
         printf '{"Latency":"—","Jitter":"—","Timestamp":%s}\n' "$Timestamp" | Write "$Monitor"
     fi
 }
@@ -208,9 +218,9 @@ while true; do
         read -r DetectTimestamp < "$Detect" 2> /dev/null
         if [ -n "$DetectTimestamp" ]; then
             Age=$((Now - DetectTimestamp))
-            if [ "$Age" -le 5 ]; then
+            if [ "$Age" -le 15 ]; then
                 WebUI=1
-            elif [ "$Age" -gt 30 ]; then
+            elif [ "$Age" -gt 45 ]; then
                 rm -f "$Detect"
             fi
         fi
@@ -220,7 +230,7 @@ while true; do
         ProcessID
         GenerateTweaks
         Monitor "$Now"
-        sleep 5
+        sleep 4
     else
         sleep 30
     fi
