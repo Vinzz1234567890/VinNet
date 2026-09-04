@@ -458,51 +458,51 @@ async function RenderTweaks() {
         }
         const Input = Card.querySelector('Input');
         Input.id = 'Tweak-' + ID;
-        Input.checked = TweakState[ID] === 'on';
+        Input.checked = TweakState[ID] === 'ON';
         Input.dataset.tweakId = ID;
         Container.appendChild(Card);
     }
 }
 
-document.addEventListener('change', e => {
-    if (e.target.matches('#PageTweaks input[type="checkbox"]')) {
-        applyTweak(e.target.dataset.tweakId, e.target.checked);
+document.addEventListener('change', Event => {
+    if (Event.target.matches('#PageTweaks input[type="checkbox"]')) {
+        ApplyTweak(Event.target.dataset.tweakId, Event.target.checked);
     }
 });
 
-document.addEventListener('click', e => {
-    const link = e.target.closest('#PageInfo a[href]');
-    if (link) {
-        e.preventDefault();
-        OpenLink(link.href);
+document.addEventListener('click', Event => {
+    const Link = Event.target.closest('#PageInfo a[href]');
+    if (Link) {
+        Event.preventDefault();
+        OpenLink(Link.href);
     }
 });
 
-let tweakQueue = Promise.resolve();
+let TweakQueue = Promise.resolve();
 
-async function applyTweak(ID, enabled) {
-    const t = Tweaks[ID];
-    if (!t) return;
-    const el = document.getElementById('Tweak-' + ID);
-    el.disabled = true;
-    tweakQueue = tweakQueue.then(async () => {
+async function ApplyTweak(ID, Enabled) {
+    const Tweak = Tweaks[ID];
+    if (!Tweak) return;
+    const Element = document.getElementById('Tweak-' + ID);
+    Element.disabled = true;
+    TweakQueue = TweakQueue.then(async () => {
         try {
-            await exec(enabled ? t.ONCommand : t.OFFCommand);
+            await exec(Enabled ? Tweak.ONCommand : Tweak.OFFCommand);
             if (!TweakState) TweakState = {};
-            TweakState[ID] = enabled ? 'on' : 'off';
-            const val = enabled ? 'on' : 'off';
-            const json = JSON.stringify(TweakState).replace(/"/g, '\\"');
+            TweakState[ID] = Enabled ? 'ON' : 'OFF';
+            const Value = Enabled ? 'ON' : 'OFF';
+            const Content = JSON.stringify(TweakState).replace(/"/g, '\\"');
             await Promise.all([
-                exec(`echo "${json}" > ${Core}/Tweaks.json`),
-                exec(`grep -v "^${ID}=" ${Core}/VinNet.conf 2>/dev/null > ${Core}/VinNet.conf.tmp; echo "${ID}=${val}" >> ${Core}/VinNet.conf.tmp; mv ${Core}/VinNet.conf.tmp ${Core}/VinNet.conf`),
+                exec(`echo "${Content}" > ${Core}/Tweaks.json`),
+                exec(`grep -v "^${ID}=" ${Core}/VinNet.conf 2>/dev/null > ${Core}/VinNet.conf.tmp; echo "${ID}=${Value}" >> ${Core}/VinNet.conf.tmp; mv ${Core}/VinNet.conf.tmp ${Core}/VinNet.conf`),
             ]);
             Log('Tweaks', TweakState);
-            Toast(`${t.Label || ID} > ${enabled ? t.ONLabel : t.OFFLabel}`);
+            Toast(`${Tweak.Label || ID} > ${Enabled ? Tweak.ONLabel : Tweak.OFFLabel}`);
         } catch {
             Toast('Unable to apply tweak');
-            el.checked = !enabled;
+            Element.checked = !Enabled;
         } finally {
-            el.disabled = false;
+            Element.disabled = false;
         }
     });
 }
