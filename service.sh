@@ -39,12 +39,13 @@ Cleanup() {
 trap Cleanup TERM EXIT INT
 
 ApplyTweaks() {
+    local State=$(printf '%s' "$2" | tr '[:upper:]' '[:lower:]')
     case "$1" in
         "IP Reach Disconnect")
-            cmd wifi set-ipreach-disconnect $([ "$2" = "on" ] && echo disabled || echo enabled)
+            cmd wifi set-ipreach-disconnect $([ "$State" = "on" ] && echo disabled || echo enabled)
             ;;
         "Scan Always Available")
-            if [ "$2" = "on" ]; then
+            if [ "$State" = "on" ]; then
                 cmd wifi set-scan-always-available disabled
                 settings put global wifi_scan_always_enabled 0
             else
@@ -53,44 +54,44 @@ ApplyTweaks() {
             fi
             ;;
         "Restrict Background")
-            cmd netpolicy set restrict-background $([ "$2" = "on" ] && echo false || echo true)
+            cmd netpolicy set restrict-background $([ "$State" = "on" ] && echo false || echo true)
             ;;
         "Power Save")
-            iw dev wlan0 set power_save $([ "$2" = "on" ] && echo off || echo on) 2> /dev/null
+            iw dev wlan0 set power_save $([ "$State" = "on" ] && echo off || echo on) 2> /dev/null
             ;;
         "QDISC")
-            local QDISC=$([ "$2" = "on" ] && echo "fq_codel quantum 300 noecn" || echo "pfifo_fast")
+            local QDISC=$([ "$State" = "on" ] && echo "fq_codel quantum 300 noecn" || echo "pfifo_fast")
             for Interface in wlan0 rmnet_data0 rmnet_ipa0; do
                 tc qdisc replace dev "$Interface" root $QDISC 2> /dev/null
             done
             ;;
         "Wi-Fi Force Low Latency Mode")
-            local Mode=$([ "$2" = "on" ] && echo enabled || echo disabled)
+            local Mode=$([ "$State" = "on" ] && echo enabled || echo disabled)
             cmd wifi force-low-latency-mode $Mode
             cmd wifi force-hi-perf-mode $Mode
             ;;
         "Network Avoid Bad Wi-Fi")
-            if [ "$2" = "on" ]; then
+            if [ "$State" = "on" ]; then
                 settings put global network_avoid_bad_wifi 0
             else
                 settings put global network_avoid_bad_wifi 1
             fi
             ;;
         "BLE Scan Always Enabled")
-            settings put global ble_scan_always_enabled $([ "$2" = "on" ] && echo 0 || echo 1)
+            settings put global ble_scan_always_enabled $([ "$State" = "on" ] && echo 0 || echo 1)
             ;;
         "Mobile Data Always ON")
-            settings put global mobile_data_always_on $([ "$2" = "on" ] && echo 0 || echo 1)
+            settings put global mobile_data_always_on $([ "$State" = "on" ] && echo 0 || echo 1)
             ;;
         "Wi-Fi Country Code")
-            if [ "$2" = "on" ]; then
+            if [ "$State" = "on" ]; then
                 resetprop ro.boot.wificountrycode US
             else
                 resetprop ro.boot.wificountrycode 00
             fi
             ;;
         "Force LTE CA")
-            if [ "$2" = "on" ]; then
+            if [ "$State" = "on" ]; then
                 resetprop -p persist.sys.radio.force_lte_ca true
             else
                 resetprop -p persist.sys.radio.force_lte_ca false
@@ -236,7 +237,7 @@ while true; do
     fi
 
     if [ $((Now - LastMonitorSave)) -ge 60 ]; then
-        [ -f "$Configuration" ] && grep -q "^Power Save=on" "$Configuration" 2> /dev/null \
+        [ -f "$Configuration" ] && grep -iq "^Power Save=on" "$Configuration" 2> /dev/null \
             && iw dev wlan0 set power_save off 2> /dev/null
         LastMonitorSave=$Now
     fi
