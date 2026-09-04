@@ -10,7 +10,7 @@ const Log = (Tag, Data) => {
 let ProgrammaticScroll = false;
 
 const Page = {
-    Dashboard: { Title: 'VinNet', Description: 'Enhanced Implementation of Network Optimization' },
+    Dashboard: { Title: 'VinNet', Description: 'Simple Implementation of Network Optimization' },
     Tweaks: { Title: 'Tweaks', Description: 'Apply Network Optimization Tweaks' },
     Info: { Title: 'Info', Description: 'Details about Module' },
 };
@@ -436,6 +436,14 @@ const Tweaks = {
         OFFCommand: 'resetprop -p persist.sys.radio.force_lte_ca false',
         ONLabel: 'Enabled', OFFLabel: 'Disabled',
     },
+    "Wi-Fi Scan Throttle Enabled": {
+        Label: 'Disable Wi-Fi Scan Throttle Enabled',
+        Icon: 'Wi-FiScanThrottleEnabled',
+        Description: 'Limit background Wi-Fi scanning to conserve battery life and prevent jitter.',
+        ONCommand: 'settings put global wifi_scan_throttle_enabled 1',
+        OFFCommand: 'settings put global wifi_scan_throttle_enabled 0',
+        ONLabel: 'Disabled', OFFLabel: 'Enabled',
+    }
 };
 
 async function RenderTweaks() {
@@ -521,7 +529,7 @@ async function DecodeImage(ImageElement) {
     } catch { }
 }
 
-async function boot() {
+async function Load() {
     await Promise.allSettled([
         LoadEnvironment(),
         FetchMonitor(),
@@ -533,16 +541,16 @@ async function boot() {
         new Promise(r => setTimeout(r, 300)),
     ]);
 
-    document.getElementById('WebUI').classList.add('ready');
+    document.getElementById('WebUI').classList.add('Ready');
     SyncActivePageFromScroll();
     UpdateNavigationIcons();
-    const ls = document.getElementById('LoadingScreen');
-    if (ls) {
-        ls.addEventListener('transitionend', () => ls.remove(), { once: true });
-        ls.classList.add('hide');
+    const LoadingScreen = document.getElementById('LoadingScreen');
+    if (LoadingScreen) {
+        LoadingScreen.addEventListener('transitionend', () => LoadingScreen.remove(), { once: true });
+        LoadingScreen.classList.add('Hide');
     }
     StartLiveTicker();
 }
 
-if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => setTimeout(boot, 100));
-else setTimeout(boot, 100);
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => setTimeout(Load, 100));
+else setTimeout(Load, 100);
