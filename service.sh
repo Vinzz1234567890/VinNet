@@ -97,6 +97,13 @@ ApplyTweaks() {
                 resetprop -p persist.sys.radio.force_lte_ca false
             fi
             ;;
+        "Wi-Fi Scan Throttle Enabled")
+            if [ "$State" = "on" ]; then
+                settings put global wifi_scan_throttle_enabled 1
+            else
+                settings put global wifi_scan_throttle_enabled 0
+            fi
+            ;;
     esac
 }
 
