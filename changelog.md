@@ -6,55 +6,55 @@
 
 ### ✨Added
 
-* `Disable Wi-Fi Scan Throttle Enabled` tweak to Web UI
-* Multi-host network monitoring using `8.8.8.8`, `1.1.1.1`, `8.8.4.4`, and `1.0.0.1`
-* Dedicated `service.pid` lock file for service process protection
-* Automatic monitor data refresh even when latency and jitter values remain unchanged for a defined interval
-* Other additions
+- `Disable Wi-Fi Scan Throttle Enabled` tweak to Web UI
+- Multi-host network monitoring using `8.8.8.8`, `1.1.1.1`, `8.8.4.4`, and `1.0.0.1`
+- Dedicated `service.pid` lock file for service process protection
+- Automatic monitor data refresh even when latency and jitter values remain unchanged for a defined interval
+- Other additions
 
 ### 🔄️Changed
 
-* Module version from `1.1.6-Gresde` to `1.1.7-Zecht`
-* Module version code from `20260808` to `20260825`
-* Module description from `Enhanced Implementation of Network Optimization` to `Simple Implementation of Network Optimization`
-* Process lock mechanism from `ProcessID.json` to a dedicated `service.pid` file
-* Tweak state handling to normalize state values before execution
-* Tweak state storage format from lowercase `on/off` to uppercase `ON/OFF`
-* Web UI navigation synchronization to use scroll position for active-page detection
-* Web UI navigation observer to select the most visible page instead of relying on a fixed visibility threshold
-* Web UI function and variable naming to consistent PascalCase naming
-* Banner asset from one `VinNetBanner.webp` image to two rotating WebP banners
-* Contributor avatar from local WebP asset to remote GitHub avatar
-* Installation script to apply `iw` permissions only when the module installs its own binary
-* Installation output formatting
-* Web UI polling/monitor detection window from 5/30 seconds to 15/45 seconds
-* Web UI monitor refresh interval from 5 seconds to 4 seconds
-* Other changes
+- Module version from `1.1.6-Gresde` to `1.1.7-Zecht`
+- Module version code from `20260808` to `20260825`
+- Module description from `Enhanced Implementation of Network Optimization` to `Simple Implementation of Network Optimization`
+- Process lock mechanism from `ProcessID.json` to a dedicated `service.pid` file
+- Tweak state handling to normalize state values before execution
+- Tweak state storage format from lowercase `on/off` to uppercase `ON/OFF`
+- Web UI navigation synchronization to use scroll position for active-page detection
+- Web UI navigation observer to select the most visible page instead of relying on a fixed visibility threshold
+- Web UI function and variable naming to consistent PascalCase naming
+- Banner asset from one `VinNetBanner.webp` image to two rotating WebP banners
+- Contributor avatar from local WebP asset to remote GitHub avatar
+- Installation script to apply `iw` permissions only when the module installs its own binary
+- Installation output formatting
+- Web UI polling/monitor detection window from 5/30 seconds to 15/45 seconds
+- Web UI monitor refresh interval from 5 seconds to 4 seconds
+- Other changes
 
 ### 📈Improved
 
-* Network monitor reliability through multiple ping targets
-* Network monitor persistence by periodically rewriting monitor data
-* Service process locking and cleanup
-* Web UI navigation synchronization after programmatic scrolling
-* Web UI swipe/page detection
-* Web UI code consistency and maintainability
-* Installation behavior when using a system/vendor-provided `iw` binary
-* Other improvements
+- Network monitor reliability through multiple ping targets
+- Network monitor persistence by periodically rewriting monitor data
+- Service process locking and cleanup
+- Web UI navigation synchronization after programmatic scrolling
+- Web UI swipe/page detection
+- Web UI code consistency and maintainability
+- Installation behavior when using a system/vendor-provided `iw` binary
+- Other improvements
 
 ### 🔧Fixed
 
-* Possible stale `Monitor.json` data when latency and jitter values do not change
-* Service lock collision caused by using `ProcessID.json` as the service lock
-* Web UI active-page synchronization after scrolling/navigation
-* Other fixes
+- Possible stale `Monitor.json` data when latency and jitter values do not change
+- Service lock collision caused by using `ProcessID.json` as the service lock
+- Web UI active-page synchronization after scrolling/navigation
+- Other fixes
 
 ### 🔥Deleted
 
-* Single `VinNetBanner.webp` asset
-* Local `Vinzz1234567890.webp` contributor avatar
-* Previous `ProcessID.json`-based service lock mechanism
-* Other obsolete implementation
+- Single `VinNetBanner.webp` asset
+- Local `Vinzz1234567890.webp` contributor avatar
+- Previous `ProcessID.json`-based service lock mechanism
+- Other obsolete implementation
 
 ---
 
