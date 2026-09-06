@@ -1,6 +1,15 @@
 #!/system/bin/sh
 Directory="${0%/*}"
 Core="$Directory/webroot/Core"
+LogPath="/storage/emulated/0/Download/VinNet.log"
+
+[ -d "$Core" ] || mkdir -p "$Core" 2> /dev/null
+if ! { : > "$Core/.WriteProbe" 2> /dev/null && rm -f "$Core/.WriteProbe"; }; then
+    Core="/data/local/tmp/VinNetCore"
+    mkdir -p "$Core" 2> /dev/null
+    echo "[$(date +%T)] CoreFallback: webroot/Core not writable, using $Core" >> "$LogPath"
+fi
+
 Configuration="$Core/VinNet.conf"
 Detect="$Core/Detect.txt"
 Monitor="$Core/Monitor.json"
@@ -10,13 +19,51 @@ Tweaks="$Core/Tweaks.json"
 ProcessID="$Core/ProcessID.json"
 LockFile="$Core/service.pid"
 Identity="$Directory/module.prop"
+CoreWritable=1
 
 [ -d "$Core" ] || mkdir -p "$Core"
 
 Write() {
-    local Destination="$1" Temporary="${Destination}.tmp.$$"
-    cat > "$Temporary" && mv -f "$Temporary" "$Destination"
+    [ "$CoreWritable" -eq 0 ] && return 1
+    local Destination="$1" Temporary="${Destination}.tmp.$$" ErrorOutput
+    ErrorOutput=$({ cat > "$Temporary" && mv -f "$Temporary" "$Destination"; } 2>&1)
+    [ $? -eq 0 ] && return 0
+    echo "[$(date +%T)] WriteFail: $Destination : ${ErrorOutput:-unknown error}" >> "$LogPath"
+    rm -f "$Temporary" 2> /dev/null
+    case "$ErrorOutput" in
+        *"Read-only file system"*)
+            CoreWritable=0
+            echo "[$(date +%T)] CoreReadOnly: $Core read-only, stopping further write attempts this session" >> "$LogPath"
+            ;;
+    esac
 }
+
+Diagnose() {
+    local ABI Arch="Unsupported"
+    ABI=$(getprop ro.product.cpu.abi)
+    case "$ABI" in arm64*) Arch="Supported (arm64)" ;; armeabi*) Arch="Supported (arm)" ;; esac
+    {
+        echo "[$(date +%T)] Diagnose: ABI=$ABI Architecture=$Arch"
+        for Bin in ping awk iw tc; do
+            if command -v "$Bin" > /dev/null 2>&1; then
+                echo "[$(date +%T)] Diagnose: $Bin found at $(command -v "$Bin")"
+            else
+                echo "[$(date +%T)] Diagnose: $Bin MISSING"
+            fi
+        done
+        if [ -w "$Core" ]; then
+            echo "[$(date +%T)] Diagnose: $Core writable"
+        else
+            echo "[$(date +%T)] Diagnose: $Core NOT writable"
+        fi
+        DmesgLines=$(dmesg 2> /dev/null | grep -iE "f2fs|erofs|remount" | tail -5)
+        if [ -n "$DmesgLines" ]; then
+            echo "[$(date +%T)] Diagnose: dmesg --"
+            echo "$DmesgLines"
+        fi
+    } >> "$LogPath" 2> /dev/null
+}
+Diagnose
 
 ProcessID() {
     printf '{"PID":%s,"Timestamp":%s}\n' "$$" "$(date +%s)" | Write "$ProcessID"
@@ -151,11 +198,11 @@ LastMonitorWrite=0
 FailCount=0
 
 Monitor() {
-    local Timestamp="$1" Output Latency Jitter Host RawOutput=""
+    local Timestamp="$1" Output Latency Jitter Host RawOutput="" LastError=""
 
     for Host in 8.8.8.8 1.1.1.1 8.8.4.4 1.0.0.1; do
-        Output=$(ping -c 1 -W 1 -w 1 "$Host" 2> /dev/null)
-        [ $? -eq 0 ] && RawOutput="$RawOutput $Output"
+        Output=$(ping -c 1 -W 1 -w 1 "$Host" 2>&1)
+        if [ $? -eq 0 ]; then RawOutput="$RawOutput $Output"; else LastError="$Output"; fi
     done
 
     if [ -n "$RawOutput" ]; then
@@ -201,6 +248,7 @@ Monitor() {
         LastJitter="—"
         LastMonitorWrite="$Timestamp"
         printf '{"Latency":"—","Jitter":"—","Timestamp":%s}\n' "$Timestamp" | Write "$Monitor"
+        echo "[$(date +%T)] MonitorFail: ${LastError:-no output from ping}" >> "$LogPath"
     fi
 }
 
@@ -240,7 +288,7 @@ while true; do
         Monitor "$Now"
         sleep 4
     else
-        sleep 30
+        sleep 5
     fi
 
     if [ $((Now - LastMonitorSave)) -ge 60 ]; then
