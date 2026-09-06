@@ -1,7 +1,6 @@
 #!/system/bin/sh
 LATESTARTSERVICE=true
-sleep 1
-ui_print "──────────────────────────────────────────────"
+sleep 0.5
 MetaModules="/data/adb/modules/magic_mount_rs /data/adb/modules/hybrid_mount /data/adb/modules/meta-mm /data/adb/modules/meta-overlayfs /data/adb/modules/magisk_overlayfs /data/adb/modules/mountify"
 MetaModule=false
 
@@ -63,4 +62,3 @@ if [ "$Binary" = true ]; then
 fi
 ui_print "- Configurating Network..."
 ui_print "- Installing VinNet..."
-ui_print "──────────────────────────────────────────────"
