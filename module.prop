@@ -1,7 +1,7 @@
 id=VinNet
 name=VinNet
-version=1.1.7-Zecht
-versionCode=20260825
+version=1.1.8-Igrum
+versionCode=20260906
 author=Vinzz
 description=Simple Implementation of Network Optimization
 webuiIcon=webroot/assets/VinNet.webp
