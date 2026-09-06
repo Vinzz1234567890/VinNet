@@ -2,7 +2,7 @@
 
 # ⚡ VinNet
 
-**Enhanced Implementation of Network Optimization.**
+**Simple Implementation of Network Optimization.**
 
 [![Magisk](https://img.shields.io/badge/Magisk-Supported-00bfa5?style=for-the-badge&logo=magisk&logoColor=white)](https://github.com/topjohnwu/Magisk)
 [![KernelSU](https://img.shields.io/badge/KernelSU-Supported-2196f3?style=for-the-badge&logo=linux&logoColor=white)](https://github.com/tiann/KernelSU)
@@ -27,7 +27,7 @@
 > Remove all conflicting network modules before proceeding.
 
 * Rooted Android Environment.
-* Magisk (Stable, Canary, Alpha, Beta, Delta/Kitsune), KernelSU / KernelSU Next / KowSU / Wild_KSU / SukiSU-Ultra / ReSukiSU, APatch / FolkPatch.
+* Magisk (Stable, Canary, Alpha, Beta, Delta/Kitsune), KernelSU / KernelSU Next / KowSU / Wild_KSU / RKSU / SukiSU-Ultra / ReSukiSU, APatch / FolkPatch.
 
 ---
 
