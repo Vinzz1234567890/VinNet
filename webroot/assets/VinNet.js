@@ -1,4 +1,4 @@
-const Core = '/data/adb/modules/VinNet/webroot/Core';
+const Core = '/data/adb/VinNetCore';
 const LogPath = '/storage/emulated/0/Download/VinNet.log';
 const LogCache = new Map();
 const Log = (Tag, Data) => {
@@ -180,9 +180,8 @@ function OpenLink(URL) {
 
 async function FetchJSON(Path) {
     try {
-        const Response = await fetch(Path, { cache: 'no-store' });
-        if (!Response.ok) return null;
-        return await Response.json();
+        const Output = await exec(`cat ${Core}/${Path.split('/').pop()} 2>/dev/null`);
+        return Output ? JSON.parse(Output) : null;
     } catch { return null; }
 }
 
@@ -501,7 +500,7 @@ async function ApplyTweak(ID, Enabled) {
             const Value = Enabled ? 'ON' : 'OFF';
             const Content = JSON.stringify(TweakState).replace(/"/g, '\\"');
             await Promise.all([
-                exec(`echo "${Content}" > ${Core}/Tweaks.json`),
+                exec(`mkdir -p ${Core} 2>/dev/null; echo "${Content}" > ${Core}/Tweaks.json`),
                 exec(`grep -v "^${ID}=" ${Core}/VinNet.conf 2>/dev/null > ${Core}/VinNet.conf.tmp; echo "${ID}=${Value}" >> ${Core}/VinNet.conf.tmp; mv ${Core}/VinNet.conf.tmp ${Core}/VinNet.conf`),
             ]);
             Log('Tweaks', TweakState);
