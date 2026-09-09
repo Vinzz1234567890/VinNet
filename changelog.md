@@ -2,35 +2,7 @@
 
 ---
 
-## v1.1.8-Igrum - 2026-09-06 - Latest
-
-### ✨Added
-
-- Dedicated data directory at `/data/adb/VinNetCore` outside the module directory for all service and Web UI data
-- Data directory cleanup to `uninstall.sh`
-- Other additions
-
-### 🔄️Changed
-
-- Data directory from `webroot/Core` inside the module directory to `/data/adb/VinNetCore`
-- Web UI data loading from `fetch` to root `exec` reads from the data directory
-- Web UI monitor detection and tweak state writes to the new data directory
-- Other changes
-
-### 📈Improved
-
-- Reliability on devices where the module webroot is mounted read-only
-- Tweak configuration persistence across module updates
-- Other improvements
-
-### 🔧Fixed
-
-- PID and Monitor always showing `—` because `service.sh` failed to write into the module webroot with `Read-only file system` errors
-- Other fixes
-
----
-
-## v1.1.7-Zecht - 2026-08-25
+## v1.1.7-Zecht - 2026-08-25 - Latest
 
 ### ✨Added
 
