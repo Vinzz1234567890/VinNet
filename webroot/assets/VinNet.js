@@ -1,4 +1,4 @@
-const Core = '/data/adb/VinNetCore';
+const Core = '/data/adb/modules/VinNet/webroot/Core';
 const LogPath = '/storage/emulated/0/Download/VinNet.log';
 const LogCache = new Map();
 const Log = (Tag, Data) => {
@@ -180,9 +180,33 @@ function OpenLink(URL) {
 
 async function FetchJSON(Path) {
     try {
-        const Output = await exec(`cat ${Core}/${Path.split('/').pop()} 2>/dev/null`);
-        return Output ? JSON.parse(Output) : null;
-    } catch { return null; }
+        const Response = await fetch(Path, { cache: 'no-store' });
+        if (!Response.ok) { Log(Path + '-Status', Response.status); return null; }
+        return await Response.json();
+    } catch (Error) { Log(Path + '-Error', String(Error)); return null; }
+}
+
+async function FetchJSONRetry(Path, Attempts = 5, DelayMs = 800) {
+    for (let Attempt = 1; Attempt <= Attempts; Attempt++) {
+        const Result = await FetchJSON(Path);
+        if (Result != null) return Result;
+        if (Attempt < Attempts) await new Promise(Resolve => setTimeout(Resolve, DelayMs));
+    }
+    return null;
+}
+
+const CoreFallback = '/data/local/tmp/VinNetCore';
+
+async function FetchCached(Path, Attempts = 5, DelayMs = 800) {
+    const Result = await FetchJSONRetry(Path, Attempts, DelayMs);
+    if (Result != null) return Result;
+    try {
+        const Raw = await exec(`cat ${CoreFallback}/${Path.split('/').pop()} 2>/dev/null`);
+        return Raw ? JSON.parse(Raw) : null;
+    } catch (Error) {
+        Log(Path + '-FallbackError', String(Error));
+        return null;
+    }
 }
 
 let CallbackCounter = 0;
@@ -253,7 +277,7 @@ const Metadata = [
 ];
 
 async function LoadMetadata() {
-    const Cached = await FetchJSON('Core/Metadata.json');
+    const Cached = await FetchCached('Core/Metadata.json');
     Log('Metadata', Cached);
     if (!Cached) return;
     for (const [ID, Key] of Metadata) {
@@ -291,12 +315,12 @@ function ApplyMonitor(Data) {
 }
 
 function Detect() {
-    exec(`date +%s > ${Core}/Detect.txt`).catch(() => { });
+    exec(`date +%s > ${Core}/Detect.txt; mkdir -p ${CoreFallback} 2>/dev/null; date +%s > ${CoreFallback}/Detect.txt`).catch(() => { });
 }
 
 async function FetchMonitor() {
     Detect();
-    const Cached = await FetchJSON('Core/Monitor.json');
+    const Cached = await FetchCached('Core/Monitor.json', 1, 0);
     Log('Monitor', Cached);
     if (Cached && Cached.Latency != null) ApplyMonitor(Cached);
 }
@@ -304,7 +328,7 @@ async function FetchMonitor() {
 let ProcessID = null;
 
 async function LoadProcessID() {
-    const Cached = await FetchJSON('Core/ProcessID.json');
+    const Cached = await FetchCached('Core/ProcessID.json');
     Log('ProcessID', Cached);
     if (!ProcessID) {
         const BannerWrap = document.querySelector('#PageDashboard .BannerWrap');
@@ -448,7 +472,7 @@ const Tweaks = {
 async function RenderTweaks() {
     const Container = document.getElementById('PageTweaks');
     const Template = document.getElementById('TweakCardTemplate');
-    TweakState = await FetchJSON('Core/Tweaks.json') || {};
+    TweakState = await FetchCached('Core/Tweaks.json') || {};
     Log('Tweaks', TweakState);
 
     Container.replaceChildren();
@@ -500,7 +524,8 @@ async function ApplyTweak(ID, Enabled) {
             const Value = Enabled ? 'ON' : 'OFF';
             const Content = JSON.stringify(TweakState).replace(/"/g, '\\"');
             await Promise.all([
-                exec(`mkdir -p ${Core} 2>/dev/null; echo "${Content}" > ${Core}/Tweaks.json`),
+                exec(`echo "${Content}" > ${Core}/Tweaks.json`),
+                exec(`mkdir -p ${CoreFallback} 2>/dev/null; echo "${Content}" > ${CoreFallback}/Tweaks.json`),
                 exec(`grep -v "^${ID}=" ${Core}/VinNet.conf 2>/dev/null > ${Core}/VinNet.conf.tmp; echo "${ID}=${Value}" >> ${Core}/VinNet.conf.tmp; mv ${Core}/VinNet.conf.tmp ${Core}/VinNet.conf`),
             ]);
             Log('Tweaks', TweakState);
