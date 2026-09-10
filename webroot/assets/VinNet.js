@@ -1,4 +1,5 @@
-const Core = '/data/adb/modules/VinNet/webroot/Core';
+const Module = '/data/adb/modules/VinNet';
+const Core = Module + '/webroot/Core';
 const LogPath = '/storage/emulated/0/Download/VinNet.log';
 const LogCache = new Map();
 const Log = (Tag, Data) => {
@@ -277,8 +278,17 @@ const Metadata = [
 ];
 
 async function LoadMetadata() {
-    const Cached = await FetchCached('Core/Metadata.json');
+    let Cached = await FetchCached('Core/Metadata.json');
     Log('Metadata', Cached);
+    if (!Cached) {
+        const Raw = await exec(`cat ${Module}/module.prop 2>/dev/null`).catch(() => '');
+        const Props = {};
+        for (const Line of String(Raw).split('\n')) {
+            const Eq = Line.indexOf('=');
+            if (Eq > 0) Props[Line.slice(0, Eq)] = Line.slice(Eq + 1);
+        }
+        Cached = { ID: Props.id, Name: Props.name, Version: Props.version, VersionCode: Props.versionCode, Author: Props.author, Description: Props.description };
+    }
     if (!Cached) return;
     for (const [ID, Key] of Metadata) {
         const Element = document.getElementById(ID);
@@ -322,7 +332,22 @@ async function FetchMonitor() {
     Detect();
     const Cached = await FetchCached('Core/Monitor.json', 1, 0);
     Log('Monitor', Cached);
-    if (Cached && Cached.Latency != null) ApplyMonitor(Cached);
+    if (Cached && Cached.Latency != null) {
+        ApplyMonitor(Cached);
+        return;
+    }
+    const Outputs = await Promise.all(['8.8.8.8', '1.1.1.1', '8.8.4.4', '1.0.0.1'].map(async Host => {
+        try { return await exec(`ping -c 1 -W 1 ${Host} 2>/dev/null`); } catch { return ''; }
+    }));
+    const Times = Outputs
+        .map(Output => String(Output).match(/time[=<]([\d.]+)\s*ms/i))
+        .map(Match => Match && Number.isFinite(parseFloat(Match[1])) ? parseFloat(Match[1]) : null)
+        .filter(Value => Value != null);
+    if (!Times.length) return;
+    const Latency = Math.round(Times.reduce((Sum, Value) => Sum + Value, 0) / Times.length);
+    let JitterSum = 0;
+    for (let Index = 1; Index < Times.length; Index++) JitterSum += Math.abs(Times[Index] - Times[Index - 1]);
+    ApplyMonitor({ Latency, Jitter: Math.round(JitterSum / (Times.length > 1 ? Times.length - 1 : 1)) });
 }
 
 let ProcessID = null;
@@ -342,7 +367,12 @@ async function LoadProcessID() {
         }
         ProcessID = Overlay.querySelector('#ProcessID');
     }
-    if (Cached && Cached.PID != null) ProcessID.textContent = Cached.PID;
+    if (Cached && Cached.PID != null) {
+        ProcessID.textContent = Cached.PID;
+    } else {
+        const PID = await exec(`P=$(cat ${Core}/service.pid 2>/dev/null || cat ${CoreFallback}/service.pid 2>/dev/null); if [ -n "$P" ] && kill -0 "$P" 2>/dev/null; then echo "$P"; else pgrep -f '${Module}/service\\.sh' 2>/dev/null | head -n 1; fi`).catch(() => '');
+        if (PID) ProcessID.textContent = PID;
+    }
 }
 
 let TweakState = null;
