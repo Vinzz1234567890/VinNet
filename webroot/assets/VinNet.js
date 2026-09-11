@@ -1,5 +1,4 @@
-const Module = '/data/adb/modules/VinNet';
-const Core = Module + '/webroot/Core';
+const Core = '/data/adb/modules/VinNet/webroot/Core';
 const LogPath = '/storage/emulated/0/Download/VinNet.log';
 const LogCache = new Map();
 const Log = (Tag, Data) => {
@@ -182,32 +181,9 @@ function OpenLink(URL) {
 async function FetchJSON(Path) {
     try {
         const Response = await fetch(Path, { cache: 'no-store' });
-        if (!Response.ok) { Log(Path + '-Status', Response.status); return null; }
+        if (!Response.ok) return null;
         return await Response.json();
-    } catch (Error) { Log(Path + '-Error', String(Error)); return null; }
-}
-
-async function FetchJSONRetry(Path, Attempts = 5, DelayMs = 800) {
-    for (let Attempt = 1; Attempt <= Attempts; Attempt++) {
-        const Result = await FetchJSON(Path);
-        if (Result != null) return Result;
-        if (Attempt < Attempts) await new Promise(Resolve => setTimeout(Resolve, DelayMs));
-    }
-    return null;
-}
-
-const CoreFallback = '/data/local/tmp/VinNetCore';
-
-async function FetchCached(Path, Attempts = 5, DelayMs = 800) {
-    const Result = await FetchJSONRetry(Path, Attempts, DelayMs);
-    if (Result != null) return Result;
-    try {
-        const Raw = await exec(`cat ${CoreFallback}/${Path.split('/').pop()} 2>/dev/null`);
-        return Raw ? JSON.parse(Raw) : null;
-    } catch (Error) {
-        Log(Path + '-FallbackError', String(Error));
-        return null;
-    }
+    } catch { return null; }
 }
 
 let CallbackCounter = 0;
@@ -278,26 +254,40 @@ const Metadata = [
 ];
 
 async function LoadMetadata() {
-    let Cached = await FetchCached('Core/Metadata.json');
+    let Cached = await FetchJSON('Core/Metadata.json');
     Log('Metadata', Cached);
     if (!Cached) {
-        const Raw = await exec(`cat ${Module}/module.prop 2>/dev/null`).catch(() => '');
-        const Props = {};
-        for (const Line of String(Raw).split('\n')) {
-            const Eq = Line.indexOf('=');
-            if (Eq > 0) Props[Line.slice(0, Eq)] = Line.slice(Eq + 1);
-        }
-        Cached = { ID: Props.id, Name: Props.name, Version: Props.version, VersionCode: Props.versionCode, Author: Props.author, Description: Props.description };
+        try {
+            const Raw = await exec('cat /data/adb/modules/VinNet/module.prop 2>/dev/null');
+            if (Raw) {
+                const Prop = Object.fromEntries(
+                    Raw.split('\n')
+                        .map(L => L.trim().split('='))
+                        .filter(P => P.length >= 2)
+                        .map(([K, ...V]) => [K.trim().toLowerCase(), V.join('=').trim()])
+                );
+                Cached = {
+                    ID: Prop.id,
+                    Name: Prop.name,
+                    Version: Prop.version,
+                    VersionCode: Prop.versioncode,
+                    Author: Prop.author,
+                    Description: Prop.description,
+                };
+            }
+        } catch { }
     }
     if (!Cached) return;
-    for (const [ID, Key] of Metadata) {
-        const Element = document.getElementById(ID);
-        if (Element && Cached[Key]) Element.textContent = Cached[Key];
-    }
-    const VersionElement = document.getElementById('MetadataVersion');
-    if (VersionElement && Cached.Version) {
-        VersionElement.textContent = Cached.VersionCode ? `${Cached.Version} (${Cached.VersionCode})` : Cached.Version;
-    }
+    requestAnimationFrame(() => {
+        for (const [ID, Key] of Metadata) {
+            const Element = document.getElementById(ID);
+            if (Element && Cached[Key]) Element.textContent = Cached[Key];
+        }
+        const VersionElement = document.getElementById('MetadataVersion');
+        if (VersionElement && Cached.Version) {
+            VersionElement.textContent = Cached.VersionCode ? `${Cached.Version} (${Cached.VersionCode})` : Cached.Version;
+        }
+    });
 }
 
 const ElementCache = new Map();
@@ -325,35 +315,38 @@ function ApplyMonitor(Data) {
 }
 
 function Detect() {
-    exec(`date +%s > ${Core}/Detect.txt; mkdir -p ${CoreFallback} 2>/dev/null; date +%s > ${CoreFallback}/Detect.txt`).catch(() => { });
+    exec(`date +%s > ${Core}/Detect.txt`).catch(() => { });
 }
 
 async function FetchMonitor() {
     Detect();
-    const Cached = await FetchCached('Core/Monitor.json', 1, 0);
+    const Cached = await FetchJSON('Core/Monitor.json');
     Log('Monitor', Cached);
     if (Cached && Cached.Latency != null) {
         ApplyMonitor(Cached);
-        return;
+    } else {
+        try {
+            const Output = await exec('ping -c 2 -w 2 8.8.8.8 2>/dev/null || ping -c 2 -w 2 1.1.1.1 2>/dev/null');
+            const Matches = [...Output.matchAll(/time=([\d.]+)\s*ms/gi)].map(M => parseFloat(M[1]));
+            if (Matches.length >= 1) {
+                const Latency = Math.round(Matches.reduce((A, B) => A + B, 0) / Matches.length);
+                let Jitter = 0;
+                for (let I = 1; I < Matches.length; I++) Jitter += Math.abs(Matches[I] - Matches[I - 1]);
+                Jitter = Matches.length > 1 ? Math.round(Jitter / (Matches.length - 1)) : 0;
+                ApplyMonitor({ Latency, Jitter });
+            } else {
+                ApplyMonitor({ Latency: '—', Jitter: '—' });
+            }
+        } catch {
+            ApplyMonitor({ Latency: '—', Jitter: '—' });
+        }
     }
-    const Outputs = await Promise.all(['8.8.8.8', '1.1.1.1', '8.8.4.4', '1.0.0.1'].map(async Host => {
-        try { return await exec(`ping -c 1 -W 1 ${Host} 2>/dev/null`); } catch { return ''; }
-    }));
-    const Times = Outputs
-        .map(Output => String(Output).match(/time[=<]([\d.]+)\s*ms/i))
-        .map(Match => Match && Number.isFinite(parseFloat(Match[1])) ? parseFloat(Match[1]) : null)
-        .filter(Value => Value != null);
-    if (!Times.length) return;
-    const Latency = Math.round(Times.reduce((Sum, Value) => Sum + Value, 0) / Times.length);
-    let JitterSum = 0;
-    for (let Index = 1; Index < Times.length; Index++) JitterSum += Math.abs(Times[Index] - Times[Index - 1]);
-    ApplyMonitor({ Latency, Jitter: Math.round(JitterSum / (Times.length > 1 ? Times.length - 1 : 1)) });
 }
 
 let ProcessID = null;
 
 async function LoadProcessID() {
-    const Cached = await FetchCached('Core/ProcessID.json');
+    const Cached = await FetchJSON('Core/ProcessID.json');
     Log('ProcessID', Cached);
     if (!ProcessID) {
         const BannerWrap = document.querySelector('#PageDashboard .BannerWrap');
@@ -370,8 +363,12 @@ async function LoadProcessID() {
     if (Cached && Cached.PID != null) {
         ProcessID.textContent = Cached.PID;
     } else {
-        const PID = await exec(`P=$(cat ${Core}/service.pid 2>/dev/null || cat ${CoreFallback}/service.pid 2>/dev/null); if [ -n "$P" ] && kill -0 "$P" 2>/dev/null; then echo "$P"; else pgrep -f '${Module}/service\\.sh' 2>/dev/null | head -n 1; fi`).catch(() => '');
-        if (PID) ProcessID.textContent = PID;
+        try {
+            const PID = await exec('pgrep -f "VinNet/service.sh" | head -n 1');
+            ProcessID.textContent = PID || '—';
+        } catch {
+            ProcessID.textContent = '—';
+        }
     }
 }
 
@@ -502,7 +499,21 @@ const Tweaks = {
 async function RenderTweaks() {
     const Container = document.getElementById('PageTweaks');
     const Template = document.getElementById('TweakCardTemplate');
-    TweakState = await FetchCached('Core/Tweaks.json') || {};
+    TweakState = await FetchJSON('Core/Tweaks.json');
+    if (!TweakState) {
+        try {
+            const RawConf = await exec('cat /data/adb/modules/VinNet/webroot/Core/VinNet.conf 2>/dev/null');
+            if (RawConf) {
+                TweakState = Object.fromEntries(
+                    RawConf.split('\n')
+                        .map(L => L.trim().split('='))
+                        .filter(P => P.length >= 2)
+                        .map(([K, ...V]) => [K.trim(), V.join('=').trim()])
+                );
+            }
+        } catch { }
+        TweakState = TweakState || {};
+    }
     Log('Tweaks', TweakState);
 
     Container.replaceChildren();
@@ -555,7 +566,6 @@ async function ApplyTweak(ID, Enabled) {
             const Content = JSON.stringify(TweakState).replace(/"/g, '\\"');
             await Promise.all([
                 exec(`echo "${Content}" > ${Core}/Tweaks.json`),
-                exec(`mkdir -p ${CoreFallback} 2>/dev/null; echo "${Content}" > ${CoreFallback}/Tweaks.json`),
                 exec(`grep -v "^${ID}=" ${Core}/VinNet.conf 2>/dev/null > ${Core}/VinNet.conf.tmp; echo "${ID}=${Value}" >> ${Core}/VinNet.conf.tmp; mv ${Core}/VinNet.conf.tmp ${Core}/VinNet.conf`),
             ]);
             Log('Tweaks', TweakState);
