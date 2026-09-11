@@ -16,7 +16,6 @@ const Page = {
 };
 
 let CurrentPageID = null;
-let NavigationOperationID = 0;
 
 let NavigationButtons = null;
 let TableName = null;
@@ -25,7 +24,6 @@ const PagesElement = document.querySelector('.Pages');
 let NavigationButtonMap = null;
 let NavigationSVGS = null;
 let NavigationSVGButtonMap = null;
-let PageElementMap = null;
 let LastMonitor = { Latency: null, Jitter: null };
 
 const LatencyColor = v => v <= 30 ? 'var(--Good)' : v <= 50 ? 'var(--Warn)' : 'var(--Bad)';
@@ -74,39 +72,64 @@ function SetActivePage(ID) {
     if (Meta) {
         if (!TableName) TableName = document.querySelector('.HeaderTitle');
         if (!TableSubordinate) TableSubordinate = document.querySelector('.HeaderDescription');
-        if (TableName) TableName.textContent = Meta.Title;
-        if (TableSubordinate) TableSubordinate.textContent = Meta.Description;
+        if (TableName && TableSubordinate) {
+            const HeaderTextEl = TableName.parentElement;
+            if (HeaderTextEl) {
+                HeaderTextEl.style.opacity = '0';
+                setTimeout(() => {
+                    TableName.textContent = Meta.Title;
+                    TableSubordinate.textContent = Meta.Description;
+                    HeaderTextEl.style.opacity = '1';
+                }, 120);
+            } else {
+                TableName.textContent = Meta.Title;
+                TableSubordinate.textContent = Meta.Description;
+            }
+        }
     }
     if (ID === 'Dashboard') {
         LoadProcessID();
     }
 }
 
-function Navigation(ID) {
-    const ThisOperation = ++NavigationOperationID;
-    ProgrammaticScroll = true;
-    if (!PageElementMap) {
-        PageElementMap = new Map([
-            ['Dashboard', document.getElementById('PageDashboard')],
-            ['Tweaks', document.getElementById('PageTweaks')],
-            ['Info', document.getElementById('PageInfo')]
-        ]);
+let ScrollAnimationID = null;
+
+function SmoothScrollPages(TargetLeft, Duration = 320) {
+    cancelAnimationFrame(ScrollAnimationID);
+    const StartLeft = PagesElement.scrollLeft;
+    const Distance = TargetLeft - StartLeft;
+    if (Math.abs(Distance) < 2) {
+        ProgrammaticScroll = false;
+        return;
     }
-    const TargetEl = PageElementMap.get(ID);
-    if (TargetEl) {
-        TargetEl.scrollIntoView({ behavior: 'smooth', inline: 'start', block: 'nearest' });
-    }
-    SetActivePage(ID);
-    const ResetProgrammatic = () => {
-        if (ThisOperation === NavigationOperationID) {
+
+    PagesElement.style.scrollSnapType = 'none';
+    const StartTime = performance.now();
+
+    function Step(Now) {
+        const Elapsed = Now - StartTime;
+        const Progress = Math.min(Elapsed / Duration, 1);
+        const Ease = 1 - Math.pow(1 - Progress, 3);
+        PagesElement.scrollLeft = StartLeft + Distance * Ease;
+
+        if (Progress < 1) {
+            ScrollAnimationID = requestAnimationFrame(Step);
+        } else {
+            PagesElement.scrollLeft = TargetLeft;
+            PagesElement.style.scrollSnapType = 'x mandatory';
             ProgrammaticScroll = false;
             SyncActivePageFromScroll();
         }
-    };
-    if ('onscrollend' in PagesElement) {
-        PagesElement.addEventListener('scrollend', ResetProgrammatic, { once: true });
     }
-    setTimeout(ResetProgrammatic, 350);
+    ScrollAnimationID = requestAnimationFrame(Step);
+}
+
+function Navigation(ID) {
+    const TargetIndex = PageList.indexOf(ID);
+    if (TargetIndex === -1) return;
+    ProgrammaticScroll = true;
+    SetActivePage(ID);
+    SmoothScrollPages(TargetIndex * PagesElement.clientWidth, 320);
 }
 
 const PageObserver = new IntersectionObserver((Entries) => {
@@ -142,10 +165,12 @@ document.querySelectorAll('.Page, .ActivePage').forEach(Page => PageObserver.obs
     let TouchStartY = 0;
 
     PagesElement.addEventListener('touchstart', (E) => {
+        cancelAnimationFrame(ScrollAnimationID);
+        PagesElement.style.scrollSnapType = 'x mandatory';
+        ProgrammaticScroll = false;
         if (E.touches.length > 1) {
-            const Pages = ['Dashboard', 'Tweaks', 'Info'];
             const Nearest = Math.round(PagesElement.scrollLeft / PagesElement.clientWidth);
-            Navigation(Pages[Math.max(0, Math.min(Nearest, Pages.length - 1))]);
+            Navigation(PageList[Math.max(0, Math.min(Nearest, PageList.length - 1))]);
             return;
         }
         TouchStartX = E.touches[0].clientX;
@@ -600,7 +625,6 @@ async function Load() {
         LoadMetadata(),
         LoadProcessID(),
         RenderTweaks(),
-        DecodeImage(document.querySelector('.HeaderLogo img')),
         ...Array.from(document.querySelectorAll('.Banner'), DecodeImage),
         new Promise(r => setTimeout(r, 300)),
     ]);
