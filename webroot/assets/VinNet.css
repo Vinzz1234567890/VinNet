@@ -100,7 +100,7 @@ img {
 
 .HeaderText {
     width: 100%;
-    transition: opacity 0.12s ease;
+    transition: opacity 0.16s ease;
 }
 
 .HeaderTitle {
@@ -200,7 +200,7 @@ img {
     width: 22px;
     height: 22px;
     fill: var(--on-surf-var);
-    transition: fill 0.2s, transform 0.32s var(--spring);
+    transition: fill 0.25s, transform 0.42s var(--spring);
     will-change: fill, transform;
 }
 
