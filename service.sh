@@ -5,9 +5,17 @@ LogPath="/storage/emulated/0/Download/VinNet.log"
 
 [ -d "$Core" ] || mkdir -p "$Core" 2> /dev/null
 if ! { : > "$Core/.WriteProbe" 2> /dev/null && rm -f "$Core/.WriteProbe"; }; then
-    Core="/data/local/tmp/VinNetCore"
-    mkdir -p "$Core" 2> /dev/null
-    echo "[$(date +%T)] CoreFallback: webroot/Core not writable, using $Core" >> "$LogPath"
+    mount -o remount,rw "$Directory" 2> /dev/null || mount -o remount,rw /data/adb/modules 2> /dev/null
+    if ! { : > "$Core/.WriteProbe" 2> /dev/null && rm -f "$Core/.WriteProbe"; }; then
+        mount -t tmpfs -o size=2M tmpfs "$Core" 2> /dev/null
+        if { : > "$Core/.WriteProbe" 2> /dev/null && rm -f "$Core/.WriteProbe"; }; then
+            echo "[$(date +%T)] CoreMountedTmpfs: webroot/Core read-only, mounted tmpfs on $Core" >> "$LogPath"
+        else
+            Core="/data/local/tmp/VinNetCore"
+            mkdir -p "$Core" 2> /dev/null
+            echo "[$(date +%T)] CoreFallback: webroot/Core not writable, using $Core" >> "$LogPath"
+        fi
+    fi
 fi
 
 Configuration="$Core/VinNet.conf"
