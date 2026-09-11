@@ -80,7 +80,7 @@ function SetActivePage(ID) {
                     TableName.textContent = Meta.Title;
                     TableSubordinate.textContent = Meta.Description;
                     HeaderTextEl.style.opacity = '1';
-                }, 120);
+                }, 160);
             } else {
                 TableName.textContent = Meta.Title;
                 TableSubordinate.textContent = Meta.Description;
@@ -94,7 +94,7 @@ function SetActivePage(ID) {
 
 let ScrollAnimationID = null;
 
-function SmoothScrollPages(TargetLeft, Duration = 320) {
+function SmoothScrollPages(TargetLeft, Duration = 420) {
     cancelAnimationFrame(ScrollAnimationID);
     const StartLeft = PagesElement.scrollLeft;
     const Distance = TargetLeft - StartLeft;
@@ -129,7 +129,7 @@ function Navigation(ID) {
     if (TargetIndex === -1) return;
     ProgrammaticScroll = true;
     SetActivePage(ID);
-    SmoothScrollPages(TargetIndex * PagesElement.clientWidth, 320);
+    SmoothScrollPages(TargetIndex * PagesElement.clientWidth, 420);
 }
 
 const PageObserver = new IntersectionObserver((Entries) => {
