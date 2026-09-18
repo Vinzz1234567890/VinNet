@@ -116,27 +116,32 @@ img {
     margin-top: 3px;
 }
 
+/* Pager: every page sits on its own lane (--page-lane) of an imaginary track and
+   is moved by the two shared offsets --page-base (the active page) and
+   --page-drag (the finger). Pages are stacked instead of scrolled, so the page
+   position is a pure function of the active index and can never drift from the
+   header or the navigation bar. */
 .Pages {
     position: relative;
     flex: 1;
-    display: flex;
-    overflow: auto hidden;
-    scroll-snap-type: x mandatory;
-    scrollbar-width: none;
+    min-height: 0;
+    overflow: hidden;
+    touch-action: pan-y;
     overscroll-behavior-x: none;
+    --page-base: 0%;
+    --page-drag: 0px;
 }
 
-.Pages::-webkit-scrollbar {
-    display: none;
-}
-
-.Page,
-.ActivePage {
-    flex: 0 0 100%;
-    scroll-snap-align: start;
-    scroll-snap-stop: always;
+.Page {
+    position: absolute;
+    inset: 0;
+    --page-lane: 0%;
+    transform: translateX(calc(var(--page-base) + var(--page-drag) + var(--page-lane)));
+    transition: transform 0.4s cubic-bezier(0.2, 1, 0.2, 1);
+    will-change: transform;
     overflow-y: auto;
     overscroll-behavior-y: none;
+    touch-action: pan-y;
     padding: calc(var(--topbar-h) + 16px) 14px calc(var(--botnav-h) + 12px);
     display: flex;
     flex-direction: column;
@@ -144,8 +149,19 @@ img {
     scrollbar-width: none;
 }
 
-.Page::-webkit-scrollbar,
-.ActivePage::-webkit-scrollbar {
+.Page:nth-child(2) {
+    --page-lane: 100%;
+}
+
+.Page:nth-child(3) {
+    --page-lane: 200%;
+}
+
+.Pages.Dragging .Page {
+    transition: none;
+}
+
+.Page::-webkit-scrollbar {
     display: none;
 }
 
