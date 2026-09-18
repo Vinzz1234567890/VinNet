@@ -14,9 +14,6 @@ const Page = {
     Info: { Title: 'Info', Description: 'Details about Module' },
 };
 
-/* Pager tuning. A gesture commits to the neighbouring page once the drag has
-   passed CommitRatio of the viewport width, clamped to CommitMinPx..CommitMaxPx,
-   and EdgeResistance damps the drag beyond the first and the last page. */
 const CommitRatio = 0.22;
 const CommitMaxPx = 96;
 const CommitMinPx = 64;
@@ -64,9 +61,6 @@ function PageWidth() {
     return PagesElement.clientWidth || 0;
 }
 
-/* The active index is the single source of truth: the resting position of every
-   page is derived from it, so a navigation tap, a half finished transition and
-   a gesture that fights it can only ever agree on where the pages belong. */
 function RenderPages() {
     PagesElement.style.setProperty('--page-base', `${CurrentPageIndex * -100}%`);
     PagesElement.style.setProperty('--page-drag', `${DragOffset}px`);
@@ -177,8 +171,6 @@ function MoveGesture(X, Y, Event, OnAxisLock) {
         if (AbsX === 0 || AbsX < Math.abs(DeltaY)) return;
         GestureAxis = 'x';
         if (OnAxisLock) {
-            // Capturing the pointer must never abort the gesture: it is an
-            // optimisation, and it can throw when the pointer is already gone.
             try { OnAxisLock(); } catch { }
         }
     }
@@ -215,9 +207,6 @@ function EndGesture(Commit, Element) {
     RenderPages();
 }
 
-/* Touch is handled through the touch events because the browser stops the
-   pointer stream (pointercancel) as soon as a native scroll takes the gesture
-   over; the pointer events cover mouse and pen. */
 PagesElement.addEventListener('pointerdown', E => {
     if (E.pointerType === 'touch' || !E.isPrimary || (E.pointerType === 'mouse' && E.button !== 0)) return;
     BeginGesture(E.clientX, E.clientY, 'pointer', E.pointerId);
