@@ -1,64 +1,98 @@
 #!/system/bin/sh
 LATESTARTSERVICE=true
+
+readonly TargetDevice="fog"
+readonly MetaModules="/data/adb/modules/magic_mount_rs /data/adb/modules/hybrid_mount /data/adb/modules/meta-mm /data/adb/modules/meta-overlayfs /data/adb/modules/magisk_overlayfs /data/adb/modules/mountify"
+readonly InstalledModule="/data/adb/modules/VinNet"
+readonly BinaryPath="$MODPATH/system/bin/iw"
+
 sleep 0.5
-MetaModules="/data/adb/modules/magic_mount_rs /data/adb/modules/hybrid_mount /data/adb/modules/meta-mm /data/adb/modules/meta-overlayfs /data/adb/modules/magisk_overlayfs /data/adb/modules/mountify"
-MetaModule=false
+[ -n "$MODPATH" ] || abort "MODPATH is Not Set"
 
-for target in $MetaModules; do
-    if [ -d "$target" ]; then
-        ui_print "- Meta Module Detected: $(basename "$target")"
-        MetaModule=true
-        break
-    fi
-done
+Print() { ui_print "- $*"; }
+HasSystemBinary() { [ -f "/system/bin/iw" ] || [ -f "/vendor/bin/iw" ]; }
+HasInstalledBinary() { [ -f "$InstalledModule/system/bin/iw" ]; }
+UseSystemBinary() { HasSystemBinary && ! HasInstalledBinary; }
 
-if [ "$MetaModule" = true ]; then
-    ui_print "- Using $(basename "$target") Mounting Method"
-    SKIPMOUNT=true
-else
-    ui_print "- Using Standard Mounting Method"
-    SKIPMOUNT=false
-fi
+FindMetaModule() {
+    for Target in $MetaModules; do
+        if [ -d "$Target" ]; then
+            basename "$Target"
+            return 0
+        fi
+    done
+    return 1
+}
 
-ui_print "- Checking Device Compatibility..."
-ui_print "- Brand: $(getprop ro.product.brand)"
-ui_print "- Model: $(getprop ro.product.model)"
-ui_print "- Android: $(getprop ro.build.version.release)"
-ui_print "- Kernel: $(uname -r)"
-ui_print "- Architecture: $(getprop ro.product.cpu.abi)"
-
-if [ "$(getprop ro.product.device)" = "fog" ]; then
-    ui_print "- Device is fog"
-else
-    ui_print "- Device isn't fog"
-    ui_print "- Delete vendor Configuration"
-    rm -rf "$MODPATH/system/vendor"
-fi
-
-ui_print "Checking Binary Dependencies..."
-
-Binary=true
-if { [ -f "/system/bin/iw" ] || [ -f "/vendor/bin/iw" ]; } && [ ! -f "/data/adb/modules/VinNet/system/bin/iw" ]; then
-    ui_print "- Using Built-in Binary..."
-    Binary=false
-else
-    ui_print "- Built-in Binary not Detected, Installing binary..."
-fi
-
-if [ "$Binary" = "true" ]; then
-    case $ARCH in
-        arm64) cp -f "$MODPATH/binaries/iw-arm64" "$MODPATH/system/bin/iw" ;;
-        arm) cp -f "$MODPATH/binaries/iw-arm" "$MODPATH/system/bin/iw" ;;
-        *) abort "Architecture not Supported" ;;
+BinaryForArch() {
+    case "$ARCH" in
+        arm64) echo "iw-arm64" ;;
+        arm) echo "iw-arm" ;;
+        *) return 1 ;;
     esac
-fi
+}
 
-ui_print "- Credit: Vinzz"
-ui_print "- TikTok: @vinzz.fog"
-ui_print "- GitHub: @Vinzz1234567890"
-if [ "$Binary" = true ]; then
-    ui_print "- Setting Permissions..."
-    set_perm "$MODPATH/system/bin/iw" 0 0 0755
-fi
-ui_print "- Configurating Network..."
-ui_print "- Installing VinNet..."
+ConfigureMount() {
+    local MetaModule="$1"
+    if [ -n "$MetaModule" ]; then
+        Print "Meta Module Detected: $MetaModule"
+        Print "Using $MetaModule Mounting Method"
+        SKIPMOUNT=true
+    else
+        Print "Using Standard Mounting Method"
+        SKIPMOUNT=false
+    fi
+}
+
+ReportDevice() {
+    Print "Checking Device Compatibility..."
+    Print "Brand: $(getprop ro.product.brand)"
+    Print "Model: $(getprop ro.product.model)"
+    Print "Android: $(getprop ro.build.version.release)"
+    Print "Kernel: $(uname -r)"
+    Print "Architecture: $(getprop ro.product.cpu.abi)"
+}
+
+ConfigureVendor() {
+    if [ "$(getprop ro.product.device)" = "$TargetDevice" ]; then
+        Print "Device is $TargetDevice"
+    else
+        Print "Device isn't $TargetDevice"
+        Print "Delete Vendor Configuration"
+        rm -rf "$MODPATH/system/vendor"
+    fi
+}
+
+ProvisionBinary() {
+    Print "Checking Binary Dependencies..."
+    if UseSystemBinary; then
+        Print "Using Built-in Binary..."
+        return
+    fi
+
+    local Source
+    Source=$(BinaryForArch) || abort "Architecture not Supported: $ARCH"
+    Print "Built-in Binary not Detected, Installing Binary..."
+    cp -f "$MODPATH/binaries/$Source" "$BinaryPath" || abort "Failed to Install iw Binary"
+}
+
+SetPermission() {
+    [ -f "$BinaryPath" ] || return
+    Print "Setting Permissions..."
+    set_perm "$BinaryPath" 0 0 0755
+}
+
+ReportCredit() {
+    Print "Credit: Vinzz"
+    Print "TikTok: @vinzz.fog"
+    Print "GitHub: @Vinzz1234567890"
+}
+
+ConfigureMount "$(FindMetaModule)"
+ReportDevice
+ConfigureVendor
+ProvisionBinary
+ReportCredit
+SetPermission
+Print "Configuring Network..."
+Print "Installing VinNet..."
