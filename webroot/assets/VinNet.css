@@ -249,6 +249,10 @@ img {
     flex-shrink: 0;
 }
 
+/* Three banners take turns in one cycle of 3 x 5.3s = 15.9s: each one is held
+   for 5s and then crossfades for 0.3s into the next slot. The visible part of
+   the keyframes sits at the start of the cycle, so every banner is delayed by
+   its distance to the end of the cycle - 0s, -10.6s and -5.3s. */
 .Banner {
     position: absolute;
     inset: 0;
@@ -256,22 +260,26 @@ img {
     height: 100%;
     object-fit: cover;
     opacity: 0;
-    animation: BannerCrossfade 10.6s infinite;
+    animation: BannerCrossfade 15.9s infinite;
 }
 
 .Banner:nth-of-type(2) {
+    animation-delay: -10.6s;
+}
+
+.Banner:nth-of-type(3) {
     animation-delay: -5.3s;
 }
 
 @keyframes BannerCrossfade {
 
     0%,
-    47.2% {
+    31.4% {
         opacity: 1;
     }
 
-    50%,
-    97.2% {
+    33.3%,
+    98.1% {
         opacity: 0;
     }
 
