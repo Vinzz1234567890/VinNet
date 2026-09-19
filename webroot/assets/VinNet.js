@@ -7,6 +7,7 @@ const Log = (Tag, Data) => {
     LogCache.set(Tag, Content);
     exec(`grep -v "^\\[.*\\] ${Tag}:" ${LogPath} 2>/dev/null > ${LogPath}.tmp; echo "[$(date +%T)] ${Tag}: ${Content}" >> ${LogPath}.tmp; mv ${LogPath}.tmp ${LogPath}`).catch(() => { });
 };
+let ProgrammaticScroll = false;
 
 const Page = {
     Dashboard: { Title: 'VinNet', Description: 'Simple Implementation of Network Optimization' },
@@ -14,22 +15,7 @@ const Page = {
     Info: { Title: 'Info', Description: 'Details about Module' },
 };
 
-const CommitRatio = 0.22;
-const CommitMaxPx = 96;
-const CommitMinPx = 64;
-const EdgeResistance = 3;
-
 let CurrentPageID = null;
-let CurrentPageIndex = 0;
-let DragOffset = 0;
-let PendingOffset = 0;
-let DragFrameID = 0;
-let Dragging = false;
-let GestureAxis = null;
-let GestureKind = null;
-let GestureStartX = 0;
-let GestureStartY = 0;
-let GesturePointerID = null;
 
 let NavigationButtons = null;
 let TableName = null;
@@ -57,27 +43,16 @@ function UpdateNavigationIcons() {
 
 const PageList = ['Dashboard', 'Tweaks', 'Info'];
 
-function PageWidth() {
-    return PagesElement.clientWidth || 0;
-}
-
-function RenderPages() {
-    PagesElement.style.setProperty('--page-base', `${CurrentPageIndex * -100}%`);
-    PagesElement.style.setProperty('--page-drag', `${DragOffset}px`);
-    const Pages = PagesElement.children;
-    for (let I = 0; I < Pages.length; I++) {
-        const Active = I === CurrentPageIndex;
-        Pages[I].toggleAttribute('inert', !Active);
-        Pages[I].setAttribute('aria-hidden', Active ? 'false' : 'true');
-    }
+function SyncActivePageFromScroll() {
+    if (!PagesElement || PagesElement.clientWidth === 0) return;
+    const Index = Math.round(PagesElement.scrollLeft / PagesElement.clientWidth);
+    const ClampedIndex = Math.max(0, Math.min(Index, PageList.length - 1));
+    SetActivePage(PageList[ClampedIndex]);
 }
 
 function SetActivePage(ID) {
-    const Index = PageList.indexOf(ID);
-    if (Index === -1 || ID === CurrentPageID) return;
+    if (!ID || ID === CurrentPageID) return;
     CurrentPageID = ID;
-    CurrentPageIndex = Index;
-    RenderPages();
     if (!NavigationButtons) {
         NavigationButtons = document.querySelectorAll('.NavigationBar, .NavigationBarActive');
         NavigationButtonMap = new Map([...NavigationButtons].map(B => [B.dataset.page, B]));
@@ -117,137 +92,63 @@ function SetActivePage(ID) {
     }
 }
 
-function CommitTargetIndex() {
-    const Width = PageWidth();
-    const Threshold = Width ? Math.min(Width * CommitRatio, CommitMaxPx) : CommitMinPx;
-    const LastIndex = PageList.length - 1;
-    if (DragOffset < -Threshold && CurrentPageIndex < LastIndex) return CurrentPageIndex + 1;
-    if (DragOffset > Threshold && CurrentPageIndex > 0) return CurrentPageIndex - 1;
-    return CurrentPageIndex;
+let ScrollAnimationID = null;
+
+function SmoothScrollPages(TargetLeft, Duration = 420) {
+    cancelAnimationFrame(ScrollAnimationID);
+    const StartLeft = PagesElement.scrollLeft;
+    const Distance = TargetLeft - StartLeft;
+    if (Math.abs(Distance) < 2) {
+        ProgrammaticScroll = false;
+        return;
+    }
+
+    PagesElement.style.scrollSnapType = 'none';
+    const StartTime = performance.now();
+
+    function Step(Now) {
+        const Elapsed = Now - StartTime;
+        const Progress = Math.min(Elapsed / Duration, 1);
+        const Ease = 1 - Math.pow(1 - Progress, 3);
+        PagesElement.scrollLeft = StartLeft + Distance * Ease;
+
+        if (Progress < 1) {
+            ScrollAnimationID = requestAnimationFrame(Step);
+        } else {
+            PagesElement.scrollLeft = TargetLeft;
+            PagesElement.style.scrollSnapType = 'x mandatory';
+            ProgrammaticScroll = false;
+            SyncActivePageFromScroll();
+        }
+    }
+    ScrollAnimationID = requestAnimationFrame(Step);
 }
 
 function Navigation(ID) {
-    if (PageList.indexOf(ID) === -1) return;
-    if (DragFrameID) {
-        cancelAnimationFrame(DragFrameID);
-        DragFrameID = 0;
-    }
-    ResetGesture();
+    const TargetIndex = PageList.indexOf(ID);
+    if (TargetIndex === -1) return;
+    ProgrammaticScroll = true;
     SetActivePage(ID);
-    RenderPages();
+    SmoothScrollPages(TargetIndex * PagesElement.clientWidth, 420);
 }
 
-function ResetGesture() {
-    Dragging = false;
-    GestureAxis = null;
-    GestureKind = null;
-    GesturePointerID = null;
-    DragOffset = 0;
-    PendingOffset = 0;
-    PagesElement.classList.remove('Dragging');
-}
-
-function BeginGesture(X, Y, Kind, PointerID) {
-    if (DragFrameID) {
-        cancelAnimationFrame(DragFrameID);
-        DragFrameID = 0;
-    }
-    ResetGesture();
-    GestureKind = Kind;
-    GesturePointerID = PointerID;
-    GestureStartX = X;
-    GestureStartY = Y;
-    Dragging = true;
-    PagesElement.classList.add('Dragging');
-    RenderPages();
-}
-
-function MoveGesture(X, Y, Event, OnAxisLock) {
-    if (!Dragging) return;
-    const DeltaX = X - GestureStartX;
-    const DeltaY = Y - GestureStartY;
-    if (GestureAxis === null) {
-        const AbsX = Math.abs(DeltaX);
-        if (AbsX === 0 || AbsX < Math.abs(DeltaY)) return;
-        GestureAxis = 'x';
-        if (OnAxisLock) {
-            try { OnAxisLock(); } catch { }
+const PageObserver = new IntersectionObserver((Entries) => {
+    if (ProgrammaticScroll) return;
+    let HighestRatio = 0;
+    let MostVisiblePage = null;
+    Entries.forEach(Entry => {
+        if (Entry.isIntersecting && Entry.intersectionRatio > HighestRatio) {
+            HighestRatio = Entry.intersectionRatio;
+            MostVisiblePage = Entry.target.id.replace('Page', '');
         }
-    }
-    if (Event.cancelable) Event.preventDefault();
-    let Offset = DeltaX;
-    if ((CurrentPageIndex === 0 && Offset > 0) || (CurrentPageIndex === PageList.length - 1 && Offset < 0)) {
-        Offset /= EdgeResistance;
-    }
-    PendingOffset = Offset;
-    if (!DragFrameID) {
-        DragFrameID = requestAnimationFrame(() => {
-            DragFrameID = 0;
-            if (!Dragging) return;
-            DragOffset = PendingOffset;
-            RenderPages();
-        });
-    }
-}
-
-function EndGesture(Commit, Element) {
-    if (!Dragging) return;
-    Dragging = false;
-    PagesElement.classList.remove('Dragging');
-    if (Element && GesturePointerID !== null && Element.hasPointerCapture(GesturePointerID)) {
-        Element.releasePointerCapture(GesturePointerID);
-    }
-    if (DragFrameID) {
-        cancelAnimationFrame(DragFrameID);
-        DragFrameID = 0;
-        DragOffset = PendingOffset;
-    }
-    if (Commit && GestureAxis === 'x') SetActivePage(PageList[CommitTargetIndex()]);
-    ResetGesture();
-    RenderPages();
-}
-
-PagesElement.addEventListener('pointerdown', E => {
-    if (E.pointerType === 'touch' || !E.isPrimary || (E.pointerType === 'mouse' && E.button !== 0)) return;
-    BeginGesture(E.clientX, E.clientY, 'pointer', E.pointerId);
-});
-
-PagesElement.addEventListener('pointermove', E => {
-    if (GestureKind !== 'pointer' || E.pointerId !== GesturePointerID) return;
-    MoveGesture(E.clientX, E.clientY, E, () => {
-        if (E.currentTarget.hasPointerCapture(E.pointerId)) return;
-        E.currentTarget.setPointerCapture(E.pointerId);
     });
-}, { passive: false });
+    if (MostVisiblePage && HighestRatio >= 0.5) {
+        SetActivePage(MostVisiblePage);
+    }
+}, { root: PagesElement, threshold: [0.5, 0.75, 1.0] });
 
-PagesElement.addEventListener('pointerup', E => {
-    if (E.pointerId !== GesturePointerID) return;
-    EndGesture(true, E.currentTarget);
-});
-
-PagesElement.addEventListener('pointercancel', E => {
-    if (E.pointerId !== GesturePointerID) return;
-    EndGesture(false, E.currentTarget);
-});
-
-PagesElement.addEventListener('touchstart', E => {
-    if (E.touches.length !== 1) return;
-    BeginGesture(E.touches[0].screenX, E.touches[0].screenY, 'touch', null);
-}, { passive: true });
-
-PagesElement.addEventListener('touchmove', E => {
-    if (GestureKind !== 'touch' || E.touches.length !== 1) return;
-    MoveGesture(E.touches[0].screenX, E.touches[0].screenY, E, null);
-}, { passive: false });
-
-PagesElement.addEventListener('touchend', E => {
-    if (GestureKind !== 'touch' || E.touches.length > 0) return;
-    EndGesture(true, E.currentTarget);
-});
-
-PagesElement.addEventListener('touchcancel', E => {
-    if (GestureKind !== 'touch') return;
-    EndGesture(false, E.currentTarget);
+PagesElement.addEventListener('scrollend', () => {
+    if (!ProgrammaticScroll) SyncActivePageFromScroll();
 });
 
 document.addEventListener('dragstart', E => E.preventDefault());
@@ -257,9 +158,36 @@ document.getElementById('Navigation').addEventListener('click', E => {
     if (Button && Button.dataset.page) Navigation(Button.dataset.page);
 });
 
-CurrentPageID = PageList[0];
-RenderPages();
+document.querySelectorAll('.Page, .ActivePage').forEach(Page => PageObserver.observe(Page));
 
+(() => {
+    let TouchStartX = 0;
+    let TouchStartY = 0;
+
+    PagesElement.addEventListener('touchstart', (E) => {
+        cancelAnimationFrame(ScrollAnimationID);
+        PagesElement.style.scrollSnapType = 'x mandatory';
+        ProgrammaticScroll = false;
+        if (E.touches.length > 1) {
+            const Nearest = Math.round(PagesElement.scrollLeft / PagesElement.clientWidth);
+            Navigation(PageList[Math.max(0, Math.min(Nearest, PageList.length - 1))]);
+            return;
+        }
+        TouchStartX = E.touches[0].clientX;
+        TouchStartY = E.touches[0].clientY;
+    }, { passive: true });
+
+    PagesElement.addEventListener('touchmove', (E) => {
+        const DeltaX = E.touches[0].clientX - TouchStartX;
+        const DeltaY = E.touches[0].clientY - TouchStartY;
+        if (Math.abs(DeltaY) > Math.abs(DeltaX)) return;
+        const AtStart = PagesElement.scrollLeft <= 0;
+        const AtEnd = PagesElement.scrollLeft >= PagesElement.scrollWidth - PagesElement.clientWidth - 1;
+        if ((AtStart && DeltaX > 0) || (AtEnd && DeltaX < 0)) {
+            E.preventDefault();
+        }
+    }, { passive: false });
+})();
 
 const SnackElement = document.getElementById('Snack');
 let SnackTimer;
@@ -502,31 +430,6 @@ const Tweaks = {
         OFFCommand: 'cmd wifi set-ipreach-disconnect enabled',
         ONLabel: 'Disabled', OFFLabel: 'Enabled',
     },
-    "Scan Always Available": {
-        Label: 'Disable Scan Always Available',
-        Icon: 'ScanAlwaysAvailable',
-        Description: 'Reduces jitter, especially when playing over Wi-Fi connection.',
-        Warn: 'May cause location services to not function properly',
-        ONCommand: 'cmd wifi set-scan-always-available disabled ; settings put global wifi_scan_always_enabled 0',
-        OFFCommand: 'cmd wifi set-scan-always-available enabled ; settings put global wifi_scan_always_enabled 1',
-        ONLabel: 'Disabled', OFFLabel: 'Enabled',
-    },
-    "Restrict Background": {
-        Label: 'Disable Restrict Background',
-        Icon: 'RestrictBackground',
-        Description: 'Maintain ping stability and prevent jitter.',
-        ONCommand: 'cmd netpolicy set restrict-background false',
-        OFFCommand: 'cmd netpolicy set restrict-background true',
-        ONLabel: 'Disabled', OFFLabel: 'Enabled',
-    },
-    "Power Save": {
-        Label: 'Disable Power Save',
-        Icon: 'PowerSave',
-        Description: 'Eliminate jitter and maintain stable ping while gaming over Wi-Fi connection.',
-        ONCommand: 'iw dev wlan0 set power_save off',
-        OFFCommand: 'iw dev wlan0 set power_save on',
-        ONLabel: 'Disabled', OFFLabel: 'Enabled',
-    },
     "QDISC": {
         Label: 'Optimize QDISC',
         Icon: 'QDISC',
@@ -702,6 +605,7 @@ async function Load() {
     ]);
 
     document.getElementById('WebUI').classList.add('Ready');
+    SyncActivePageFromScroll();
     UpdateNavigationIcons();
     const LoadingScreen = document.getElementById('LoadingScreen');
     if (LoadingScreen) {
