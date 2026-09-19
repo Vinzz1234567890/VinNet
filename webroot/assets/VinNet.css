@@ -119,24 +119,24 @@ img {
 .Pages {
     position: relative;
     flex: 1;
-    min-height: 0;
-    overflow: hidden;
-    touch-action: pan-y;
+    display: flex;
+    overflow: auto hidden;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
     overscroll-behavior-x: none;
-    --page-base: 0%;
-    --page-drag: 0px;
 }
 
-.Page {
-    position: absolute;
-    inset: 0;
-    --page-lane: 0%;
-    transform: translateX(calc(var(--page-base) + var(--page-drag) + var(--page-lane)));
-    transition: transform 0.4s cubic-bezier(0.2, 1, 0.2, 1);
-    will-change: transform;
+.Pages::-webkit-scrollbar {
+    display: none;
+}
+
+.Page,
+.ActivePage {
+    flex: 0 0 100%;
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
     overflow-y: auto;
     overscroll-behavior-y: none;
-    touch-action: pan-y;
     padding: calc(var(--topbar-h) + 16px) 14px calc(var(--botnav-h) + 12px);
     display: flex;
     flex-direction: column;
@@ -144,19 +144,8 @@ img {
     scrollbar-width: none;
 }
 
-.Page:nth-child(2) {
-    --page-lane: 100%;
-}
-
-.Page:nth-child(3) {
-    --page-lane: 200%;
-}
-
-.Pages.Dragging .Page {
-    transition: none;
-}
-
-.Page::-webkit-scrollbar {
+.Page::-webkit-scrollbar,
+.ActivePage::-webkit-scrollbar {
     display: none;
 }
 
@@ -251,26 +240,22 @@ img {
     height: 100%;
     object-fit: cover;
     opacity: 0;
-    animation: BannerCrossfade 15.9s infinite;
+    animation: BannerCrossfade 10.6s infinite;
 }
 
 .Banner:nth-of-type(2) {
-    animation-delay: -10.6s;
-}
-
-.Banner:nth-of-type(3) {
     animation-delay: -5.3s;
 }
 
 @keyframes BannerCrossfade {
 
     0%,
-    31.4% {
+    47.2% {
         opacity: 1;
     }
 
-    33.3%,
-    98.1% {
+    50%,
+    97.2% {
         opacity: 0;
     }
 
