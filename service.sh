@@ -99,6 +99,21 @@ ApplyTweaks() {
         "IP Reach Disconnect")
             cmd wifi set-ipreach-disconnect $([ "$State" = "on" ] && echo disabled || echo enabled)
             ;;
+        "Scan Always Available")
+            if [ "$State" = "on" ]; then
+                cmd wifi set-scan-always-available disabled
+                settings put global wifi_scan_always_enabled 0
+            else
+                cmd wifi set-scan-always-available enabled
+                settings put global wifi_scan_always_enabled 1
+            fi
+            ;;
+        "Restrict Background")
+            cmd netpolicy set restrict-background $([ "$State" = "on" ] && echo false || echo true)
+            ;;
+        "Power Save")
+            iw dev wlan0 set power_save $([ "$State" = "on" ] && echo off || echo on) 2> /dev/null
+            ;;
         "QDISC")
             local QDISC=$([ "$State" = "on" ] && echo "fq_codel quantum 300 noecn" || echo "pfifo_fast")
             for Interface in wlan0 rmnet_data0 rmnet_ipa0; do
@@ -257,6 +272,8 @@ Environment
 ProcessID
 Monitor "$(date +%s)"
 
+LastMonitorSave=0
+
 while true; do
     Now=$(date +%s)
 
@@ -280,5 +297,11 @@ while true; do
         sleep 4
     else
         sleep 5
+    fi
+
+    if [ $((Now - LastMonitorSave)) -ge 60 ]; then
+        [ -f "$Configuration" ] && grep -iq "^Power Save=on" "$Configuration" 2> /dev/null \
+            && iw dev wlan0 set power_save off 2> /dev/null
+        LastMonitorSave=$Now
     fi
 done
