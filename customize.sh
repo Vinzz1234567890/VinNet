@@ -3,16 +3,11 @@ LATESTARTSERVICE=true
 
 readonly TargetDevice="fog"
 readonly MetaModules="/data/adb/modules/magic_mount_rs /data/adb/modules/hybrid_mount /data/adb/modules/meta-mm /data/adb/modules/meta-overlayfs /data/adb/modules/magisk_overlayfs /data/adb/modules/mountify"
-readonly InstalledModule="/data/adb/modules/VinNet"
-readonly BinaryPath="$MODPATH/system/bin/iw"
 
 sleep 0.5
 [ -n "$MODPATH" ] || abort "MODPATH is Not Set"
 
 Print() { ui_print "- $*"; }
-HasSystemBinary() { [ -f "/system/bin/iw" ] || [ -f "/vendor/bin/iw" ]; }
-HasInstalledBinary() { [ -f "$InstalledModule/system/bin/iw" ]; }
-UseSystemBinary() { HasSystemBinary && ! HasInstalledBinary; }
 
 FindMetaModule() {
     for Target in $MetaModules; do
@@ -22,14 +17,6 @@ FindMetaModule() {
         fi
     done
     return 1
-}
-
-BinaryForArch() {
-    case "$ARCH" in
-        arm64) echo "iw-arm64" ;;
-        arm) echo "iw-arm" ;;
-        *) return 1 ;;
-    esac
 }
 
 ConfigureMount() {
@@ -63,25 +50,6 @@ ConfigureVendor() {
     fi
 }
 
-ProvisionBinary() {
-    Print "Checking Binary Dependencies..."
-    if UseSystemBinary; then
-        Print "Using Built-in Binary..."
-        return
-    fi
-
-    local Source
-    Source=$(BinaryForArch) || abort "Architecture not Supported: $ARCH"
-    Print "Built-in Binary not Detected, Installing Binary..."
-    cp -f "$MODPATH/binaries/$Source" "$BinaryPath" || abort "Failed to Install iw Binary"
-}
-
-SetPermission() {
-    [ -f "$BinaryPath" ] || return
-    Print "Setting Permissions..."
-    set_perm "$BinaryPath" 0 0 0755
-}
-
 ReportCredit() {
     Print "Credit: Vinzz"
     Print "TikTok: @vinzz.fog"
@@ -91,8 +59,6 @@ ReportCredit() {
 ConfigureMount "$(FindMetaModule)"
 ReportDevice
 ConfigureVendor
-ProvisionBinary
 ReportCredit
-SetPermission
 Print "Configuring Network..."
 Print "Installing VinNet..."
