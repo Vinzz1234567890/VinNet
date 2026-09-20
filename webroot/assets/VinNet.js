@@ -319,7 +319,6 @@ const Environment = [
 
 const VendorBinary = [
     ['Vendor', '[ "$(getprop ro.product.device)" = "fog" ] && { grep -q "VinNet" /vendor/etc/wifi/WCNSS_qcom_cfg.ini 2>/dev/null && grep -q "p2p_disabled=1" /vendor/etc/wifi/wpa_supplicant_overlay.conf 2>/dev/null && grep -q "ap_scan=1" /vendor/etc/wifi/wpa_supplicant.conf 2>/dev/null && echo Mounted || echo Unmounted; } || echo Unmounted'],
-    ['Binary', 'command -v iw >/dev/null 2>&1 && echo Mounted || echo Unmounted'],
 ];
 
 async function LoadEnvironment() {
@@ -502,31 +501,6 @@ const Tweaks = {
         OFFCommand: 'cmd wifi set-ipreach-disconnect enabled',
         ONLabel: 'Disabled', OFFLabel: 'Enabled',
     },
-    "Scan Always Available": {
-        Label: 'Disable Scan Always Available',
-        Icon: 'ScanAlwaysAvailable',
-        Description: 'Reduces jitter, especially when playing over Wi-Fi connection.',
-        Warn: 'May cause location services to not function properly',
-        ONCommand: 'cmd wifi set-scan-always-available disabled ; settings put global wifi_scan_always_enabled 0',
-        OFFCommand: 'cmd wifi set-scan-always-available enabled ; settings put global wifi_scan_always_enabled 1',
-        ONLabel: 'Disabled', OFFLabel: 'Enabled',
-    },
-    "Restrict Background": {
-        Label: 'Disable Restrict Background',
-        Icon: 'RestrictBackground',
-        Description: 'Maintain ping stability and prevent jitter.',
-        ONCommand: 'cmd netpolicy set restrict-background false',
-        OFFCommand: 'cmd netpolicy set restrict-background true',
-        ONLabel: 'Disabled', OFFLabel: 'Enabled',
-    },
-    "Power Save": {
-        Label: 'Disable Power Save',
-        Icon: 'PowerSave',
-        Description: 'Eliminate jitter and maintain stable ping while gaming over Wi-Fi connection.',
-        ONCommand: 'iw dev wlan0 set power_save off',
-        OFFCommand: 'iw dev wlan0 set power_save on',
-        ONLabel: 'Disabled', OFFLabel: 'Enabled',
-    },
     "QDISC": {
         Label: 'Optimize QDISC',
         Icon: 'QDISC',
@@ -538,9 +512,9 @@ const Tweaks = {
     "Wi-Fi Force Low Latency Mode": {
         Label: 'Enable Wi-Fi Force Low Latency Mode',
         Icon: 'Wi-FiForceLowLatencyMode',
-        Description: 'Force Android to enable built-in low-latency mode at system level.',
-        ONCommand: 'cmd wifi force-low-latency-mode enabled ; cmd wifi force-hi-perf-mode enabled',
-        OFFCommand: 'cmd wifi force-low-latency-mode disabled ; cmd wifi force-hi-perf-mode disabled',
+        Description: 'Force Android to enable built-in low-latency mode at system level, falling back to hi-perf mode on devices that lack it.',
+        ONCommand: 'cmd wifi force-low-latency-mode enabled 2>/dev/null || cmd wifi force-hi-perf-mode enabled',
+        OFFCommand: 'cmd wifi force-low-latency-mode disabled 2>/dev/null || cmd wifi force-hi-perf-mode disabled',
         ONLabel: 'Enabled', OFFLabel: 'Disabled',
     },
     "Network Avoid Bad Wi-Fi": {
