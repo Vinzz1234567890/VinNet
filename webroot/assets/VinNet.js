@@ -295,11 +295,11 @@ function exec(cmd) {
             try { ksu.exec(cmd, JSON.stringify({}), CallbackName); } catch (e) { delete window[CallbackName]; reject(String(e)); }
         } else {
             const MOCK = {
-                'getprop ro.product.brand': '—',
-                'getprop ro.product.model': '—',
-                'getprop ro.build.version.release': '—',
+                'resetprop ro.product.brand': '—',
+                'resetprop ro.product.model': '—',
+                'resetprop ro.build.version.release': '—',
                 'uname -r': '—',
-                'getprop ro.product.cpu.abi': '—',
+                'resetprop ro.product.cpu.abi': '—',
             };
             if (MOCK[cmd] !== undefined) { resolve(MOCK[cmd]); return; }
             if (cmd.toLowerCase().startsWith('ping')) { resolve('—'); return; }
@@ -309,16 +309,16 @@ function exec(cmd) {
 }
 
 const Environment = [
-    ['Brand', 'Brand', 'getprop ro.product.brand'],
-    ['Model', 'Model', 'getprop ro.product.model'],
-    ['Android', 'Android', 'getprop ro.build.version.release'],
+    ['Brand', 'Brand', 'resetprop ro.product.brand'],
+    ['Model', 'Model', 'resetprop ro.product.model'],
+    ['Android', 'Android', 'resetprop ro.build.version.release'],
     ['Kernel', 'Kernel', 'uname -r'],
-    ['Architecture', 'Architecture', 'getprop ro.product.cpu.abi'],
+    ['Architecture', 'Architecture', 'resetprop ro.product.cpu.abi'],
     ['Root', 'Root', 'command -v ksud >/dev/null 2>&1 && echo KernelSU || (command -v apd >/dev/null 2>&1 && echo APatch || (command -v magisk >/dev/null 2>&1 && echo Magisk || echo Unknown))'],
 ];
 
 const VendorBinary = [
-    ['Vendor', '[ "$(getprop ro.product.device)" = "fog" ] && { grep -q "VinNet" /vendor/etc/wifi/WCNSS_qcom_cfg.ini 2>/dev/null && grep -q "p2p_disabled=1" /vendor/etc/wifi/wpa_supplicant_overlay.conf 2>/dev/null && grep -q "ap_scan=1" /vendor/etc/wifi/wpa_supplicant.conf 2>/dev/null && echo Mounted || echo Unmounted; } || echo Unmounted'],
+    ['Vendor', '[ "$(resetprop ro.product.device)" = "fog" ] && { grep -q "VinNet" /vendor/etc/wifi/WCNSS_qcom_cfg.ini 2>/dev/null && grep -q "p2p_disabled=1" /vendor/etc/wifi/wpa_supplicant_overlay.conf 2>/dev/null && grep -q "ap_scan=1" /vendor/etc/wifi/wpa_supplicant.conf 2>/dev/null && echo Mounted || echo Unmounted; } || echo Unmounted'],
 ];
 
 async function LoadEnvironment() {
@@ -492,6 +492,15 @@ document.addEventListener('visibilitychange', () => {
     }
 });
 
+// OFF restores the stock value service.sh recorded in Core/Baseline.conf, deleting the
+// property when the device never had it. The fallback is used when nothing was recorded.
+function StockRestore(Name, Flags, Fallback) {
+    const Prop = `${Flags ? Flags + ' ' : ''}${Name}`;
+    return `Stock=$(sed -n 's/^${Name}=//p' ${Core}/Baseline.conf 2>/dev/null | tail -n 1); ` +
+        `[ -n "$Stock" ] || Stock=${Fallback}; ` +
+        `case "$Stock" in @@Unset@@) resetprop ${Prop} --delete ;; *) resetprop ${Prop} "$Stock" ;; esac`;
+}
+
 const Tweaks = {
     "IP Reach Disconnect": {
         Label: 'Disable IP Reach Disconnect',
@@ -546,7 +555,7 @@ const Tweaks = {
         Icon: 'Wi-FiCountryCode',
         Description: 'Change country code to “US” to bypass certain restrictions on Wi-Fi.',
         ONCommand: 'resetprop ro.boot.wificountrycode US',
-        OFFCommand: 'resetprop ro.boot.wificountrycode 00',
+        OFFCommand: StockRestore('ro.boot.wificountrycode', '', '00'),
         ONLabel: 'Changed', OFFLabel: 'Unchanged',
     },
     "Force LTE CA": {
@@ -554,16 +563,16 @@ const Tweaks = {
         Icon: 'ForceLTECA',
         Description: 'Combines two or more cellular frequency bands simultaneously, resulting in significantly faster internet speeds and more stable connection on 4G or 4G+ networks.',
         ONCommand: 'resetprop -p persist.sys.radio.force_lte_ca true',
-        OFFCommand: 'resetprop -p persist.sys.radio.force_lte_ca false',
+        OFFCommand: StockRestore('persist.sys.radio.force_lte_ca', '-p', 'false'),
         ONLabel: 'Enabled', OFFLabel: 'Disabled',
     },
-    "Wi-Fi Scan Throttle Enabled": {
-        Label: 'Disable Wi-Fi Scan Throttle Enabled',
-        Icon: 'Wi-FiScanThrottleEnabled',
+    "Wi-Fi Scan Throttle": {
+        Label: 'Enable Wi-Fi Scan Throttle',
+        Icon: 'Wi-FiScanThrottle',
         Description: 'Limit background Wi-Fi scanning to conserve battery life and prevent jitter.',
         ONCommand: 'settings put global wifi_scan_throttle_enabled 1',
         OFFCommand: 'settings put global wifi_scan_throttle_enabled 0',
-        ONLabel: 'Disabled', OFFLabel: 'Enabled',
+        ONLabel: 'Enabled', OFFLabel: 'Disabled',
     }
 };
 
