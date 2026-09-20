@@ -33,15 +33,15 @@ ConfigureMount() {
 
 ReportDevice() {
     Print "Checking Device Compatibility..."
-    Print "Brand: $(getprop ro.product.brand)"
-    Print "Model: $(getprop ro.product.model)"
-    Print "Android: $(getprop ro.build.version.release)"
+    Print "Brand: $(resetprop ro.product.brand)"
+    Print "Model: $(resetprop ro.product.model)"
+    Print "Android: $(resetprop ro.build.version.release)"
     Print "Kernel: $(uname -r)"
-    Print "Architecture: $(getprop ro.product.cpu.abi)"
+    Print "Architecture: $(resetprop ro.product.cpu.abi)"
 }
 
 ConfigureVendor() {
-    if [ "$(getprop ro.product.device)" = "$TargetDevice" ]; then
+    if [ "$(resetprop ro.product.device)" = "$TargetDevice" ]; then
         Print "Device is $TargetDevice"
     else
         Print "Device isn't $TargetDevice"
