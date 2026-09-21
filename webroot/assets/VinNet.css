@@ -116,11 +116,6 @@ img {
     margin-top: 3px;
 }
 
-/* Pager: every page sits on its own lane (--page-lane) of an imaginary track and
-   is moved by the two shared offsets --page-base (the active page) and
-   --page-drag (the finger). Pages are stacked instead of scrolled, so the page
-   position is a pure function of the active index and can never drift from the
-   header or the navigation bar. */
 .Pages {
     position: relative;
     flex: 1;
@@ -249,10 +244,6 @@ img {
     flex-shrink: 0;
 }
 
-/* Three banners take turns in one cycle of 3 x 5.3s = 15.9s: each one is held
-   for 5s and then crossfades for 0.3s into the next slot. The visible part of
-   the keyframes sits at the start of the cycle, so every banner is delayed by
-   its distance to the end of the cycle - 0s, -10.6s and -5.3s. */
 .Banner {
     position: absolute;
     inset: 0;
