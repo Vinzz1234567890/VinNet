@@ -492,15 +492,6 @@ document.addEventListener('visibilitychange', () => {
     }
 });
 
-// OFF restores the stock value service.sh recorded in Core/Baseline.conf, deleting the
-// property when the device never had it. The fallback is used when nothing was recorded.
-function StockRestore(Name, Flags, Fallback) {
-    const Prop = `${Flags ? Flags + ' ' : ''}${Name}`;
-    return `Stock=$(sed -n 's/^${Name}=//p' ${Core}/Baseline.conf 2>/dev/null | tail -n 1); ` +
-        `[ -n "$Stock" ] || Stock=${Fallback}; ` +
-        `case "$Stock" in @@Unset@@) resetprop ${Prop} --delete ;; *) resetprop ${Prop} "$Stock" ;; esac`;
-}
-
 const Tweaks = {
     "IP Reach Disconnect": {
         Label: 'Disable IP Reach Disconnect',
@@ -555,7 +546,7 @@ const Tweaks = {
         Icon: 'Wi-FiCountryCode',
         Description: 'Change country code to “US” to bypass certain restrictions on Wi-Fi.',
         ONCommand: 'resetprop ro.boot.wificountrycode US',
-        OFFCommand: StockRestore('ro.boot.wificountrycode', '', '00'),
+        OFFCommand: 'resetprop ro.boot.wificountrycode 00',
         ONLabel: 'Changed', OFFLabel: 'Unchanged',
     },
     "Force LTE CA": {
@@ -563,7 +554,7 @@ const Tweaks = {
         Icon: 'ForceLTECA',
         Description: 'Combines two or more cellular frequency bands simultaneously, resulting in significantly faster internet speeds and more stable connection on 4G or 4G+ networks.',
         ONCommand: 'resetprop -p persist.sys.radio.force_lte_ca true',
-        OFFCommand: StockRestore('persist.sys.radio.force_lte_ca', '-p', 'false'),
+        OFFCommand: 'resetprop -p persist.sys.radio.force_lte_ca false',
         ONLabel: 'Enabled', OFFLabel: 'Disabled',
     },
     "Wi-Fi Scan Throttle": {
