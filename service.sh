@@ -107,7 +107,9 @@ ApplyTweaks() {
             ;;
         "Wi-Fi Force Low Latency Mode")
             local Mode=$([ "$State" = "on" ] && echo enabled || echo disabled)
-            cmd wifi force-low-latency-mode "$Mode" 2> /dev/null || cmd wifi force-hi-perf-mode "$Mode" 2> /dev/null
+            local Out
+            Out=$(cmd wifi force-low-latency-mode "$Mode" 2> /dev/null)
+            case "$Out" in *"Command execution failed"*) cmd wifi force-hi-perf-mode "$Mode" 2> /dev/null;; esac
             ;;
         "Network Avoid Bad Wi-Fi")
             if [ "$State" = "on" ]; then
