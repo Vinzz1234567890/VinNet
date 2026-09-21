@@ -2,7 +2,76 @@
 
 ---
 
-## v1.1.7-Zecht - 2026-08-25 - Latest
+## v1.1.8-Igrum - 2026-09-06 - Latest
+
+### ✨Added
+
+- Diagnostic logging for service, filesystem, binary, and network monitor errors
+- Recovery mechanism for an unwritable `webroot/Core` directory using remount, temporary filesystem, or fallback storage
+- Live state detection for Web UI tweaks
+- Fallback loading of module metadata from `module.prop`
+- Fallback network latency and jitter measurement when monitor data is unavailable
+- Fallback process ID detection using `pgrep`
+- Third Web UI banner: `VinNetBanner3.webp`
+- Feedback link to the Web UI information page
+
+### 🔄️Changed
+
+- Module version from `1.1.7-Zecht` to `1.1.8-Igrum`
+- Module version code from `20260825` to `20260906`
+- Module description from `Enhanced Implementation of Network Optimization` to `Simple Implementation of Network Optimization`
+- Web UI page navigation from scroll-based navigation to transform-based drag/swipe navigation
+- Web UI tweak system to verify actual system state instead of relying only on saved configuration
+- `Wi-Fi Force Low Latency Mode` to fall back to `Wi-Fi High Performance Mode` when low-latency mode is unavailable
+- `Wi-Fi Scan Throttle Enabled` tweak to `Wi-Fi Scan Throttle` with corrected enable/disable behavior and status labels
+- Web UI header to remove the VinNet logo
+- Web UI header height from `84px` to `70px`
+- Banner rotation timing to accommodate three banners
+- Environment property queries from `getprop` to `resetprop`
+- Web UI metadata, monitor, and process loading to support fallback sources
+- Service boot-completion detection to use `resetprop`
+- Network monitor failure handling to record ping errors in the log
+- `customize.sh` installation logic and output structure
+- Other Web UI and service refactoring
+
+### 📈Improved
+
+- Web UI swipe and drag interaction
+- Navigation transition smoothness and page synchronization
+- Tweak status accuracy through live system-state verification
+- Service resilience when `webroot/Core` is read-only
+- Web UI reliability when cached runtime data is unavailable
+- Network monitor diagnostics and failure reporting
+- Web UI banner presentation
+- Installation simplicity and package efficiency
+- General Web UI, service, and installation code structure
+
+### 🔧Fixed
+
+- Web UI tweak switches displaying outdated states when the actual system state differs from saved configuration
+- Web UI failure when `Metadata.json` is unavailable
+- Dashboard monitor failure when `Monitor.json` is unavailable
+- PID display failure when `ProcessID.json` is unavailable
+- Service write failures when `webroot/Core` is mounted read-only
+- Low-latency mode handling on devices where `force-low-latency-mode` is unsupported
+- Other Web UI navigation and runtime reliability issues
+
+### 🔥Deleted
+
+- Bundled `iw-arm` binary
+- Bundled `iw-arm64` binary
+- `webroot/assets/VinNet.webp`
+- `Scan Always Available` tweak
+- `Restrict Background` tweak
+- `Power Save` tweak
+- Local `wifi_scan_always_enabled` cleanup from `uninstall.sh`
+- `Binary` status entry from the Web UI dashboard
+- Obsolete scroll/intersection-based navigation implementation
+- Other obsolete code
+
+---
+
+## v1.1.7-Zecht - 2026-08-25
 
 ### ✨Added
 
