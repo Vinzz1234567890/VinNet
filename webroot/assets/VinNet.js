@@ -499,6 +499,8 @@ const Tweaks = {
         Description: 'Preventing Wi-Fi from suddenly disconnecting when network is unstable.',
         ONCommand: 'cmd wifi set-ipreach-disconnect disabled',
         OFFCommand: 'cmd wifi set-ipreach-disconnect enabled',
+        CheckCommand: 'cmd wifi get-ipreach-disconnect',
+        Expect: 'disabled',
         ONLabel: 'Disabled', OFFLabel: 'Enabled',
     },
     "QDISC": {
@@ -507,6 +509,8 @@ const Tweaks = {
         Description: 'Split data traffic into multiple paths and prioritize small data packets so they aren\'t held up by large data packets.',
         ONCommand: 'tc qdisc replace dev wlan0 root fq_codel quantum 300 noecn ; tc qdisc replace dev rmnet_data0 root fq_codel quantum 300 noecn ; tc qdisc replace dev rmnet_ipa0 root fq_codel quantum 300 noecn',
         OFFCommand: 'tc qdisc replace dev wlan0 root pfifo_fast ; tc qdisc replace dev rmnet_data0 root pfifo_fast ; tc qdisc replace dev rmnet_ipa0 root pfifo_fast',
+        CheckCommand: 'tc qdisc show dev wlan0 2>/dev/null; tc qdisc show dev rmnet_data0 2>/dev/null; tc qdisc show dev rmnet_ipa0 2>/dev/null || true',
+        Expect: 'fq_codel',
         ONLabel: 'Optimized', OFFLabel: 'Unoptimized',
     },
     "Wi-Fi Force Low Latency Mode": {
@@ -515,6 +519,8 @@ const Tweaks = {
         Description: 'Force Android to enable built-in low-latency mode at system level, falling back to hi-perf mode on devices that lack it.',
         ONCommand: 'cmd wifi force-low-latency-mode enabled 2>/dev/null || cmd wifi force-hi-perf-mode enabled',
         OFFCommand: 'cmd wifi force-low-latency-mode disabled 2>/dev/null || cmd wifi force-hi-perf-mode disabled',
+        CheckCommand: "dumpsys wifi 2>/dev/null | grep -oE 'mPowerSaveDisableRequests [0-9]+' | head -n 1 | awk '{print $2 % 4}'",
+        Expect: ['2', '3'],
         ONLabel: 'Enabled', OFFLabel: 'Disabled',
     },
     "Network Avoid Bad Wi-Fi": {
@@ -523,6 +529,8 @@ const Tweaks = {
         Description: 'Forces system to stay connected to Wi-Fi interface even if signal quality deteriorates.',
         ONCommand: 'settings put global network_avoid_bad_wifi 0',
         OFFCommand: 'settings put global network_avoid_bad_wifi 1',
+        CheckCommand: 'settings get global network_avoid_bad_wifi',
+        Expect: '0',
         ONLabel: 'Disabled', OFFLabel: 'Enabled',
     },
     "BLE Scan Always Enabled": {
@@ -531,6 +539,8 @@ const Tweaks = {
         Description: 'Minimize jitter and ping spikes when gaming over 2.4 GHz Wi-Fi network.',
         ONCommand: 'settings put global ble_scan_always_enabled 0',
         OFFCommand: 'settings put global ble_scan_always_enabled 1',
+        CheckCommand: 'settings get global ble_scan_always_enabled',
+        Expect: '0',
         ONLabel: 'Disabled', OFFLabel: 'Enabled',
     },
     "Mobile Data Always ON": {
@@ -539,6 +549,8 @@ const Tweaks = {
         Description: 'Disable functions that are likely to disrupt transmission stability.',
         ONCommand: 'settings put global mobile_data_always_on 0',
         OFFCommand: 'settings put global mobile_data_always_on 1',
+        CheckCommand: 'settings get global mobile_data_always_on',
+        Expect: '0',
         ONLabel: 'Disabled', OFFLabel: 'Enabled',
     },
     "Wi-Fi Country Code": {
@@ -547,6 +559,8 @@ const Tweaks = {
         Description: 'Change country code to “US” to bypass certain restrictions on Wi-Fi.',
         ONCommand: 'resetprop ro.boot.wificountrycode US',
         OFFCommand: 'resetprop ro.boot.wificountrycode 00',
+        CheckCommand: 'resetprop ro.boot.wificountrycode',
+        Expect: 'US',
         ONLabel: 'Changed', OFFLabel: 'Unchanged',
     },
     "Force LTE CA": {
@@ -555,6 +569,8 @@ const Tweaks = {
         Description: 'Combines two or more cellular frequency bands simultaneously, resulting in significantly faster internet speeds and more stable connection on 4G or 4G+ networks.',
         ONCommand: 'resetprop -p persist.sys.radio.force_lte_ca true',
         OFFCommand: 'resetprop -p persist.sys.radio.force_lte_ca false',
+        CheckCommand: 'resetprop -p persist.sys.radio.force_lte_ca',
+        Expect: 'true',
         ONLabel: 'Enabled', OFFLabel: 'Disabled',
     },
     "Wi-Fi Scan Throttle": {
@@ -563,9 +579,20 @@ const Tweaks = {
         Description: 'Limit background Wi-Fi scanning to conserve battery life and prevent jitter.',
         ONCommand: 'settings put global wifi_scan_throttle_enabled 1',
         OFFCommand: 'settings put global wifi_scan_throttle_enabled 0',
+        CheckCommand: 'settings get global wifi_scan_throttle_enabled',
+        Expect: '1',
         ONLabel: 'Enabled', OFFLabel: 'Disabled',
     }
 };
+
+async function CheckTweaks() {
+    const LiveState = new Map();
+    await Promise.all(Object.entries(Tweaks).map(async ([ID, Tweak]) => {
+        if (!Tweak.CheckCommand) return;
+        try { const Out = await exec(Tweak.CheckCommand); LiveState.set(ID, [].concat(Tweak.Expect).some(E => Out.includes(E))); } catch { }
+    }));
+    return LiveState;
+}
 
 async function RenderTweaks() {
     const Container = document.getElementById('PageTweaks');
@@ -587,6 +614,8 @@ async function RenderTweaks() {
     }
     Log('Tweaks', TweakState);
 
+    const LiveState = await CheckTweaks();
+
     Container.replaceChildren();
     for (const [ID, Tweak] of Object.entries(Tweaks)) {
         const Card = Template.content.cloneNode(true);
@@ -601,7 +630,7 @@ async function RenderTweaks() {
         }
         const Input = Card.querySelector('Input');
         Input.id = 'Tweak-' + ID;
-        Input.checked = TweakState[ID] === 'ON';
+        Input.checked = LiveState.has(ID) ? LiveState.get(ID) : TweakState[ID] === 'ON';
         Input.dataset.tweakId = ID;
         Container.appendChild(Card);
     }
