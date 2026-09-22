@@ -3,20 +3,24 @@ Directory="${0%/*}"
 Core="$Directory/webroot/Core"
 LogPath="/storage/emulated/0/Download/VinNet.log"
 
+Log() { echo "[$(date +%T)] $1: $2" >> "$LogPath" 2> /dev/null; }
+
+ProbeWrite() { : > "$Core/.WriteProbe" 2> /dev/null && rm -f "$Core/.WriteProbe"; }
+
 [ -d "$Core" ] || mkdir -p "$Core" 2> /dev/null
-if ! { : > "$Core/.WriteProbe" 2> /dev/null && rm -f "$Core/.WriteProbe"; }; then
+ProbeWrite || {
     mount -o remount,rw "$Directory" 2> /dev/null || mount -o remount,rw /data/adb/modules 2> /dev/null
-    if ! { : > "$Core/.WriteProbe" 2> /dev/null && rm -f "$Core/.WriteProbe"; }; then
+    ProbeWrite || {
         mount -t tmpfs -o size=2M tmpfs "$Core" 2> /dev/null
-        if { : > "$Core/.WriteProbe" 2> /dev/null && rm -f "$Core/.WriteProbe"; }; then
-            echo "[$(date +%T)] CoreMountedTmpfs: webroot/Core read-only, mounted tmpfs on $Core" >> "$LogPath"
+        if ProbeWrite; then
+            Log CoreMountedTmpfs "webroot/Core read-only, mounted tmpfs on $Core"
         else
             Core="/data/local/tmp/VinNetCore"
             mkdir -p "$Core" 2> /dev/null
-            echo "[$(date +%T)] CoreFallback: webroot/Core not writable, using $Core" >> "$LogPath"
+            Log CoreFallback "webroot/Core not writable, using $Core"
         fi
-    fi
-fi
+    }
+}
 
 Configuration="$Core/VinNet.conf"
 Detect="$Core/Detect.txt"
@@ -29,19 +33,17 @@ LockFile="$Core/service.pid"
 Identity="$Directory/module.prop"
 CoreWritable=1
 
-[ -d "$Core" ] || mkdir -p "$Core"
-
 Write() {
     [ "$CoreWritable" -eq 0 ] && return 1
     local Destination="$1" Temporary="${Destination}.tmp.$$" ErrorOutput
     ErrorOutput=$({ cat > "$Temporary" && mv -f "$Temporary" "$Destination"; } 2>&1)
     [ $? -eq 0 ] && return 0
-    echo "[$(date +%T)] WriteFail: $Destination : ${ErrorOutput:-unknown error}" >> "$LogPath"
+    Log WriteFail "$Destination : ${ErrorOutput:-unknown error}"
     rm -f "$Temporary" 2> /dev/null
     case "$ErrorOutput" in
         *"Read-only file system"*)
             CoreWritable=0
-            echo "[$(date +%T)] CoreReadOnly: $Core read-only, stopping further write attempts this session" >> "$LogPath"
+            Log CoreReadOnly "$Core read-only, stopping further write attempts this session"
             ;;
     esac
 }
@@ -50,26 +52,17 @@ Diagnose() {
     local ABI Arch="Unsupported"
     ABI=$(resetprop ro.product.cpu.abi)
     case "$ABI" in arm64*) Arch="Supported (arm64)" ;; armeabi*) Arch="Supported (arm)" ;; esac
-    {
-        echo "[$(date +%T)] Diagnose: ABI=$ABI Architecture=$Arch"
-        for Bin in ping awk tc resetprop; do
-            if command -v "$Bin" > /dev/null 2>&1; then
-                echo "[$(date +%T)] Diagnose: $Bin found at $(command -v "$Bin")"
-            else
-                echo "[$(date +%T)] Diagnose: $Bin MISSING"
-            fi
-        done
-        if [ -w "$Core" ]; then
-            echo "[$(date +%T)] Diagnose: $Core writable"
+    Log Diagnose "ABI=$ABI Architecture=$Arch"
+    for Bin in ping awk tc resetprop; do
+        if command -v "$Bin" > /dev/null 2>&1; then
+            Log Diagnose "$Bin found at $(command -v "$Bin")"
         else
-            echo "[$(date +%T)] Diagnose: $Core NOT writable"
+            Log Diagnose "$Bin MISSING"
         fi
-        DmesgLines=$(dmesg 2> /dev/null | grep -iE "f2fs|erofs|remount" | tail -5)
-        if [ -n "$DmesgLines" ]; then
-            echo "[$(date +%T)] Diagnose: dmesg --"
-            echo "$DmesgLines"
-        fi
-    } >> "$LogPath" 2> /dev/null
+    done
+    if [ -w "$Core" ]; then Log Diagnose "$Core writable"; else Log Diagnose "$Core NOT writable"; fi
+    DmesgLines=$(dmesg 2> /dev/null | grep -iE "f2fs|erofs|remount" | tail -5)
+    [ -n "$DmesgLines" ] && Log Diagnose "dmesg -- $DmesgLines"
 }
 Diagnose
 
@@ -112,11 +105,7 @@ ApplyTweaks() {
             case "$Out" in *"Command execution failed"*) cmd wifi force-hi-perf-mode "$Mode" 2> /dev/null;; esac
             ;;
         "Network Avoid Bad Wi-Fi")
-            if [ "$State" = "on" ]; then
-                settings put global network_avoid_bad_wifi 0
-            else
-                settings put global network_avoid_bad_wifi 1
-            fi
+            settings put global network_avoid_bad_wifi $([ "$State" = "on" ] && echo 0 || echo 1)
             ;;
         "BLE Scan Always Enabled")
             settings put global ble_scan_always_enabled $([ "$State" = "on" ] && echo 0 || echo 1)
@@ -125,25 +114,13 @@ ApplyTweaks() {
             settings put global mobile_data_always_on $([ "$State" = "on" ] && echo 0 || echo 1)
             ;;
         "Wi-Fi Country Code")
-            if [ "$State" = "on" ]; then
-                resetprop ro.boot.wificountrycode US
-            else
-                resetprop ro.boot.wificountrycode 00
-            fi
+            resetprop ro.boot.wificountrycode $([ "$State" = "on" ] && echo US || echo 00)
             ;;
         "Force LTE CA")
-            if [ "$State" = "on" ]; then
-                resetprop -p persist.sys.radio.force_lte_ca true
-            else
-                resetprop -p persist.sys.radio.force_lte_ca false
-            fi
+            resetprop -p persist.sys.radio.force_lte_ca $([ "$State" = "on" ] && echo true || echo false)
             ;;
         "Wi-Fi Scan Throttle")
-            if [ "$State" = "on" ]; then
-                settings put global wifi_scan_throttle_enabled 1
-            else
-                settings put global wifi_scan_throttle_enabled 0
-            fi
+            settings put global wifi_scan_throttle_enabled $([ "$State" = "on" ] && echo 1 || echo 0)
             ;;
     esac
 }
@@ -163,13 +140,13 @@ GenerateTweaks() {
 
 Metadata() {
     [ -f "$Identity" ] || return
-    local ID Name Version VersionCode Author Description
-    ID=$(grep "^id=" "$Identity" | cut -d'=' -f2-)
-    Name=$(grep "^name=" "$Identity" | cut -d'=' -f2-)
-    Version=$(grep "^version=" "$Identity" | cut -d'=' -f2-)
-    VersionCode=$(grep "^versionCode=" "$Identity" | cut -d'=' -f2-)
-    Author=$(grep "^author=" "$Identity" | cut -d'=' -f2-)
-    Description=$(grep "^description=" "$Identity" | cut -d'=' -f2-)
+    local Key Value ID Name Version VersionCode Author Description
+    while IFS='=' read -r Key Value; do
+        case "$Key" in
+            id) ID=$Value ;; name) Name=$Value ;; version) Version=$Value ;;
+            versionCode) VersionCode=$Value ;; author) Author=$Value ;; description) Description=$Value ;;
+        esac
+    done < "$Identity"
 
     printf '{"ID":"%s","Name":"%s","Version":"%s","VersionCode":"%s","Author":"%s","Description":"%s"}\n' \
         "$ID" "$Name" "$Version" "$VersionCode" "$Author" "$Description" | Write "$Metadata"
@@ -242,7 +219,7 @@ Monitor() {
         LastJitter="—"
         LastMonitorWrite="$Timestamp"
         printf '{"Latency":"—","Jitter":"—","Timestamp":%s}\n' "$Timestamp" | Write "$Monitor"
-        echo "[$(date +%T)] MonitorFail: ${LastError:-no output from ping}" >> "$LogPath"
+        Log MonitorFail "${LastError:-no output from ping}"
     fi
 }
 
@@ -258,23 +235,18 @@ Environment
 ProcessID
 Monitor "$(date +%s)"
 
+WebUIActive() {
+    [ -f "$Detect" ] || return 1
+    read -r DetectTimestamp < "$Detect" 2> /dev/null
+    [ -n "$DetectTimestamp" ] || return 1
+    local Age=$(( $(date +%s) - DetectTimestamp ))
+    [ "$Age" -gt 45 ] && rm -f "$Detect"
+    [ "$Age" -le 15 ]
+}
+
 while true; do
     Now=$(date +%s)
-
-    WebUI=0
-    if [ -f "$Detect" ]; then
-        read -r DetectTimestamp < "$Detect" 2> /dev/null
-        if [ -n "$DetectTimestamp" ]; then
-            Age=$((Now - DetectTimestamp))
-            if [ "$Age" -le 15 ]; then
-                WebUI=1
-            elif [ "$Age" -gt 45 ]; then
-                rm -f "$Detect"
-            fi
-        fi
-    fi
-
-    if [ "$WebUI" -eq 1 ]; then
+    if WebUIActive; then
         ProcessID
         GenerateTweaks
         Monitor "$Now"
