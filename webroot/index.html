@@ -5,12 +5,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="theme-color" content="#1C1B1F">
+    <meta name="color-scheme" content="dark">
     <meta name="description" content="VinNet - Simple Implementation of Network Optimization for Android">
     <title>VinNet</title>
     <link rel="preload" href="assets/GoogleSansFlex.woff2" as="font" type="font/woff2" crossorigin>
-    <link rel="preload" href="assets/VinNetBanner1.webp" as="image" type="image/webp">
-    <link rel="preload" href="assets/VinNetBanner2.webp" as="image" type="image/webp">
-    <link rel="preload" href="assets/VinNetBanner3.webp" as="image" type="image/webp">
+    <link rel="preload" href="assets/VinNetBanner1.webp" as="image" type="image/webp" fetchpriority="high">
+    <link rel="preload" href="assets/VinNetBanner2.webp" as="image" type="image/webp" fetchpriority="low">
+    <link rel="preload" href="assets/VinNetBanner3.webp" as="image" type="image/webp" fetchpriority="low">
+    <link rel="preconnect" href="https://avatars.githubusercontent.com">
     <link rel="stylesheet" href="assets/VinNet.css">
 </head>
 
@@ -101,20 +103,35 @@
         </div>
     </template>
 
+    <template id="LinkRowTemplate">
+        <div class="IndexRow">
+            <span class="IndexRowlabel"></span>
+            <a class="ir-link">
+                <svg viewBox="0 0 24 24" width="14" height="14">
+                    <use href=""></use>
+                </svg>
+                <span class="ir-link-label"></span>
+                <svg viewBox="0 0 24 24" width="14" height="14" class="ir-chevron">
+                    <use href="#Chevron"></use>
+                </svg>
+            </a>
+        </div>
+    </template>
+
     <div id="LoadingScreen">
         <div class="LoadingScreenAnimation"></div>
         <div class="LoadingScreenText">Loading</div>
     </div>
 
     <div id="WebUI">
-        <div class="Header">
+        <header class="Header">
             <div class="HeaderText">
                 <div class="HeaderTitle">VinNet</div>
                 <div class="HeaderDescription">Simple Implementation of Network Optimization</div>
             </div>
-        </div>
+        </header>
 
-        <div class="Pages">
+        <main class="Pages">
             <div class="Page" id="PageDashboard">
                 <div class="BannerWrap">
                     <img src="assets/VinNetBanner1.webp" alt="VinNet Banner" class="Banner" width="508" height="152"
@@ -148,14 +165,11 @@
                     <div class="IndexRow"><span class="IndexRowlabel">Model</span><span class="IndexRowValue"
                             id="Model">—</span></div>
                     <div class="IndexRow"><span class="IndexRowlabel">Android</span><span class="IndexRowValue"
-                            id="Android">—</span>
-                    </div>
+                            id="Android">—</span></div>
                     <div class="IndexRow"><span class="IndexRowlabel">Kernel</span><span class="IndexRowValue"
-                            id="Kernel">—</span>
-                    </div>
+                            id="Kernel">—</span></div>
                     <div class="IndexRow"><span class="IndexRowlabel">Architecture</span><span class="IndexRowValue"
-                            id="Architecture">—</span>
-                    </div>
+                            id="Architecture">—</span></div>
                     <div class="IndexRow"><span class="IndexRowlabel">Root</span><span class="IndexRowValue"
                             id="Root">—</span></div>
                     <div class="IndexRow"><span class="IndexRowlabel">Vendor</span><span class="IndexRowValue"
@@ -191,42 +205,7 @@
                         </svg>
                         Links
                     </div>
-                    <div class="IndexRow">
-                        <span class="IndexRowlabel">Repository</span>
-                        <a class="ir-link" href="https://github.com/Vinzz1234567890/VinNet">
-                            <svg viewBox="0 0 24 24" width="14" height="14" class="ir-icon-github">
-                                <use href="#Repository"></use>
-                            </svg>
-                            VinNet
-                            <svg viewBox="0 0 24 24" width="14" height="14" class="ir-chevron">
-                                <use href="#Chevron"></use>
-                            </svg>
-                        </a>
-                    </div>
-                    <div class="IndexRow">
-                        <span class="IndexRowlabel">Telegram</span>
-                        <a class="ir-link" href="https://t.me/VinzzRepository">
-                            <svg viewBox="0 0 24 24" width="14" height="14" class="ir-icon-telegram">
-                                <use href="#Telegram"></use>
-                            </svg>
-                            Vinzz Repository
-                            <svg viewBox="0 0 24 24" width="14" height="14" class="ir-chevron">
-                                <use href="#Chevron"></use>
-                            </svg>
-                        </a>
-                    </div>
-                    <div class="IndexRow">
-                        <span class="IndexRowlabel">Feedback</span>
-                        <a class="ir-link" href="https://t.me/Vinzz1234567890">
-                            <svg viewBox="0 0 24 24" width="14" height="14" class="ir-icon-telegram">
-                                <use href="#Telegram"></use>
-                            </svg>
-                            Vinzz
-                            <svg viewBox="0 0 24 24" width="14" height="14" class="ir-chevron">
-                                <use href="#Chevron"></use>
-                            </svg>
-                        </a>
-                    </div>
+                    <div id="LinkRows"></div>
                 </div>
                 <div class="Card">
                     <div class="CardLabel">
@@ -246,9 +225,9 @@
                     </div>
                 </div>
             </div>
-        </div>
+        </main>
 
-        <div class="Navigation" id="Navigation">
+        <nav class="Navigation" id="Navigation">
             <div class="NavigationBarActive" data-page="Dashboard">
                 <svg viewBox="0 0 24 24"
                     data-outline="M19 5v2h-4V5h4M9 5v6H5V5h4m10 8v6h-4v-6h4M9 17v2H5v-2h4M21 3h-8v6h8V3zM11 3H3v10h8V3zm10 8h-8v10h8V11zm-10 4H3v6h8v-6z"
@@ -273,7 +252,7 @@
                 </svg>
                 <span class="NavigationBarLabel">Info</span>
             </div>
-        </div>
+        </nav>
 
         <div class="Snack" id="Snack"></div>
     </div>
