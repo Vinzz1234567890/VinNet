@@ -386,6 +386,29 @@ async function LoadMetadata() {
     });
 }
 
+const Links = [
+    { Label: 'Repository', Href: 'https://github.com/Vinzz1234567890/VinNet', Icon: 'Repository', IconClass: 'ir-icon-github', Text: 'VinNet' },
+    { Label: 'Telegram', Href: 'https://t.me/VinzzRepository', Icon: 'Telegram', IconClass: 'ir-icon-telegram', Text: 'Vinzz Repository' },
+    { Label: 'Feedback', Href: 'https://t.me/Vinzz1234567890', Icon: 'Telegram', IconClass: 'ir-icon-telegram', Text: 'Vinzz' },
+];
+
+function RenderLinks() {
+    const Container = document.getElementById('LinkRows');
+    const Template = document.getElementById('LinkRowTemplate');
+    Container.replaceChildren();
+    for (const Link of Links) {
+        const Row = Template.content.cloneNode(true);
+        Row.querySelector('.IndexRowlabel').textContent = Link.Label;
+        const Anchor = Row.querySelector('.ir-link');
+        Anchor.href = Link.Href;
+        const Icon = Anchor.querySelector('svg');
+        Icon.setAttribute('class', Link.IconClass);
+        Icon.querySelector('use').setAttribute('href', '#' + Link.Icon);
+        Row.querySelector('.ir-link-label').textContent = Link.Text;
+        Container.appendChild(Row);
+    }
+}
+
 const ElementCache = new Map();
 function GetElement(ID) {
     if (!ElementCache.has(ID)) ElementCache.set(ID, document.getElementById(ID));
@@ -699,6 +722,7 @@ async function Load() {
         FetchMonitor(),
         LoadMetadata(),
         LoadProcessID(),
+        RenderLinks(),
         RenderTweaks(),
         ...Array.from(document.querySelectorAll('.Banner'), DecodeImage),
         new Promise(r => setTimeout(r, 300)),
