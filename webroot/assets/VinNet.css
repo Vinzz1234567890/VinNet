@@ -15,32 +15,27 @@
     outline: none;
 }
 
-.NavigationBar,
-.NavigationBarActive,
-.sw-track,
-.chip {
-    cursor: pointer;
-}
-
 :root {
     --topbar-h: 70px;
     --botnav-h: 68px;
     --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
     --pri: #AACAE9;
     --on-pri: #10334C;
-    --pri-con: #2A4964;
-    --pri-mix-45: color-mix(in srgb, var(--pri) 45%, transparent);
     --pri-mix-40: color-mix(in srgb, var(--pri) 40%, transparent);
     --pri-mix-14: color-mix(in srgb, var(--pri) 14%, transparent);
+
     --bg: #1C1B1F;
     --surf-lo: #1C1B1F;
     --surf-c: #211F26;
     --surf-hi: #2B2930;
     --surf-xhi: #36343B;
+
     --on-surf: #E6E0E9;
     --on-surf-var: #CAC4D0;
     --outline: #938F99;
     --out-var: #49454F;
+
     --Good: #6EF2A8;
     --Warn: #FFD166;
     --Bad: #FF6B6B;
@@ -160,7 +155,6 @@ img {
     display: none;
 }
 
-
 .Navigation {
     position: absolute;
     inset: auto 0 0;
@@ -198,16 +192,15 @@ img {
     align-items: center;
     padding: 10px 0 14px;
     gap: 4px;
+    cursor: pointer;
     transition: transform 0.15s;
 }
 
-.NavigationBar:active,
-.NavigationBarActive:active {
+:is(.NavigationBar, .NavigationBarActive, .ir-link, .chip):active {
     transform: scale(0.94);
 }
 
-.NavigationBar svg,
-.NavigationBarActive svg {
+:is(.NavigationBar, .NavigationBarActive) svg {
     width: 22px;
     height: 22px;
     fill: var(--on-surf-var);
@@ -313,15 +306,6 @@ img {
     border-bottom: 1px solid var(--out-var);
 }
 
-.IndexRow:last-child {
-    border-bottom: none;
-    padding-bottom: 0;
-}
-
-.IndexRow:first-child {
-    padding-top: 0;
-}
-
 .IndexRowlabel {
     font-size: 13px;
     color: var(--on-surf-var);
@@ -349,6 +333,7 @@ img {
     display: flex;
     align-items: center;
     gap: 6px;
+    cursor: pointer;
     transition: transform 0.15s;
 }
 
@@ -367,10 +352,6 @@ img {
 .ir-chevron {
     fill: currentColor;
     margin-inline-start: auto;
-}
-
-.ir-link:active {
-    transform: scale(0.94);
 }
 
 .Tweak {
@@ -392,11 +373,13 @@ img {
     flex-shrink: 0;
 }
 
+.IndexRow:last-child,
 .Tweak:last-child {
     border-bottom: none;
     padding-bottom: 0;
 }
 
+.IndexRow:first-child,
 .Tweak:first-child {
     padding-top: 0;
 }
@@ -454,7 +437,6 @@ img {
     cursor: default;
 }
 
-
 .SwitchThumb {
     position: absolute;
     top: 50%;
@@ -492,6 +474,7 @@ img {
     font-weight: 600;
     margin: 4px 4px 0 0;
     text-decoration: none;
+    cursor: pointer;
     transition: transform 0.15s;
 }
 
@@ -500,10 +483,6 @@ img {
     height: 18px;
     border-radius: 50%;
     object-fit: cover;
-}
-
-.chip:active {
-    transform: scale(0.94);
 }
 
 .IndexRow .chip {
