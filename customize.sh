@@ -50,12 +50,6 @@ ConfigureVendor() {
     fi
 }
 
-ReportCredit() {
-    Print "Credit: Vinzz"
-    Print "TikTok: @vinzz.fog"
-    Print "GitHub: @Vinzz1234567890"
-}
-
 ConfigureMount "$(FindMetaModule)"
 ReportDevice
 ConfigureVendor
