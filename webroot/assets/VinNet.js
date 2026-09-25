@@ -443,8 +443,8 @@ const Tweaks = {
     "QDISC": {
         Label: 'Optimize QDISC', Icon: 'QDISC',
         Description: 'Split data traffic into multiple paths and prioritize small data packets so they aren\'t held up by large data packets.',
-        ONCommand: 'tc qdisc replace dev wlan0 root fq_codel quantum 300 noecn ; tc qdisc replace dev rmnet_data0 root fq_codel quantum 300 noecn ; tc qdisc replace dev rmnet_ipa0 root fq_codel quantum 300 noecn',
-        OFFCommand: 'tc qdisc replace dev wlan0 root pfifo_fast ; tc qdisc replace dev rmnet_data0 root pfifo_fast ; tc qdisc replace dev rmnet_ipa0 root pfifo_fast',
+        ONCommand: 'tc qdisc replace dev wlan0 root fq_codel quantum 300 noecn 2>/dev/null; tc qdisc replace dev rmnet_data0 root fq_codel quantum 300 noecn 2>/dev/null; tc qdisc replace dev rmnet_ipa0 root fq_codel quantum 300 noecn 2>/dev/null; true',
+        OFFCommand: 'tc qdisc replace dev wlan0 root pfifo_fast 2>/dev/null; tc qdisc replace dev rmnet_data0 root pfifo_fast 2>/dev/null; tc qdisc replace dev rmnet_ipa0 root pfifo_fast 2>/dev/null; true',
         CheckCommand: 'tc qdisc show dev wlan0 2>/dev/null; tc qdisc show dev rmnet_data0 2>/dev/null; tc qdisc show dev rmnet_ipa0 2>/dev/null || true',
         Expect: 'fq_codel', ONLabel: 'Optimized', OFFLabel: 'Unoptimized',
     },
