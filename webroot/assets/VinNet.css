@@ -41,8 +41,8 @@
     --Bad: #FF6B6B;
 }
 
-html,
-body {
+HTML,
+Body {
     height: 100%;
     overflow: hidden;
     background: var(--bg);
@@ -53,7 +53,7 @@ body {
     -webkit-user-select: none;
 }
 
-img {
+IMG {
     -webkit-user-drag: none;
     user-drag: none;
     pointer-events: none;
@@ -416,7 +416,7 @@ img {
     margin-top: 1px;
 }
 
-.Switch input {
+.Switch Input {
     position: absolute;
     opacity: 0;
     width: 0;
@@ -432,7 +432,7 @@ img {
     transition: background-color 0.22s, border-color 0.22s;
 }
 
-.Switch:has(input:disabled) .SwitchTrack {
+.Switch:has(Input:disabled) .SwitchTrack {
     opacity: .5;
     cursor: default;
 }
@@ -451,12 +451,12 @@ img {
     will-change: transform, background-color;
 }
 
-.Switch input:checked~.SwitchTrack {
+.Switch Input:checked~.SwitchTrack {
     background-color: var(--pri);
     border-color: var(--pri);
 }
 
-.Switch input:checked~.SwitchTrack .SwitchThumb {
+.Switch Input:checked~.SwitchTrack .SwitchThumb {
     transform: translateY(-50%) translateX(18px) scale(1.5);
     background-color: var(--on-pri);
 }
