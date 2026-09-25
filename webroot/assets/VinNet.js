@@ -55,7 +55,7 @@ function UpdateNavigationIcons() {
     });
 }
 
-const PageList = ['Dashboard', 'Tweaks', 'Info'];
+const PageList = Object.keys(Page);
 
 function PageWidth() {
     return PagesElement.clientWidth || 0;
@@ -260,7 +260,6 @@ document.getElementById('Navigation').addEventListener('click', E => {
 CurrentPageID = PageList[0];
 RenderPages();
 
-
 const SnackElement = document.getElementById('Snack');
 let SnackTimer;
 function Toast(Message) {
@@ -272,7 +271,6 @@ function Toast(Message) {
 
 function OpenLink(URL) {
     exec(`am start -a android.intent.action.VIEW -d "${URL}"`).catch(() => Toast('Unable to open link'));
-    return false;
 }
 
 async function FetchJSON(Path) {
@@ -333,7 +331,7 @@ async function LoadEnvironment() {
             try { return [ID, await exec(CMD) || '—']; } catch { return [ID, '—']; }
         }));
         requestAnimationFrame(() => {
-            for (const [ID, text] of Results) document.getElementById(ID).textContent = text;
+            for (const [ID, Text] of Results) document.getElementById(ID).textContent = Text;
         });
     }
     const VendorBinaryResults = await Promise.all(VendorBinary.map(async ([ID, CMD]) => {
@@ -660,13 +658,13 @@ async function RenderTweaks() {
 }
 
 document.addEventListener('change', Event => {
-    if (Event.target.matches('#PageTweaks input[type="checkbox"]')) {
+    if (Event.target.matches('#PageTweaks Input[type="checkbox"]')) {
         ApplyTweak(Event.target.dataset.tweakId, Event.target.checked);
     }
 });
 
 document.addEventListener('click', Event => {
-    const Link = Event.target.closest('#PageInfo a[href]');
+    const Link = Event.target.closest('#PageInfo A[href]');
     if (Link) {
         Event.preventDefault();
         OpenLink(Link.href);
