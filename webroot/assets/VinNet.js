@@ -32,8 +32,8 @@ let GestureStartY = 0;
 let GesturePointerID = null;
 
 let NavigationButtons = null;
-let TableName = null;
-let TableSubordinate = null;
+let HeaderTitle = null;
+let HeaderDescription = null;
 const PagesElement = document.querySelector('.Pages');
 let NavigationButtonMap = null;
 let NavigationSVGS = null;
@@ -72,6 +72,25 @@ function RenderPages() {
     }
 }
 
+function UpdateHeader(Meta) {
+    if (!Meta) return;
+    if (!HeaderTitle) HeaderTitle = document.querySelector('.HeaderTitle');
+    if (!HeaderDescription) HeaderDescription = document.querySelector('.HeaderDescription');
+    if (!HeaderTitle || !HeaderDescription) return;
+    const HeaderText = HeaderTitle.parentElement;
+    if (!HeaderText) {
+        HeaderTitle.textContent = Meta.Title;
+        HeaderDescription.textContent = Meta.Description;
+        return;
+    }
+    HeaderText.style.opacity = '0';
+    setTimeout(() => {
+        HeaderTitle.textContent = Meta.Title;
+        HeaderDescription.textContent = Meta.Description;
+        HeaderText.style.opacity = '1';
+    }, 160);
+}
+
 function SetActivePage(ID) {
     const Index = PageList.indexOf(ID);
     if (Index === -1 || ID === CurrentPageID) return;
@@ -93,25 +112,7 @@ function SetActivePage(ID) {
         }
     });
     UpdateNavigationIcons();
-    const Meta = Page[ID];
-    if (Meta) {
-        if (!TableName) TableName = document.querySelector('.HeaderTitle');
-        if (!TableSubordinate) TableSubordinate = document.querySelector('.HeaderDescription');
-        if (TableName && TableSubordinate) {
-            const HeaderTextEl = TableName.parentElement;
-            if (HeaderTextEl) {
-                HeaderTextEl.style.opacity = '0';
-                setTimeout(() => {
-                    TableName.textContent = Meta.Title;
-                    TableSubordinate.textContent = Meta.Description;
-                    HeaderTextEl.style.opacity = '1';
-                }, 160);
-            } else {
-                TableName.textContent = Meta.Title;
-                TableSubordinate.textContent = Meta.Description;
-            }
-        }
-    }
+    UpdateHeader(Page[ID]);
     if (ID === 'Dashboard') {
         LoadProcessID();
     }
@@ -281,6 +282,24 @@ async function FetchJSON(Path) {
     } catch { return null; }
 }
 
+function ParseKV(Raw, Lowercase) {
+    return Object.fromEntries(
+        Raw.split('\n')
+            .map(L => L.trim().split('='))
+            .filter(P => P.length >= 2)
+            .map(([K, ...V]) => [Lowercase ? K.trim().toLowerCase() : K.trim(), V.join('=').trim()])
+    );
+}
+
+async function ExecFields(Entries) {
+    const Results = await Promise.all(Entries.map(async ([ID, , CMD]) => {
+        try { return [ID, await exec(CMD) || '—']; } catch { return [ID, '—']; }
+    }));
+    requestAnimationFrame(() => {
+        for (const [ID, Text] of Results) document.getElementById(ID).textContent = Text;
+    });
+}
+
 let CallbackCounter = 0;
 function exec(cmd) {
     return new Promise((resolve, reject) => {
@@ -315,8 +334,8 @@ const Environment = [
     ['Root', 'Root', 'command -v ksud >/dev/null 2>&1 && echo KernelSU || (command -v apd >/dev/null 2>&1 && echo APatch || (command -v magisk >/dev/null 2>&1 && echo Magisk || echo Unknown))'],
 ];
 
-const VendorBinary = [
-    ['Vendor', '[ "$(resetprop ro.product.device)" = "fog" ] && { grep -q "VinNet" /vendor/etc/wifi/WCNSS_qcom_cfg.ini 2>/dev/null && grep -q "p2p_disabled=1" /vendor/etc/wifi/wpa_supplicant_overlay.conf 2>/dev/null && grep -q "ap_scan=1" /vendor/etc/wifi/wpa_supplicant.conf 2>/dev/null && echo Mounted || echo Unmounted; } || echo Unmounted'],
+const Vendor = [
+    ['Vendor', 'Vendor', '[ "$(resetprop ro.product.device)" = "fog" ] && { grep -q "VinNet" /vendor/etc/wifi/WCNSS_qcom_cfg.ini 2>/dev/null && grep -q "p2p_disabled=1" /vendor/etc/wifi/wpa_supplicant_overlay.conf 2>/dev/null && grep -q "ap_scan=1" /vendor/etc/wifi/wpa_supplicant.conf 2>/dev/null && echo Mounted || echo Unmounted; } || echo Unmounted'],
 ];
 
 async function LoadEnvironment() {
@@ -327,19 +346,9 @@ async function LoadEnvironment() {
             for (const [ID, Key] of Environment) document.getElementById(ID).textContent = Cached[Key] || '—';
         });
     } else {
-        const Results = await Promise.all(Environment.map(async ([ID, Key, CMD]) => {
-            try { return [ID, await exec(CMD) || '—']; } catch { return [ID, '—']; }
-        }));
-        requestAnimationFrame(() => {
-            for (const [ID, Text] of Results) document.getElementById(ID).textContent = Text;
-        });
+        await ExecFields(Environment);
     }
-    const VendorBinaryResults = await Promise.all(VendorBinary.map(async ([ID, CMD]) => {
-        try { return [ID, await exec(CMD) || '—']; } catch { return [ID, '—']; }
-    }));
-    requestAnimationFrame(() => {
-        for (const [ID, Text] of VendorBinaryResults) document.getElementById(ID).textContent = Text;
-    });
+    await ExecFields(Vendor);
 }
 
 const Metadata = [
@@ -354,12 +363,7 @@ async function LoadMetadata() {
         try {
             const Raw = await exec('cat /data/adb/modules/VinNet/module.prop 2>/dev/null');
             if (Raw) {
-                const Prop = Object.fromEntries(
-                    Raw.split('\n')
-                        .map(L => L.trim().split('='))
-                        .filter(P => P.length >= 2)
-                        .map(([K, ...V]) => [K.trim().toLowerCase(), V.join('=').trim()])
-                );
+                const Prop = ParseKV(Raw, true);
                 Cached = {
                     ID: Prop.id,
                     Name: Prop.name,
@@ -441,23 +445,21 @@ async function FetchMonitor() {
     Log('Monitor', Cached);
     if (Cached && Cached.Latency != null) {
         ApplyMonitor(Cached);
-    } else {
-        try {
-            const Output = await exec('ping -c 2 -w 2 8.8.8.8 2>/dev/null || ping -c 2 -w 2 1.1.1.1 2>/dev/null');
-            const Matches = [...Output.matchAll(/time=([\d.]+)\s*ms/gi)].map(M => parseFloat(M[1]));
-            if (Matches.length >= 1) {
-                const Latency = Math.round(Matches.reduce((A, B) => A + B, 0) / Matches.length);
-                let Jitter = 0;
-                for (let I = 1; I < Matches.length; I++) Jitter += Math.abs(Matches[I] - Matches[I - 1]);
-                Jitter = Matches.length > 1 ? Math.round(Jitter / (Matches.length - 1)) : 0;
-                ApplyMonitor({ Latency, Jitter });
-            } else {
-                ApplyMonitor({ Latency: '—', Jitter: '—' });
-            }
-        } catch {
-            ApplyMonitor({ Latency: '—', Jitter: '—' });
-        }
+        return;
     }
+    try {
+        const Output = await exec('ping -c 2 -w 2 8.8.8.8 2>/dev/null || ping -c 2 -w 2 1.1.1.1 2>/dev/null');
+        const Matches = [...Output.matchAll(/time=([\d.]+)\s*ms/gi)].map(M => parseFloat(M[1]));
+        if (Matches.length >= 1) {
+            const Latency = Math.round(Matches.reduce((A, B) => A + B, 0) / Matches.length);
+            let Jitter = 0;
+            for (let I = 1; I < Matches.length; I++) Jitter += Math.abs(Matches[I] - Matches[I - 1]);
+            Jitter = Matches.length > 1 ? Math.round(Jitter / (Matches.length - 1)) : 0;
+            ApplyMonitor({ Latency, Jitter });
+            return;
+        }
+    } catch { }
+    ApplyMonitor({ Latency: '—', Jitter: '—' });
 }
 
 let ProcessID = null;
@@ -623,12 +625,7 @@ async function RenderTweaks() {
         try {
             const RawConf = await exec('cat /data/adb/modules/VinNet/webroot/Core/VinNet.conf 2>/dev/null');
             if (RawConf) {
-                TweakState = Object.fromEntries(
-                    RawConf.split('\n')
-                        .map(L => L.trim().split('='))
-                        .filter(P => P.length >= 2)
-                        .map(([K, ...V]) => [K.trim(), V.join('=').trim()])
-                );
+                TweakState = ParseKV(RawConf);
             }
         } catch { }
         TweakState = TweakState || {};
