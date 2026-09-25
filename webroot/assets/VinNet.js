@@ -1,6 +1,7 @@
 const Core = '/data/adb/modules/VinNet/webroot/Core';
 const LogPath = '/storage/emulated/0/Download/VinNet.log';
 const LogCache = new Map();
+
 const Log = (Tag, Data) => {
     const Content = JSON.stringify(Data);
     if (LogCache.get(Tag) === Content) return;
@@ -14,30 +15,14 @@ const Page = {
     Info: { Title: 'Info', Description: 'Details about Module' },
 };
 
-const CommitRatio = 0.22;
-const CommitMaxPx = 96;
-const CommitMinPx = 64;
-const EdgeResistance = 3;
+const CommitRatio = 0.22, CommitMaxPx = 96, CommitMinPx = 64, EdgeResistance = 3;
 
-let CurrentPageID = null;
-let CurrentPageIndex = 0;
-let DragOffset = 0;
-let PendingOffset = 0;
-let DragFrameID = 0;
-let Dragging = false;
-let GestureAxis = null;
-let GestureKind = null;
-let GestureStartX = 0;
-let GestureStartY = 0;
-let GesturePointerID = null;
+let CurrentPageID = null, CurrentPageIndex = 0, DragOffset = 0, PendingOffset = 0, DragFrameID = 0, Dragging = false;
+let GestureAxis = null, GestureKind = null, GestureStartX = 0, GestureStartY = 0, GesturePointerID = null;
 
-let NavigationButtons = null;
-let HeaderTitle = null;
-let HeaderDescription = null;
+let NavigationButtons = null, HeaderTitle = null, HeaderDescription = null;
 const PagesElement = document.querySelector('.Pages');
-let NavigationButtonMap = null;
-let NavigationSVGS = null;
-let NavigationSVGButtonMap = null;
+let NavigationButtonMap = null, NavigationSVGS = null, NavigationSVGButtonMap = null;
 let LastMonitor = { Latency: null, Jitter: null };
 
 const LatencyColor = v => v <= 30 ? 'var(--Good)' : v <= 50 ? 'var(--Warn)' : 'var(--Bad)';
@@ -49,27 +34,22 @@ function UpdateNavigationIcons() {
         NavigationSVGButtonMap = new Map([...NavigationSVGS].map(svg => [svg, svg.closest('.NavigationBar, .NavigationBarActive')]));
     }
     NavigationSVGS.forEach(SVG => {
-        const Button = NavigationSVGButtonMap.get(SVG);
-        const Active = Button.classList.contains('NavigationBarActive');
-        SVG.querySelector('path').setAttribute('d', SVG.dataset[Active ? 'fill' : 'outline']);
+        const Active = NavigationSVGButtonMap.get(SVG)?.classList.contains('NavigationBarActive');
+        SVG.querySelector('path')?.setAttribute('d', SVG.dataset[Active ? 'fill' : 'outline']);
     });
 }
 
 const PageList = Object.keys(Page);
-
-function PageWidth() {
-    return PagesElement.clientWidth || 0;
-}
+const PageWidth = () => PagesElement.clientWidth || 0;
 
 function RenderPages() {
     PagesElement.style.setProperty('--page-base', `${CurrentPageIndex * -100}%`);
     PagesElement.style.setProperty('--page-drag', `${DragOffset}px`);
-    const Pages = PagesElement.children;
-    for (let I = 0; I < Pages.length; I++) {
+    Array.from(PagesElement.children).forEach((Child, I) => {
         const Active = I === CurrentPageIndex;
-        Pages[I].toggleAttribute('inert', !Active);
-        Pages[I].setAttribute('aria-hidden', Active ? 'false' : 'true');
-    }
+        Child.toggleAttribute('inert', !Active);
+        Child.setAttribute('aria-hidden', Active ? 'false' : 'true');
+    });
 }
 
 function UpdateHeader(Meta) {
@@ -103,19 +83,12 @@ function SetActivePage(ID) {
     }
     NavigationButtons.forEach(B => {
         const IsActive = B.dataset.page === ID;
-        if (IsActive) {
-            B.classList.remove('NavigationBar');
-            B.classList.add('NavigationBarActive');
-        } else {
-            B.classList.remove('NavigationBarActive');
-            B.classList.add('NavigationBar');
-        }
+        B.classList.toggle('NavigationBarActive', IsActive);
+        B.classList.toggle('NavigationBar', !IsActive);
     });
     UpdateNavigationIcons();
     UpdateHeader(Page[ID]);
-    if (ID === 'Dashboard') {
-        LoadProcessID();
-    }
+    if (ID === 'Dashboard') LoadProcessID();
 }
 
 function CommitTargetIndex() {
@@ -129,10 +102,7 @@ function CommitTargetIndex() {
 
 function Navigation(ID) {
     if (PageList.indexOf(ID) === -1) return;
-    if (DragFrameID) {
-        cancelAnimationFrame(DragFrameID);
-        DragFrameID = 0;
-    }
+    if (DragFrameID) { cancelAnimationFrame(DragFrameID); DragFrameID = 0; }
     ResetGesture();
     SetActivePage(ID);
     RenderPages();
@@ -140,24 +110,16 @@ function Navigation(ID) {
 
 function ResetGesture() {
     Dragging = false;
-    GestureAxis = null;
-    GestureKind = null;
-    GesturePointerID = null;
-    DragOffset = 0;
-    PendingOffset = 0;
+    GestureAxis = null; GestureKind = null; GesturePointerID = null;
+    DragOffset = 0; PendingOffset = 0;
     PagesElement.classList.remove('Dragging');
 }
 
 function BeginGesture(X, Y, Kind, PointerID) {
-    if (DragFrameID) {
-        cancelAnimationFrame(DragFrameID);
-        DragFrameID = 0;
-    }
+    if (DragFrameID) { cancelAnimationFrame(DragFrameID); DragFrameID = 0; }
     ResetGesture();
-    GestureKind = Kind;
-    GesturePointerID = PointerID;
-    GestureStartX = X;
-    GestureStartY = Y;
+    GestureKind = Kind; GesturePointerID = PointerID;
+    GestureStartX = X; GestureStartY = Y;
     Dragging = true;
     PagesElement.classList.add('Dragging');
     RenderPages();
@@ -165,15 +127,12 @@ function BeginGesture(X, Y, Kind, PointerID) {
 
 function MoveGesture(X, Y, Event, OnAxisLock) {
     if (!Dragging) return;
-    const DeltaX = X - GestureStartX;
-    const DeltaY = Y - GestureStartY;
+    const DeltaX = X - GestureStartX, DeltaY = Y - GestureStartY;
     if (GestureAxis === null) {
         const AbsX = Math.abs(DeltaX);
         if (AbsX === 0 || AbsX < Math.abs(DeltaY)) return;
         GestureAxis = 'x';
-        if (OnAxisLock) {
-            try { OnAxisLock(); } catch { }
-        }
+        if (OnAxisLock) try { OnAxisLock(); } catch { }
     }
     if (Event.cancelable) Event.preventDefault();
     let Offset = DeltaX;
@@ -198,11 +157,7 @@ function EndGesture(Commit, Element) {
     if (Element && GesturePointerID !== null && Element.hasPointerCapture(GesturePointerID)) {
         Element.releasePointerCapture(GesturePointerID);
     }
-    if (DragFrameID) {
-        cancelAnimationFrame(DragFrameID);
-        DragFrameID = 0;
-        DragOffset = PendingOffset;
-    }
+    if (DragFrameID) { cancelAnimationFrame(DragFrameID); DragFrameID = 0; DragOffset = PendingOffset; }
     if (Commit && GestureAxis === 'x') SetActivePage(PageList[CommitTargetIndex()]);
     ResetGesture();
     RenderPages();
@@ -216,46 +171,29 @@ PagesElement.addEventListener('pointerdown', E => {
 PagesElement.addEventListener('pointermove', E => {
     if (GestureKind !== 'pointer' || E.pointerId !== GesturePointerID) return;
     MoveGesture(E.clientX, E.clientY, E, () => {
-        if (E.currentTarget.hasPointerCapture(E.pointerId)) return;
-        E.currentTarget.setPointerCapture(E.pointerId);
+        if (!E.currentTarget.hasPointerCapture(E.pointerId)) E.currentTarget.setPointerCapture(E.pointerId);
     });
 }, { passive: false });
 
-PagesElement.addEventListener('pointerup', E => {
-    if (E.pointerId !== GesturePointerID) return;
-    EndGesture(true, E.currentTarget);
-});
-
-PagesElement.addEventListener('pointercancel', E => {
-    if (E.pointerId !== GesturePointerID) return;
-    EndGesture(false, E.currentTarget);
-});
+PagesElement.addEventListener('pointerup', E => { if (E.pointerId === GesturePointerID) EndGesture(true, E.currentTarget); });
+PagesElement.addEventListener('pointercancel', E => { if (E.pointerId === GesturePointerID) EndGesture(false, E.currentTarget); });
 
 PagesElement.addEventListener('touchstart', E => {
-    if (E.touches.length !== 1) return;
-    BeginGesture(E.touches[0].screenX, E.touches[0].screenY, 'touch', null);
+    if (E.touches.length === 1) BeginGesture(E.touches[0].screenX, E.touches[0].screenY, 'touch', null);
 }, { passive: true });
 
 PagesElement.addEventListener('touchmove', E => {
-    if (GestureKind !== 'touch' || E.touches.length !== 1) return;
-    MoveGesture(E.touches[0].screenX, E.touches[0].screenY, E, null);
+    if (GestureKind === 'touch' && E.touches.length === 1) MoveGesture(E.touches[0].screenX, E.touches[0].screenY, E, null);
 }, { passive: false });
 
-PagesElement.addEventListener('touchend', E => {
-    if (GestureKind !== 'touch' || E.touches.length > 0) return;
-    EndGesture(true, E.currentTarget);
-});
-
-PagesElement.addEventListener('touchcancel', E => {
-    if (GestureKind !== 'touch') return;
-    EndGesture(false, E.currentTarget);
-});
+PagesElement.addEventListener('touchend', E => { if (GestureKind === 'touch' && E.touches.length === 0) EndGesture(true, E.currentTarget); });
+PagesElement.addEventListener('touchcancel', E => { if (GestureKind === 'touch') EndGesture(false, E.currentTarget); });
 
 document.addEventListener('dragstart', E => E.preventDefault());
 
 document.getElementById('Navigation').addEventListener('click', E => {
     const Button = E.target.closest('.NavigationBar, .NavigationBarActive');
-    if (Button && Button.dataset.page) Navigation(Button.dataset.page);
+    if (Button?.dataset.page) Navigation(Button.dataset.page);
 });
 
 CurrentPageID = PageList[0];
@@ -277,8 +215,7 @@ function OpenLink(URL) {
 async function FetchJSON(Path) {
     try {
         const Response = await fetch(Path, { cache: 'no-store' });
-        if (!Response.ok) return null;
-        return await Response.json();
+        return Response.ok ? await Response.json() : null;
     } catch { return null; }
 }
 
@@ -364,14 +301,7 @@ async function LoadMetadata() {
             const Raw = await exec('cat /data/adb/modules/VinNet/module.prop 2>/dev/null');
             if (Raw) {
                 const Prop = ParseKV(Raw, true);
-                Cached = {
-                    ID: Prop.id,
-                    Name: Prop.name,
-                    Version: Prop.version,
-                    VersionCode: Prop.versioncode,
-                    Author: Prop.author,
-                    Description: Prop.description,
-                };
+                Cached = { ID: Prop.id, Name: Prop.name, Version: Prop.version, VersionCode: Prop.versioncode, Author: Prop.author, Description: Prop.description };
             }
         } catch { }
     }
@@ -420,12 +350,11 @@ function GetElement(ID) {
 function SetMonitorValue(ID, Value, Color) {
     const Element = GetElement(ID);
     const Next = (Value == null || Value === '—') ? '—' : Value + ' ms';
-    const Changed = Element.textContent !== Next;
-    if (Changed) Element.style.opacity = '0.3';
+    if (Element.textContent !== Next) Element.style.opacity = '0.3';
     Element.textContent = Next;
     const NextColor = (Value == null || Value === '—') ? '' : Color(Value);
     if (Element.style.color !== NextColor) Element.style.color = NextColor;
-    if (Changed) requestAnimationFrame(() => { Element.style.opacity = '1'; });
+    requestAnimationFrame(() => { Element.style.opacity = '1'; });
 }
 
 function ApplyMonitor(Data) {
@@ -435,9 +364,7 @@ function ApplyMonitor(Data) {
     SetMonitorValue('Jitter', Data.Jitter, JitterColor);
 }
 
-function Detect() {
-    exec(`date +%s > ${Core}/Detect.txt`).catch(() => { });
-}
+const Detect = () => exec(`date +%s > ${Core}/Detect.txt`).catch(() => { });
 
 async function FetchMonitor() {
     Detect();
@@ -491,120 +418,79 @@ async function LoadProcessID() {
     }
 }
 
-let TweakState = null;
+let TweakState = null, LiveTickInterval = null;
 
-let LiveTickInterval = null;
 function StartLiveTicker() {
-    if (LiveTickInterval) return;
-    LiveTickInterval = setInterval(FetchMonitor, 4000);
+    if (!LiveTickInterval) LiveTickInterval = setInterval(FetchMonitor, 4000);
 }
 
 function StopLiveTicker() {
-    if (LiveTickInterval) {
-        clearInterval(LiveTickInterval);
-        LiveTickInterval = null;
-    }
+    if (LiveTickInterval) { clearInterval(LiveTickInterval); LiveTickInterval = null; }
 }
 
 document.addEventListener('visibilitychange', () => {
-    if (document.hidden) {
-        StopLiveTicker();
-    } else {
-        Detect();
-        StartLiveTicker();
-    }
+    if (document.hidden) StopLiveTicker();
+    else { Detect(); StartLiveTicker(); }
 });
 
 const Tweaks = {
     "IP Reach Disconnect": {
-        Label: 'Disable IP Reach Disconnect',
-        Icon: 'Monitor,IPReachDisconnect',
+        Label: 'Disable IP Reach Disconnect', Icon: 'Monitor,IPReachDisconnect',
         Description: 'Preventing Wi-Fi from suddenly disconnecting when network is unstable.',
-        ONCommand: 'cmd wifi set-ipreach-disconnect disabled',
-        OFFCommand: 'cmd wifi set-ipreach-disconnect enabled',
-        CheckCommand: 'cmd wifi get-ipreach-disconnect',
-        Expect: 'false',
-        ONLabel: 'Disabled', OFFLabel: 'Enabled',
+        ONCommand: 'cmd wifi set-ipreach-disconnect disabled', OFFCommand: 'cmd wifi set-ipreach-disconnect enabled',
+        CheckCommand: 'cmd wifi get-ipreach-disconnect', Expect: 'false', ONLabel: 'Disabled', OFFLabel: 'Enabled',
     },
     "QDISC": {
-        Label: 'Optimize QDISC',
-        Icon: 'QDISC',
+        Label: 'Optimize QDISC', Icon: 'QDISC',
         Description: 'Split data traffic into multiple paths and prioritize small data packets so they aren\'t held up by large data packets.',
         ONCommand: 'tc qdisc replace dev wlan0 root fq_codel quantum 300 noecn ; tc qdisc replace dev rmnet_data0 root fq_codel quantum 300 noecn ; tc qdisc replace dev rmnet_ipa0 root fq_codel quantum 300 noecn',
         OFFCommand: 'tc qdisc replace dev wlan0 root pfifo_fast ; tc qdisc replace dev rmnet_data0 root pfifo_fast ; tc qdisc replace dev rmnet_ipa0 root pfifo_fast',
         CheckCommand: 'tc qdisc show dev wlan0 2>/dev/null; tc qdisc show dev rmnet_data0 2>/dev/null; tc qdisc show dev rmnet_ipa0 2>/dev/null || true',
-        Expect: 'fq_codel',
-        ONLabel: 'Optimized', OFFLabel: 'Unoptimized',
+        Expect: 'fq_codel', ONLabel: 'Optimized', OFFLabel: 'Unoptimized',
     },
     "Wi-Fi Force Low Latency Mode": {
-        Label: 'Enable Wi-Fi Force Low Latency Mode',
-        Icon: 'Wi-FiForceLowLatencyMode',
+        Label: 'Enable Wi-Fi Force Low Latency Mode', Icon: 'Wi-FiForceLowLatencyMode',
         Description: 'Force Android to enable built-in low-latency mode at system level, falling back to hi-perf mode on devices that lack it.',
         ONCommand: 'Out=$(cmd wifi force-low-latency-mode enabled 2>/dev/null); case "$Out" in *"Command execution failed"*) cmd wifi force-hi-perf-mode enabled;; esac',
         OFFCommand: 'Out=$(cmd wifi force-low-latency-mode disabled 2>/dev/null); case "$Out" in *"Command execution failed"*) cmd wifi force-hi-perf-mode disabled;; esac',
         CheckCommand: "dumpsys wifi 2>/dev/null | grep -oE 'mPowerSaveDisableRequests [0-9]+' | head -n 1 | awk '{print $2 % 4}'",
-        Expect: ['2', '3'],
-        ONLabel: 'Enabled', OFFLabel: 'Disabled',
+        Expect: ['2', '3'], ONLabel: 'Enabled', OFFLabel: 'Disabled',
     },
     "Network Avoid Bad Wi-Fi": {
-        Label: 'Disable Network Avoid Bad Wi-Fi',
-        Icon: 'NetworkAvoidBadWi-Fi',
+        Label: 'Disable Network Avoid Bad Wi-Fi', Icon: 'NetworkAvoidBadWi-Fi',
         Description: 'Forces system to stay connected to Wi-Fi interface even if signal quality deteriorates.',
-        ONCommand: 'settings put global network_avoid_bad_wifi 0',
-        OFFCommand: 'settings put global network_avoid_bad_wifi 1',
-        CheckCommand: 'settings get global network_avoid_bad_wifi',
-        Expect: '0',
-        ONLabel: 'Disabled', OFFLabel: 'Enabled',
+        ONCommand: 'settings put global network_avoid_bad_wifi 0', OFFCommand: 'settings put global network_avoid_bad_wifi 1',
+        CheckCommand: 'settings get global network_avoid_bad_wifi', Expect: '0', ONLabel: 'Disabled', OFFLabel: 'Enabled',
     },
     "BLE Scan Always Enabled": {
-        Label: 'Disable BLE Scan Always Enabled',
-        Icon: 'BLEScanAlwaysEnabled',
+        Label: 'Disable BLE Scan Always Enabled', Icon: 'BLEScanAlwaysEnabled',
         Description: 'Minimize jitter and ping spikes when gaming over 2.4 GHz Wi-Fi network.',
-        ONCommand: 'settings put global ble_scan_always_enabled 0',
-        OFFCommand: 'settings put global ble_scan_always_enabled 1',
-        CheckCommand: 'settings get global ble_scan_always_enabled',
-        Expect: '0',
-        ONLabel: 'Disabled', OFFLabel: 'Enabled',
+        ONCommand: 'settings put global ble_scan_always_enabled 0', OFFCommand: 'settings put global ble_scan_always_enabled 1',
+        CheckCommand: 'settings get global ble_scan_always_enabled', Expect: '0', ONLabel: 'Disabled', OFFLabel: 'Enabled',
     },
     "Mobile Data Always ON": {
-        Label: 'Disable Mobile Data Always ON',
-        Icon: 'MobileDataAlwaysON',
+        Label: 'Disable Mobile Data Always ON', Icon: 'MobileDataAlwaysON',
         Description: 'Disable functions that are likely to disrupt transmission stability.',
-        ONCommand: 'settings put global mobile_data_always_on 0',
-        OFFCommand: 'settings put global mobile_data_always_on 1',
-        CheckCommand: 'settings get global mobile_data_always_on',
-        Expect: '0',
-        ONLabel: 'Disabled', OFFLabel: 'Enabled',
+        ONCommand: 'settings put global mobile_data_always_on 0', OFFCommand: 'settings put global mobile_data_always_on 1',
+        CheckCommand: 'settings get global mobile_data_always_on', Expect: '0', ONLabel: 'Disabled', OFFLabel: 'Enabled',
     },
     "Wi-Fi Country Code": {
-        Label: 'Change Wi-Fi Country Code',
-        Icon: 'Wi-FiCountryCode',
+        Label: 'Change Wi-Fi Country Code', Icon: 'Wi-FiCountryCode',
         Description: 'Change country code to “US” to bypass certain restrictions on Wi-Fi.',
-        ONCommand: 'resetprop ro.boot.wificountrycode US',
-        OFFCommand: 'resetprop ro.boot.wificountrycode 00',
-        CheckCommand: 'resetprop ro.boot.wificountrycode',
-        Expect: 'US',
-        ONLabel: 'Changed', OFFLabel: 'Unchanged',
+        ONCommand: 'resetprop ro.boot.wificountrycode US', OFFCommand: 'resetprop ro.boot.wificountrycode 00',
+        CheckCommand: 'resetprop ro.boot.wificountrycode', Expect: 'US', ONLabel: 'Changed', OFFLabel: 'Unchanged',
     },
     "Force LTE CA": {
-        Label: 'Enable Force LTE CA',
-        Icon: 'ForceLTECA',
+        Label: 'Enable Force LTE CA', Icon: 'ForceLTECA',
         Description: 'Combines two or more cellular frequency bands simultaneously, resulting in significantly faster internet speeds and more stable connection on 4G or 4G+ networks.',
-        ONCommand: 'resetprop -p persist.sys.radio.force_lte_ca true',
-        OFFCommand: 'resetprop -p persist.sys.radio.force_lte_ca false',
-        CheckCommand: 'resetprop -p persist.sys.radio.force_lte_ca',
-        Expect: 'true',
-        ONLabel: 'Enabled', OFFLabel: 'Disabled',
+        ONCommand: 'resetprop -p persist.sys.radio.force_lte_ca true', OFFCommand: 'resetprop -p persist.sys.radio.force_lte_ca false',
+        CheckCommand: 'resetprop -p persist.sys.radio.force_lte_ca', Expect: 'true', ONLabel: 'Enabled', OFFLabel: 'Disabled',
     },
     "Wi-Fi Scan Throttle": {
-        Label: 'Enable Wi-Fi Scan Throttle',
-        Icon: 'Wi-FiScanThrottle',
+        Label: 'Enable Wi-Fi Scan Throttle', Icon: 'Wi-FiScanThrottle',
         Description: 'Limit background Wi-Fi scanning to conserve battery life and prevent jitter.',
-        ONCommand: 'settings put global wifi_scan_throttle_enabled 1',
-        OFFCommand: 'settings put global wifi_scan_throttle_enabled 0',
-        CheckCommand: 'settings get global wifi_scan_throttle_enabled',
-        Expect: '1',
-        ONLabel: 'Enabled', OFFLabel: 'Disabled',
+        ONCommand: 'settings put global wifi_scan_throttle_enabled 1', OFFCommand: 'settings put global wifi_scan_throttle_enabled 0',
+        CheckCommand: 'settings get global wifi_scan_throttle_enabled', Expect: '1', ONLabel: 'Enabled', OFFLabel: 'Disabled',
     }
 };
 
@@ -612,7 +498,10 @@ async function CheckTweaks() {
     const LiveState = new Map();
     await Promise.all(Object.entries(Tweaks).map(async ([ID, Tweak]) => {
         if (!Tweak.CheckCommand) return;
-        try { const Out = await exec(Tweak.CheckCommand); LiveState.set(ID, [].concat(Tweak.Expect).some(E => Out.includes(E))); } catch { }
+        try {
+            const Out = await exec(Tweak.CheckCommand);
+            LiveState.set(ID, [].concat(Tweak.Expect).some(E => Out.includes(E)));
+        } catch { }
     }));
     return LiveState;
 }
@@ -624,9 +513,7 @@ async function RenderTweaks() {
     if (!TweakState) {
         try {
             const RawConf = await exec('cat /data/adb/modules/VinNet/webroot/Core/VinNet.conf 2>/dev/null');
-            if (RawConf) {
-                TweakState = ParseKV(RawConf);
-            }
+            if (RawConf) TweakState = ParseKV(RawConf);
         } catch { }
         TweakState = TweakState || {};
     }
