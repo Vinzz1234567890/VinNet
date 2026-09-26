@@ -6,7 +6,8 @@ const Log = (Tag, Data) => {
     const Content = JSON.stringify(Data);
     if (LogCache.get(Tag) === Content) return;
     LogCache.set(Tag, Content);
-    exec(`grep -v "^\\[.*\\] ${Tag}:" ${LogPath} 2>/dev/null > ${LogPath}.tmp; echo "[$(date +%T)] ${Tag}: ${Content}" >> ${LogPath}.tmp; mv ${LogPath}.tmp ${LogPath}`).catch(() => { });
+    const Safe = Content.replace(/'/g, "'\\''");
+    exec(`grep -v "^\\[.*\\] ${Tag}:" ${LogPath} 2>/dev/null > ${LogPath}.tmp; printf '[%s] %s: %s\\n' "$(date +%T)" "${Tag}" '${Safe}' >> ${LogPath}.tmp; mv ${LogPath}.tmp ${LogPath}`).catch(() => { });
 };
 
 const Page = {
@@ -443,8 +444,8 @@ const Tweaks = {
     "QDISC": {
         Label: 'Optimize QDISC', Icon: 'QDISC',
         Description: 'Split data traffic into multiple paths and prioritize small data packets so they aren\'t held up by large data packets.',
-        ONCommand: 'tc qdisc replace dev wlan0 root fq_codel quantum 300 noecn 2>/dev/null; tc qdisc replace dev rmnet_data0 root fq_codel quantum 300 noecn 2>/dev/null; tc qdisc replace dev rmnet_ipa0 root fq_codel quantum 300 noecn 2>/dev/null; true',
-        OFFCommand: 'tc qdisc replace dev wlan0 root pfifo_fast 2>/dev/null; tc qdisc replace dev rmnet_data0 root pfifo_fast 2>/dev/null; tc qdisc replace dev rmnet_ipa0 root pfifo_fast 2>/dev/null; true',
+        ONCommand: 'R=1; tc qdisc replace dev wlan0 root fq_codel quantum 300 noecn && R=0; tc qdisc replace dev rmnet_data0 root fq_codel quantum 300 noecn && R=0; tc qdisc replace dev rmnet_ipa0 root fq_codel quantum 300 noecn && R=0; exit $R',
+        OFFCommand: 'R=1; tc qdisc replace dev wlan0 root pfifo_fast && R=0; tc qdisc replace dev rmnet_data0 root pfifo_fast && R=0; tc qdisc replace dev rmnet_ipa0 root pfifo_fast && R=0; exit $R',
         CheckCommand: 'tc qdisc show dev wlan0 2>/dev/null; tc qdisc show dev rmnet_data0 2>/dev/null; tc qdisc show dev rmnet_ipa0 2>/dev/null || true',
         Expect: 'fq_codel', ONLabel: 'Optimized', OFFLabel: 'Unoptimized',
     },
@@ -500,8 +501,10 @@ async function CheckTweaks() {
         if (!Tweak.CheckCommand) return;
         try {
             const Out = await exec(Tweak.CheckCommand);
+            if (!Out) { Log(`Check:${ID}`, 'no output - check unsupported on this device'); return; }
             LiveState.set(ID, [].concat(Tweak.Expect).some(E => Out.includes(E)));
-        } catch { }
+            Log(`Check:${ID}`, Out);
+        } catch (Err) { Log(`Check:${ID}`, `${Err || 'unknown error'}`); }
     }));
     return LiveState;
 }
@@ -575,7 +578,8 @@ async function ApplyTweak(ID, Enabled) {
             ]);
             Log('Tweaks', TweakState);
             Toast(`${Tweak.Label || ID} > ${Enabled ? Tweak.ONLabel : Tweak.OFFLabel}`);
-        } catch {
+        } catch (Err) {
+            Log('TweakFail', `${ID}: ${Err || 'unknown error'}`);
             Toast('Unable to apply tweak');
             Element.checked = !Enabled;
         } finally {
