@@ -23,14 +23,12 @@ if ! ProbeWrite; then
     fi
 fi
 
-Configuration="$Core/VinNet.conf"
 Detect="$Core/Detect.txt"
 Monitor="$Core/Monitor.json"
 Environment="$Core/Environment.json"
 Metadata="$Core/Metadata.json"
 Tweaks="$Core/Tweaks.json"
 ProcessID="$Core/ProcessID.json"
-LockFile="$Core/service.pid"
 Identity="$ModuleDirectory/module.prop"
 CoreWritable=1
 
@@ -70,15 +68,16 @@ Diagnose
 
 ProcessID() { printf '{"PID":%s,"Timestamp":%s}\n' "$$" "$(date +%s)" | Write "$ProcessID"; }
 
-if [ -f "$LockFile" ]; then
-    read -r OldPID < "$LockFile" 2> /dev/null
+if [ -f "$ProcessID" ]; then
+    read -r Line < "$ProcessID" 2> /dev/null
+    OldPID="${Line#*\"PID\":}"
+    OldPID="${OldPID%%[!0-9]*}"
     [ -n "$OldPID" ] && kill -0 "$OldPID" 2> /dev/null && exit 0
 fi
-printf '%s\n' "$$" > "$LockFile"
 ProcessID
 
 Cleanup() {
-    rm -f "$ProcessID" "$LockFile" "$Detect" "$Core"/*.tmp.$$ 2> /dev/null
+    rm -f "$ProcessID" "$Detect" "$Core"/*.tmp.$$ 2> /dev/null
     exit 0
 }
 trap Cleanup TERM EXIT INT
@@ -107,16 +106,19 @@ ApplyTweaks() {
     esac
 }
 
-GenerateTweaks() {
-    [ -f "$Configuration" ] || { printf '{}\n' | Write "$Tweaks"; return; }
-    local JSON="{" First=1
-    while IFS='=' read -r Key Value; do
-        [ -z "$Key" ] && continue
-        [ "$First" -eq 1 ] || JSON="$JSON,"
-        JSON="$JSON\"$Key\":\"$Value\""
-        First=0
-    done < "$Configuration"
-    printf '%s}\n' "$JSON" | Write "$Tweaks"
+InitTweaks() {
+    if [ ! -f "$Tweaks" ] && [ -f "$Core/VinNet.conf" ]; then
+        local JSON="{" First=1
+        while IFS='=' read -r Key Value; do
+            [ -z "$Key" ] && continue
+            [ "$First" -eq 1 ] || JSON="$JSON,"
+            JSON="$JSON\"$Key\":\"$Value\""
+            First=0
+        done < "$Core/VinNet.conf"
+        printf '%s}\n' "$JSON" | Write "$Tweaks"
+        rm -f "$Core/VinNet.conf" 2> /dev/null
+    fi
+    [ -f "$Tweaks" ] || printf '{}\n' | Write "$Tweaks"
 }
 
 Metadata() {
@@ -190,13 +192,14 @@ Monitor() {
     fi
 }
 
-if [ -f "$Configuration" ]; then
-    while IFS='=' read -r Key Value; do
+InitTweaks
+
+if [ -f "$Tweaks" ]; then
+    awk -F'"' '{for (i=2; i<=NF; i+=4) print $i "=" $(i+2)}' "$Tweaks" 2> /dev/null | while IFS='=' read -r Key Value; do
         [ -n "$Key" ] && ApplyTweaks "$Key" "$Value"
-    done < "$Configuration"
+    done
 fi
 
-GenerateTweaks
 Metadata
 Environment
 ProcessID
@@ -214,13 +217,12 @@ WebUIActive() {
 while true; do
     Now=$(date +%s)
     [ -d "$Core" ] || mkdir -p "$Core" 2> /dev/null
-    [ -f "$LockFile" ] || printf '%s\n' "$$" > "$LockFile"
+    [ -f "$ProcessID" ] || ProcessID
     [ -f "$Metadata" ] || Metadata
     [ -f "$Environment" ] || Environment
-    [ -f "$Tweaks" ] || GenerateTweaks
+    [ -f "$Tweaks" ] || InitTweaks
     if WebUIActive; then
         ProcessID
-        GenerateTweaks
         Monitor "$Now"
         sleep 4
     else
