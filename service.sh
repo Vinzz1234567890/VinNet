@@ -108,7 +108,7 @@ ApplyTweaks() {
 }
 
 GenerateTweaks() {
-    [ -f "$Configuration" ] || return
+    [ -f "$Configuration" ] || { printf '{}\n' | Write "$Tweaks"; return; }
     local JSON="{" First=1
     while IFS='=' read -r Key Value; do
         [ -z "$Key" ] && continue
@@ -213,6 +213,11 @@ WebUIActive() {
 
 while true; do
     Now=$(date +%s)
+    [ -d "$Core" ] || mkdir -p "$Core" 2> /dev/null
+    [ -f "$LockFile" ] || printf '%s\n' "$$" > "$LockFile"
+    [ -f "$Metadata" ] || Metadata
+    [ -f "$Environment" ] || Environment
+    [ -f "$Tweaks" ] || GenerateTweaks
     if WebUIActive; then
         ProcessID
         GenerateTweaks
