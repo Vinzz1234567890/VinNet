@@ -23,7 +23,6 @@ if ! ProbeWrite; then
     fi
 fi
 
-Detect="$Core/Detect.txt"
 Monitor="$Core/Monitor.json"
 Environment="$Core/Environment.json"
 Metadata="$Core/Metadata.json"
@@ -77,7 +76,7 @@ fi
 ProcessID
 
 Cleanup() {
-    rm -f "$ProcessID" "$Detect" "$Core"/*.tmp.$$ 2> /dev/null
+    rm -f "$ProcessID" "$Core"/*.tmp.$$ 2> /dev/null
     exit 0
 }
 trap Cleanup TERM EXIT INT
@@ -206,12 +205,11 @@ ProcessID
 Monitor "$(date +%s)"
 
 WebUIActive() {
-    [ -f "$Detect" ] || return 1
-    read -r DetectTimestamp < "$Detect" 2> /dev/null
-    [ -n "$DetectTimestamp" ] || return 1
-    local Age=$(($(date +%s) - DetectTimestamp))
-    [ "$Age" -gt 45 ] && rm -f "$Detect"
-    [ "$Age" -le 15 ]
+    [ -f "$Monitor" ] || return 1
+    local MTime
+    MTime=$(date -r "$Monitor" +%s 2> /dev/null)
+    [ -n "$MTime" ] || return 1
+    [ $(( $(date +%s) - MTime )) -le 15 ]
 }
 
 while true; do
