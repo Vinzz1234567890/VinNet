@@ -365,7 +365,7 @@ function ApplyMonitor(Data) {
     SetMonitorValue('Jitter', Data.Jitter, JitterColor);
 }
 
-const Detect = () => exec(`date +%s > ${Core}/Detect.txt`).catch(() => { });
+const Detect = () => exec(`touch ${Core}/Monitor.json`).catch(() => { });
 
 async function FetchMonitor() {
     Detect();
