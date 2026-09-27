@@ -1,7 +1,7 @@
 id=VinNet
 name=VinNet
 version=1.1.9-Demond
-versionCode=20260906
+versionCode=20260927
 author=Vinzz
 description=Simple Implementation of Network Optimization
 webuiIcon=webroot/assets/VinNetBanner1.webp
