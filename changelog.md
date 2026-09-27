@@ -2,7 +2,74 @@
 
 ---
 
-## v1.1.8-Igrum - 2026-09-06 - Latest
+## v1.1.9-Demond - 2026-09-27 - Latest
+
+### ✨Added
+
+- Dynamic rendering system for Web UI links using reusable `LinkRowTemplate`
+- Centralized Web UI links configuration in `VinNet.js`
+- Additional logging for tweak state checks and tweak execution failures
+- `color-scheme` declaration for dark Web UI rendering
+- Image loading priority hints for Web UI banners
+- GitHub avatar host preconnect for remote contributor images
+
+### 🔄️Changed
+
+- Module version from `1.1.8-Igrum` to `1.1.9-Demond`
+- Module version code from `20260906` to `20260927`
+- Service initialization to wait for Android boot completion before initializing the module core
+- Core write test and logging logic to use reusable `ProbeWrite()` and `Log()` functions
+- Tweak execution state handling to use a normalized numeric state internally
+- Module metadata parsing from multiple `grep`/`cut` operations to a single key-value parser
+- Root implementation detection logic in `service.sh`
+- Network monitor and Web UI service handling to use more compact internal logic
+- Web UI page list to derive directly from centralized page metadata
+- Web UI header update logic to use a dedicated `UpdateHeader()` function
+- Web UI metadata parsing to use reusable `ParseKV()`
+- Web UI environment command execution to use reusable `ExecFields()`
+- Web UI links from static HTML markup to dynamically rendered link rows
+- Web UI vendor status handling to use the centralized environment execution system
+- Web UI monitor value updates to consistently restore display opacity after updates
+- Web UI navigation and DOM handling to use simplified cached references
+- Web UI structure to use semantic `header`, `main`, and `nav` elements
+- CSS selector grouping using `:is()` for shared interaction states
+- CSS selectors to match PascalCase HTML element naming
+- Installation output by removing contributor credit reporting
+- Other code refactoring and simplification
+
+### 📈Improved
+
+- Web UI maintainability through centralized link configuration and reusable rendering
+- Service code maintainability through reusable logging and write-probe functions
+- Metadata parsing efficiency and consistency
+- Web UI command execution consistency
+- Web UI navigation and header update handling
+- Monitor value rendering behavior
+- CSS organization and selector reuse
+- Web UI semantic structure
+- Diagnostic visibility for tweak state and execution failures
+- Overall code readability by reducing repeated implementation
+- Overall module code size and internal complexity
+
+### 🔧Fixed
+
+- Potential shell quoting issues when writing JSON content to `VinNet.log`
+- Tweak state-check failures are now logged instead of being silently ignored
+- Tweak execution failures are now logged for diagnosis
+- Minor Web UI update and DOM-handling issues
+
+### 🔥Deleted
+
+- `ReportCredit()` function from `customize.sh`
+- Static link markup previously embedded directly in `index.html`
+- Redundant Web UI link rendering implementation
+- Repeated environment command execution logic
+- Repeated key-value parsing logic
+- Other redundant implementation code
+
+---
+
+## v1.1.8-Igrum - 2026-09-06
 
 ### ✨Added
 
