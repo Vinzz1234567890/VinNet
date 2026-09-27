@@ -2,34 +2,11 @@
 LATESTARTSERVICE=true
 
 readonly TargetDevice="fog"
-readonly MetaModules="/data/adb/modules/magic_mount_rs /data/adb/modules/hybrid_mount /data/adb/modules/meta-mm /data/adb/modules/meta-overlayfs /data/adb/modules/magisk_overlayfs /data/adb/modules/mountify"
 
 sleep 0.5
 [ -n "$MODPATH" ] || abort "MODPATH is Not Set"
 
 Print() { ui_print "- $*"; }
-
-FindMetaModule() {
-    for Target in $MetaModules; do
-        if [ -d "$Target" ]; then
-            basename "$Target"
-            return 0
-        fi
-    done
-    return 1
-}
-
-ConfigureMount() {
-    local MetaModule="$1"
-    if [ -n "$MetaModule" ]; then
-        Print "Meta Module Detected: $MetaModule"
-        Print "Using $MetaModule Mounting Method"
-        SKIPMOUNT=true
-    else
-        Print "Using Standard Mounting Method"
-        SKIPMOUNT=false
-    fi
-}
 
 ReportDevice() {
     Print "Checking Device Compatibility..."
@@ -50,9 +27,7 @@ ConfigureVendor() {
     fi
 }
 
-ConfigureMount "$(FindMetaModule)"
 ReportDevice
 ConfigureVendor
-ReportCredit
 Print "Configuring Network..."
 Print "Installing VinNet..."
