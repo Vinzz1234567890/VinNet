@@ -515,8 +515,8 @@ async function RenderTweaks() {
     TweakState = await FetchJSON('Core/Tweaks.json');
     if (!TweakState) {
         try {
-            const RawConf = await exec('cat /data/adb/modules/VinNet/webroot/Core/VinNet.conf 2>/dev/null');
-            if (RawConf) TweakState = ParseKV(RawConf);
+            const Raw = await exec(`cat ${Core}/Tweaks.json 2>/dev/null`);
+            if (Raw) TweakState = JSON.parse(Raw);
         } catch { }
         TweakState = TweakState || {};
     }
@@ -570,12 +570,8 @@ async function ApplyTweak(ID, Enabled) {
             await exec(Enabled ? Tweak.ONCommand : Tweak.OFFCommand);
             if (!TweakState) TweakState = {};
             TweakState[ID] = Enabled ? 'ON' : 'OFF';
-            const Value = Enabled ? 'ON' : 'OFF';
             const Content = JSON.stringify(TweakState).replace(/"/g, '\\"');
-            await Promise.all([
-                exec(`echo "${Content}" > ${Core}/Tweaks.json`),
-                exec(`grep -v "^${ID}=" ${Core}/VinNet.conf 2>/dev/null > ${Core}/VinNet.conf.tmp; echo "${ID}=${Value}" >> ${Core}/VinNet.conf.tmp; mv ${Core}/VinNet.conf.tmp ${Core}/VinNet.conf`),
-            ]);
+            await exec(`echo "${Content}" > ${Core}/Tweaks.json`);
             Log('Tweaks', TweakState);
             Toast(`${Tweak.Label || ID} > ${Enabled ? Tweak.ONLabel : Tweak.OFFLabel}`);
         } catch (Err) {
