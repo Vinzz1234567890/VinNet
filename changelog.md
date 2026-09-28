@@ -2,7 +2,67 @@
 
 ---
 
-## v1.1.9-Demond - 2026-09-27 - Latest
+## v1.2.0-Leaks - 2026-09-28 - Latest
+
+### ✨Added
+
+- Root-aware `resetprop` execution fallback for KernelSU, APatch, and Magisk
+- Runtime recovery for missing Web UI Core data files
+- Automatic recreation of `ProcessID.json`, `Metadata.json`, `Environment.json`, and `Tweaks.json` when missing
+- Other additions
+
+### 🔄️Changed
+
+- Module version from `1.1.9-Demond` to `1.2.0-Leaks`
+- Module version code from `20260906` to `20260928`
+- Service process locking from dedicated `service.pid` to `ProcessID.json`
+- Tweak configuration source from `VinNet.conf` to `Tweaks.json`
+- Tweak initialization to read and apply states directly from `Tweaks.json`
+- Web UI activity detection from `Detect.txt` timestamp to `Monitor.json` modification time
+- Web UI detection command from writing a timestamp to `Detect.txt` to touching `Monitor.json`
+- `Wi-Fi Country Code` and `Force LTE CA` commands to dynamically select the available `resetprop` implementation
+- Root detection in Web UI to use a cached root implementation result
+- Web UI tweak fallback state loading to read and parse `Tweaks.json`
+- Web UI tweak command execution to support both string and function-based commands
+- Service cleanup to remove only runtime process state and temporary files
+- Module installation script by removing the meta-module mounting detection logic
+- Module installation flow to always use the standard mounting method
+- Other internal changes
+
+### 📈Improved
+
+- Compatibility of `resetprop`-based tweaks across KernelSU, APatch, and Magisk environments
+- Persistence and consistency of tweak state management
+- Service process locking reliability by using the existing process state file
+- Web UI activity detection without requiring a separate detection file
+- Service resilience when runtime Core files are deleted or unavailable
+- Web UI environment loading by reusing cached root information
+- Overall service and Web UI architecture by reducing redundant runtime files
+- General code simplicity and maintainability
+
+### 🔧Fixed
+
+- Duplicate runtime state management between `VinNet.conf` and `Tweaks.json`
+- Dependency on `Detect.txt` for Web UI activity detection
+- Dependency on `service.pid` when `ProcessID.json` already contains the active process ID
+- Potential stale or missing Web UI Core data after runtime files are removed
+- `resetprop` tweak execution when the standard `resetprop` command is unavailable but the active root implementation provides an equivalent command
+- Other minor runtime handling issues
+
+### 🔥Deleted
+
+- `VinNet.conf` runtime configuration dependency
+- `Detect.txt` runtime detection file
+- `service.pid` runtime lock file
+- `GenerateTweaks()` function
+- Meta-module detection and mounting configuration from `customize.sh`
+- `ReportCredit`-related installation handling
+- Redundant runtime state synchronization between `VinNet.conf` and `Tweaks.json`
+- Other obsolete implementation
+
+---
+
+## v1.1.9-Demond - 2026-09-27
 
 ### ✨Added
 
