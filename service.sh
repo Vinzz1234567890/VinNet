@@ -105,21 +105,6 @@ ApplyTweaks() {
     esac
 }
 
-InitTweaks() {
-    if [ ! -f "$Tweaks" ] && [ -f "$Core/VinNet.conf" ]; then
-        local JSON="{" First=1
-        while IFS='=' read -r Key Value; do
-            [ -z "$Key" ] && continue
-            [ "$First" -eq 1 ] || JSON="$JSON,"
-            JSON="$JSON\"$Key\":\"$Value\""
-            First=0
-        done < "$Core/VinNet.conf"
-        printf '%s}\n' "$JSON" | Write "$Tweaks"
-        rm -f "$Core/VinNet.conf" 2> /dev/null
-    fi
-    [ -f "$Tweaks" ] || printf '{}\n' | Write "$Tweaks"
-}
-
 Metadata() {
     [ -f "$Identity" ] || return
     local Key Value ID Name Version VersionCode Author Description
@@ -190,8 +175,6 @@ Monitor() {
         Log MonitorFail "${LastError:-no output from ping}"
     fi
 }
-
-InitTweaks
 
 if [ -f "$Tweaks" ]; then
     awk -F'"' '{for (i=2; i<=NF; i+=4) print $i "=" $(i+2)}' "$Tweaks" 2> /dev/null | while IFS='=' read -r Key Value; do
