@@ -263,13 +263,21 @@ function exec(cmd) {
     });
 }
 
+let Root = '', RootReady = null;
+const RootCommand = 'command -v ksud >/dev/null 2>&1 && echo KernelSU || (command -v apd >/dev/null 2>&1 && echo APatch || (command -v magisk >/dev/null 2>&1 && echo Magisk || echo Unknown))';
+const DetectRoot = () => {
+    if (!RootReady) RootReady = exec(RootCommand).then(Name => {
+        Root = Root || Name || 'Unknown';
+    }, () => { });
+    return RootReady;
+};
+
 const Environment = [
     ['Brand', 'Brand', 'resetprop ro.product.brand'],
     ['Model', 'Model', 'resetprop ro.product.model'],
     ['Android', 'Android', 'resetprop ro.build.version.release'],
     ['Kernel', 'Kernel', 'uname -r'],
     ['Architecture', 'Architecture', 'resetprop ro.product.cpu.abi'],
-    ['Root', 'Root', 'command -v ksud >/dev/null 2>&1 && echo KernelSU || (command -v apd >/dev/null 2>&1 && echo APatch || (command -v magisk >/dev/null 2>&1 && echo Magisk || echo Unknown))'],
 ];
 
 const Vendor = [
@@ -280,12 +288,16 @@ async function LoadEnvironment() {
     const Cached = await FetchJSON('Core/Environment.json');
     Log('Environment', Cached);
     if (Cached) {
+        Root = Cached.Root || 'Unknown';
+        RootReady = Promise.resolve();
         requestAnimationFrame(() => {
             for (const [ID, Key] of Environment) document.getElementById(ID).textContent = Cached[Key] || '—';
         });
     } else {
         await ExecFields(Environment);
+        await DetectRoot();
     }
+    requestAnimationFrame(() => { const E = document.getElementById('Root'); if (E) E.textContent = Root; });
     await ExecFields(Vendor);
 }
 
@@ -434,6 +446,14 @@ document.addEventListener('visibilitychange', () => {
     else { Detect(); StartLiveTicker(); }
 });
 
+const Daemon = { KernelSU: 'ksud', APatch: 'apd', Magisk: 'magisk' };
+const ResetProp = (...Args) => {
+    const Sub = Daemon[Root];
+    return `RP(){ resetprop "$@" && return;${Sub ? ` ${Sub} resetprop "$@" && return;` : ''} echo "resetprop unavailable on this device" >&2; return 1; }; RP ${Args.join(' ')}`;
+};
+
+const Command = C => typeof C === 'function' ? C() : C;
+
 const Tweaks = {
     "IP Reach Disconnect": {
         Label: 'Disable IP Reach Disconnect', Icon: 'Monitor,IPReachDisconnect',
@@ -478,14 +498,14 @@ const Tweaks = {
     "Wi-Fi Country Code": {
         Label: 'Change Wi-Fi Country Code', Icon: 'Wi-FiCountryCode',
         Description: 'Change country code to “US” to bypass certain restrictions on Wi-Fi.',
-        ONCommand: 'resetprop ro.boot.wificountrycode US', OFFCommand: 'resetprop ro.boot.wificountrycode 00',
-        CheckCommand: 'resetprop ro.boot.wificountrycode', Expect: 'US', ONLabel: 'Changed', OFFLabel: 'Unchanged',
+        ONCommand: () => ResetProp('ro.boot.wificountrycode', 'US'), OFFCommand: () => ResetProp('ro.boot.wificountrycode', '00'),
+        CheckCommand: () => ResetProp('ro.boot.wificountrycode'), Expect: 'US', ONLabel: 'Changed', OFFLabel: 'Unchanged',
     },
     "Force LTE CA": {
         Label: 'Enable Force LTE CA', Icon: 'ForceLTECA',
         Description: 'Combines two or more cellular frequency bands simultaneously, resulting in significantly faster internet speeds and more stable connection on 4G or 4G+ networks.',
-        ONCommand: 'resetprop -p persist.sys.radio.force_lte_ca true', OFFCommand: 'resetprop -p persist.sys.radio.force_lte_ca false',
-        CheckCommand: 'resetprop -p persist.sys.radio.force_lte_ca', Expect: 'true', ONLabel: 'Enabled', OFFLabel: 'Disabled',
+        ONCommand: () => ResetProp('-p', 'persist.sys.radio.force_lte_ca', 'true'), OFFCommand: () => ResetProp('-p', 'persist.sys.radio.force_lte_ca', 'false'),
+        CheckCommand: () => ResetProp('-p', 'persist.sys.radio.force_lte_ca'), Expect: 'true', ONLabel: 'Enabled', OFFLabel: 'Disabled',
     },
     "Wi-Fi Scan Throttle": {
         Label: 'Enable Wi-Fi Scan Throttle', Icon: 'Wi-FiScanThrottle',
@@ -500,7 +520,7 @@ async function CheckTweaks() {
     await Promise.all(Object.entries(Tweaks).map(async ([ID, Tweak]) => {
         if (!Tweak.CheckCommand) return;
         try {
-            const Out = await exec(Tweak.CheckCommand);
+            const Out = await exec(Command(Tweak.CheckCommand));
             if (!Out) { Log(`Check:${ID}`, 'no output - check unsupported on this device'); return; }
             LiveState.set(ID, [].concat(Tweak.Expect).some(E => Out.includes(E)));
             Log(`Check:${ID}`, Out);
@@ -522,6 +542,7 @@ async function RenderTweaks() {
     }
     Log('Tweaks', TweakState);
 
+    await DetectRoot();
     const LiveState = await CheckTweaks();
 
     Container.replaceChildren();
@@ -567,7 +588,7 @@ async function ApplyTweak(ID, Enabled) {
     Element.disabled = true;
     TweakQueue = TweakQueue.then(async () => {
         try {
-            await exec(Enabled ? Tweak.ONCommand : Tweak.OFFCommand);
+            await exec(Command(Enabled ? Tweak.ONCommand : Tweak.OFFCommand));
             if (!TweakState) TweakState = {};
             TweakState[ID] = Enabled ? 'ON' : 'OFF';
             const Content = JSON.stringify(TweakState).replace(/"/g, '\\"');
