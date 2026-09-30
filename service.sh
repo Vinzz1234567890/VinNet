@@ -63,23 +63,13 @@ Diagnose() {
     DmesgLines=$(dmesg 2> /dev/null | grep -iE "f2fs|erofs|remount" | tail -5)
     [ -n "$DmesgLines" ] && Log Diagnose "dmesg -- $DmesgLines"
 }
-Diagnose
 
 ProcessID() { printf '{"PID":%s,"Timestamp":%s}\n' "$$" "$(date +%s)" | Write "$ProcessID"; }
-
-if [ -f "$ProcessID" ]; then
-    read -r Line < "$ProcessID" 2> /dev/null
-    OldPID="${Line#*\"PID\":}"
-    OldPID="${OldPID%%[!0-9]*}"
-    [ -n "$OldPID" ] && kill -0 "$OldPID" 2> /dev/null && exit 0
-fi
-ProcessID
 
 Cleanup() {
     rm -f "$ProcessID" "$Core"/*.tmp.$$ 2> /dev/null
     exit 0
 }
-trap Cleanup TERM EXIT INT
 
 ApplyTweaks() {
     local State=$(printf '%s' "$2" | tr '[:upper:]' '[:lower:]')
@@ -176,17 +166,6 @@ Monitor() {
     fi
 }
 
-if [ -f "$Tweaks" ]; then
-    awk -F'"' '{for (i=2; i<=NF; i+=4) print $i "=" $(i+2)}' "$Tweaks" 2> /dev/null | while IFS='=' read -r Key Value; do
-        [ -n "$Key" ] && ApplyTweaks "$Key" "$Value"
-    done
-fi
-
-Metadata
-Environment
-ProcessID
-Monitor "$(date +%s)"
-
 WebUIActive() {
     [ -f "$Monitor" ] || return 1
     local MTime
@@ -195,13 +174,33 @@ WebUIActive() {
     [ $(( $(date +%s) - MTime )) -le 15 ]
 }
 
+Diagnose
+
+if [ -f "$ProcessID" ]; then
+    read -r Line < "$ProcessID" 2> /dev/null
+    OldPID="${Line#*\"PID\":}"
+    OldPID="${OldPID%%[!0-9]*}"
+    [ -n "$OldPID" ] && kill -0 "$OldPID" 2> /dev/null && exit 0
+fi
+ProcessID
+trap Cleanup TERM EXIT INT
+
+if [ -f "$Tweaks" ]; then
+    awk -F'"' '{for (i=2; i<=NF; i+=4) print $i "=" $(i+2)}' "$Tweaks" 2> /dev/null | while IFS='=' read -r Key Value; do
+        [ -n "$Key" ] && ApplyTweaks "$Key" "$Value"
+    done
+fi
+
+Metadata
+Environment
+Monitor "$(date +%s)"
+
 while true; do
     Now=$(date +%s)
     [ -d "$Core" ] || mkdir -p "$Core" 2> /dev/null
     [ -f "$ProcessID" ] || ProcessID
     [ -f "$Metadata" ] || Metadata
     [ -f "$Environment" ] || Environment
-    [ -f "$Tweaks" ] || InitTweaks
     if WebUIActive; then
         ProcessID
         Monitor "$Now"
