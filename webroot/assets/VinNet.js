@@ -264,12 +264,35 @@ function exec(cmd) {
 }
 
 let Root = '', RootReady = null;
+const Daemon = { KernelSU: 'ksud', APatch: 'apd', Magisk: 'magisk' };
 const RootCommand = 'command -v ksud >/dev/null 2>&1 && echo KernelSU || (command -v apd >/dev/null 2>&1 && echo APatch || (command -v magisk >/dev/null 2>&1 && echo Magisk || echo Unknown))';
 const DetectRoot = () => {
     if (!RootReady) RootReady = exec(RootCommand).then(Name => {
         Root = Root || Name || 'Unknown';
     }, () => { });
     return RootReady;
+};
+
+let PropInvoker = null, PropReady = null;
+const DetectProp = () => {
+    if (PropReady) return PropReady;
+    PropReady = (async () => {
+        const Candidates = [].concat(Daemon[Root] ? `${Daemon[Root]} resetprop` : []);
+        try {
+            const Path = (await exec('command -v resetprop')).trim();
+            if (Path) Candidates.push(Path);
+        } catch (Err) { Log('PropProbe:command -v', `${Err || 'not found'}`); }
+        for (const Invoke of Candidates) {
+            try {
+                await exec(`${Invoke} ro.build.version.release`);
+                PropInvoker = Invoke;
+                Log('PropInvoker', Invoke);
+                return;
+            } catch (Err) { Log(`PropProbe:${Invoke}`, `${Err || 'unsupported'}`); }
+        }
+        Log('PropInvoker', 'unavailable');
+    })();
+    return PropReady;
 };
 
 const Environment = [
@@ -446,11 +469,9 @@ document.addEventListener('visibilitychange', () => {
     else { Detect(); StartLiveTicker(); }
 });
 
-const Daemon = { KernelSU: 'ksud', APatch: 'apd', Magisk: 'magisk' };
-const ResetProp = (...Args) => {
-    const Sub = Daemon[Root];
-    return `RP(){ resetprop "$@" && return;${Sub ? ` ${Sub} resetprop "$@" && return;` : ''} echo "resetprop unavailable on this device" >&2; return 1; }; RP ${Args.join(' ')}`;
-};
+const ResetProp = (...Args) => PropInvoker
+    ? `${PropInvoker} ${Args.join(' ')}`
+    : 'echo "resetprop unavailable on this device" >&2; exit 1';
 
 const Command = C => typeof C === 'function' ? C() : C;
 
@@ -543,6 +564,7 @@ async function RenderTweaks() {
     Log('Tweaks', TweakState);
 
     await DetectRoot();
+    await DetectProp();
     const LiveState = await CheckTweaks();
 
     Container.replaceChildren();
