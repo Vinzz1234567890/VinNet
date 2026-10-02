@@ -8,9 +8,18 @@ LogPath="/storage/emulated/0/Download/VinNet.log"
 
 LastLog=""
 Log() {
-    [ "$1: $2" = "$LastLog" ] && return
-    LastLog="$1: $2"
-    echo "[$(date +%T)] $1: $2" >> "$LogPath" 2> /dev/null
+    local Tag="$1" Message="$2" Remaining
+    [ "$Tag: $Message" = "$LastLog" ] && return
+    LastLog="$Tag: $Message"
+    if [ -f "$LogPath" ]; then
+        Remaining=$(grep -v "^\[.*\] $Tag:" "$LogPath" 2> /dev/null)
+        {
+            [ -n "$Remaining" ] && printf '%s\n' "$Remaining"
+            echo "[$(date +%T)] $Tag: $Message"
+        } > "$LogPath" 2> /dev/null
+    else
+        echo "[$(date +%T)] $Tag: $Message" >> "$LogPath" 2> /dev/null
+    fi
 }
 ProbeWrite() { : > "$1/.WriteProbe" 2> /dev/null && rm -f "$1/.WriteProbe"; }
 
@@ -51,25 +60,47 @@ Write() {
 }
 
 Diagnose() {
-    local ABI Arch="Unsupported"
+    local ABI Arch="Unsupported" DmesgLines ExistingLines
     ABI=$(resetprop ro.product.cpu.abi)
     case "$ABI" in arm64*) Arch="Supported (arm64)" ;; armeabi*) Arch="Supported (arm)" ;; esac
-    Log Diagnose "ABI=$ABI Architecture=$Arch"
-    for Bin in ping awk tc resetprop; do
-        if command -v "$Bin" > /dev/null 2>&1; then
-            Log Diagnose "$Bin found at $(command -v "$Bin")"
-        else
-            Log Diagnose "$Bin MISSING"
+
+    for TmpFile in "${LogPath}.tmp"*; do
+        if [ -f "$TmpFile" ]; then
+            if [ ! -s "$LogPath" ] && [ -s "$TmpFile" ]; then
+                cat "$TmpFile" > "$LogPath" 2> /dev/null
+            fi
+            rm -f "$TmpFile" 2> /dev/null
         fi
     done
-    if ProbeWrite "$Core"; then
-        Log Diagnose "$Core writable"
-    else
-        Log Diagnose "$Core NOT writable"
-        Log Diagnose "mount -- $(mount 2>/dev/null | grep -E ' /data |modules' | tr '\n' ' ')"
+
+    ExistingLines=""
+    if [ -f "$LogPath" ]; then
+        ExistingLines=$(grep -v "Diagnose:" "$LogPath" 2> /dev/null | grep -vE '^\s*\[\s*[0-9]+\.[0-9]+\]')
     fi
-    DmesgLines=$(dmesg 2> /dev/null | grep -iE "f2fs|erofs|remount" | tail -5)
-    [ -n "$DmesgLines" ] && Log Diagnose "dmesg -- $DmesgLines"
+
+    {
+        echo "[$(date +%T)] Diagnose: ABI=$ABI Architecture=$Arch"
+        for Bin in ping awk tc resetprop; do
+            if command -v "$Bin" > /dev/null 2>&1; then
+                echo "[$(date +%T)] Diagnose: $Bin found at $(command -v "$Bin")"
+            else
+                echo "[$(date +%T)] Diagnose: $Bin MISSING"
+            fi
+        done
+        if ProbeWrite "$Core"; then
+            echo "[$(date +%T)] Diagnose: $Core writable"
+        else
+            echo "[$(date +%T)] Diagnose: $Core NOT writable"
+            echo "[$(date +%T)] Diagnose: mount -- $(mount 2>/dev/null | grep -E ' /data |modules' | tr '\n' ' ')"
+        fi
+        DmesgLines=$(dmesg 2> /dev/null | grep -iE "f2fs|erofs|remount" | tail -5)
+        if [ -n "$DmesgLines" ]; then
+            printf '%s\n' "$DmesgLines" | while IFS= read -r Line; do
+                [ -n "$Line" ] && echo "[$(date +%T)] Diagnose: dmesg -- $Line"
+            done
+        fi
+        [ -n "$ExistingLines" ] && printf '%s\n' "$ExistingLines"
+    } > "$LogPath" 2> /dev/null
 }
 
 ProcessID() { Write "$ProcessID" "$(printf '{"PID":%s,"Timestamp":%s}\n' "$$" "$(date +%s)")"; }
