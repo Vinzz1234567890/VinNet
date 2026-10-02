@@ -118,6 +118,13 @@
         </div>
     </template>
 
+    <template id="IndexRowTemplate">
+        <div class="IndexRow">
+            <span class="IndexRowlabel"></span>
+            <span class="IndexRowValue">—</span>
+        </div>
+    </template>
+
     <div id="LoadingScreen">
         <div class="LoadingScreenAnimation"></div>
         <div class="LoadingScreenText">Loading</div>
@@ -148,10 +155,7 @@
                         </svg>
                         Monitor
                     </div>
-                    <div class="IndexRow"><span class="IndexRowlabel">Latency</span><span class="IndexRowValue"
-                            id="Latency">—</span></div>
-                    <div class="IndexRow"><span class="IndexRowlabel">Jitter</span><span class="IndexRowValue"
-                            id="Jitter">—</span></div>
+                    <div id="MonitorRows"></div>
                 </div>
                 <div class="Card">
                     <div class="CardLabel">
@@ -160,20 +164,7 @@
                         </svg>
                         Environment
                     </div>
-                    <div class="IndexRow"><span class="IndexRowlabel">Brand</span><span class="IndexRowValue"
-                            id="Brand">—</span></div>
-                    <div class="IndexRow"><span class="IndexRowlabel">Model</span><span class="IndexRowValue"
-                            id="Model">—</span></div>
-                    <div class="IndexRow"><span class="IndexRowlabel">Android</span><span class="IndexRowValue"
-                            id="Android">—</span></div>
-                    <div class="IndexRow"><span class="IndexRowlabel">Kernel</span><span class="IndexRowValue"
-                            id="Kernel">—</span></div>
-                    <div class="IndexRow"><span class="IndexRowlabel">Architecture</span><span class="IndexRowValue"
-                            id="Architecture">—</span></div>
-                    <div class="IndexRow"><span class="IndexRowlabel">Root</span><span class="IndexRowValue"
-                            id="Root">—</span></div>
-                    <div class="IndexRow"><span class="IndexRowlabel">Vendor</span><span class="IndexRowValue"
-                            id="Vendor">—</span></div>
+                    <div id="EnvironmentRows"></div>
                 </div>
             </div>
 
@@ -187,16 +178,7 @@
                         </svg>
                         Metadata
                     </div>
-                    <div class="IndexRow"><span class="IndexRowlabel">ID</span><span class="IndexRowValue"
-                            id="MetadataID">—</span></div>
-                    <div class="IndexRow"><span class="IndexRowlabel">Name</span><span class="IndexRowValue"
-                            id="MetadataName">—</span></div>
-                    <div class="IndexRow"><span class="IndexRowlabel">Version</span><span class="IndexRowValue"
-                            id="MetadataVersion">—</span></div>
-                    <div class="IndexRow"><span class="IndexRowlabel">Author</span><span class="IndexRowValue"
-                            id="MetadataAuthor">—</span></div>
-                    <div class="IndexRow"><span class="IndexRowlabel">Description</span><span class="IndexRowValue"
-                            id="MetadataDescription">—</span></div>
+                    <div id="MetadataRows"></div>
                 </div>
                 <div class="Card">
                     <div class="CardLabel">
