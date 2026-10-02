@@ -8,7 +8,7 @@ const Log = (Tag, Data) => {
     if (LogCache.get(Tag) === Content) return;
     LogCache.set(Tag, Content);
     const Safe = Content.replace(/'/g, "'\\''");
-    LogQueue = LogQueue.then(() => exec(`grep -v "^\\[.*\\] ${Tag}:" ${LogPath} 2>/dev/null > ${LogPath}.tmp; printf '[%s] %s: %s\\n' "$(date +%T)" "${Tag}" '${Safe}' >> ${LogPath}.tmp; mv -f ${LogPath}.tmp ${LogPath}`)).catch(() => { });
+    LogQueue = LogQueue.then(() => exec(`grep -v "^\\[.*\\] ${Tag}:" ${LogPath} 2>/dev/null > ${Core}/.log.tmp; printf '[%s] %s: %s\\n' "$(date +%T)" "${Tag}" '${Safe}' >> ${Core}/.log.tmp; cat ${Core}/.log.tmp > ${LogPath}; rm -f ${Core}/.log.tmp`)).catch(() => { });
 };
 
 const Page = {
