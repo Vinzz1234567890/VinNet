@@ -6,8 +6,19 @@ ModuleDirectory="${0%/*}"
 Core="/data/adb/VinNet"
 LogPath="/storage/emulated/0/Download/VinNet.log"
 
-Log() { echo "[$(date +%T)] $1: $2" >> "$LogPath" 2> /dev/null; }
+LastLog=""
+Log() {
+    [ "$1: $2" = "$LastLog" ] && return
+    LastLog="$1: $2"
+    echo "[$(date +%T)] $1: $2" >> "$LogPath" 2> /dev/null
+}
 ProbeWrite() { : > "$1/.WriteProbe" 2> /dev/null && rm -f "$1/.WriteProbe"; }
+
+# Cap the log so it cannot grow unbounded across sessions
+if [ -f "$LogPath" ] && [ "$(wc -c < "$LogPath" 2> /dev/null)" -gt 131072 ]; then
+    : > "$LogPath" 2> /dev/null
+    Log LogRotate "previous log exceeded 128K, truncated"
+fi
 
 # State lives outside the module directory: /data/adb/modules can be a read-only loop image and
 # webroot/ is wiped on every module update. No fallback -- if this path is not writable the latch
