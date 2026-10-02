@@ -1,4 +1,4 @@
-const Core = '/data/adb/modules/VinNet/webroot/Core';
+const Core = '/data/adb/VinNet';
 const LogPath = '/storage/emulated/0/Download/VinNet.log';
 const LogCache = new Map();
 
@@ -7,7 +7,7 @@ const Log = (Tag, Data) => {
     if (LogCache.get(Tag) === Content) return;
     LogCache.set(Tag, Content);
     const Safe = Content.replace(/'/g, "'\\''");
-    exec(`grep -v "^\\[.*\\] ${Tag}:" ${LogPath} 2>/dev/null > ${LogPath}.tmp; printf '[%s] %s: %s\\n' "$(date +%T)" "${Tag}" '${Safe}' >> ${LogPath}.tmp; mv ${LogPath}.tmp ${LogPath}`).catch(() => { });
+    exec(`printf '[%s] %s: %s\\n' "$(date +%T)" "${Tag}" '${Safe}' >> ${LogPath}`).catch(() => { });
 };
 
 const Page = {
@@ -213,10 +213,12 @@ function OpenLink(URL) {
     exec(`am start -a android.intent.action.VIEW -d "${URL}"`).catch(() => Toast('Unable to open link'));
 }
 
-async function FetchJSON(Path) {
+// State lives at /data/adb/VinNet, outside webroot/, so fetch() cannot reach it
+// (WebViewAssetLoader enforces canonical path containment). Read via root shell instead.
+async function FetchJSON(File) {
     try {
-        const Response = await fetch(Path, { cache: 'no-store' });
-        return Response.ok ? await Response.json() : null;
+        const Raw = await exec(`cat ${Core}/${File} 2>/dev/null`);
+        return Raw ? JSON.parse(Raw) : null;
     } catch { return null; }
 }
 
@@ -308,7 +310,7 @@ const Vendor = [
 ];
 
 async function LoadEnvironment() {
-    const Cached = await FetchJSON('Core/Environment.json');
+    const Cached = await FetchJSON('Environment.json');
     Log('Environment', Cached);
     if (Cached) {
         Root = Cached.Root || 'Unknown';
@@ -330,7 +332,7 @@ const Metadata = [
 ];
 
 async function LoadMetadata() {
-    let Cached = await FetchJSON('Core/Metadata.json');
+    let Cached = await FetchJSON('Metadata.json');
     Log('Metadata', Cached);
     if (!Cached) {
         try {
@@ -400,11 +402,8 @@ function ApplyMonitor(Data) {
     SetMonitorValue('Jitter', Data.Jitter, JitterColor);
 }
 
-const Detect = () => exec(`touch ${Core}/Monitor.json`).catch(() => { });
-
 async function FetchMonitor() {
-    Detect();
-    const Cached = await FetchJSON('Core/Monitor.json');
+    const Cached = await FetchJSON('Monitor.json');
     Log('Monitor', Cached);
     if (Cached && Cached.Latency != null) {
         ApplyMonitor(Cached);
@@ -428,7 +427,7 @@ async function FetchMonitor() {
 let ProcessID = null;
 
 async function LoadProcessID() {
-    const Cached = await FetchJSON('Core/ProcessID.json');
+    const Cached = await FetchJSON('ProcessID.json');
     Log('ProcessID', Cached);
     if (!ProcessID) {
         const BannerWrap = document.querySelector('#PageDashboard .BannerWrap');
@@ -466,7 +465,7 @@ function StopLiveTicker() {
 
 document.addEventListener('visibilitychange', () => {
     if (document.hidden) StopLiveTicker();
-    else { Detect(); StartLiveTicker(); }
+    else StartLiveTicker();
 });
 
 const ResetProp = (...Args) => PropInvoker
@@ -474,6 +473,23 @@ const ResetProp = (...Args) => PropInvoker
     : 'echo "resetprop unavailable on this device" >&2; exit 1';
 
 const Command = C => typeof C === 'function' ? C() : C;
+
+// ponytail: qdisc is volatile -- wlan0 is destroyed/recreated on Wi-Fi toggle, so this can only
+// ever be a runtime tweak. Interface names are vendor-specific (rmnet_data* is AOSP-only), so
+// enumerate /sys/class/net instead of hardcoding them. Fails only when no interface accepts the
+// qdisc kind, which reports "unsupported" instead of failing on a missing device name.
+const NetDeny = '^(lo|dummy[0-9]*|tun[0-9]*|tap[0-9]*|ip6tnl[0-9]*|sit[0-9]*|ifb[0-9]*|veth.*|rmnet_mux[0-9]*|rmnet_ctl|rmtfs[0-9]*|radio[0-9]*|wlan0h.*|wlan0bss.*)$';
+
+const TuneNet = Spec => {
+    const Kind = Spec.split(' ')[0];
+    return `N=0
+for P in /sys/class/net/*; do
+  D=\${P##*/}
+  echo "$D" | grep -qE '${NetDeny}' && continue
+  tc qdisc replace dev "$D" root ${Spec} 2>/dev/null && N=$((N+1))
+done
+[ "$N" -gt 0 ] || { echo "no interface accepted ${Kind}" >&2; exit 1; }`;
+};
 
 const Tweaks = {
     "IP Reach Disconnect": {
@@ -485,10 +501,10 @@ const Tweaks = {
     "QDISC": {
         Label: 'Optimize QDISC', Icon: 'QDISC',
         Description: 'Split data traffic into multiple paths and prioritize small data packets so they aren\'t held up by large data packets.',
-        ONCommand: 'R=1; tc qdisc replace dev wlan0 root fq_codel quantum 300 noecn && R=0; tc qdisc replace dev rmnet_data0 root fq_codel quantum 300 noecn && R=0; tc qdisc replace dev rmnet_ipa0 root fq_codel quantum 300 noecn && R=0; exit $R',
-        OFFCommand: 'R=1; tc qdisc replace dev wlan0 root pfifo_fast && R=0; tc qdisc replace dev rmnet_data0 root pfifo_fast && R=0; tc qdisc replace dev rmnet_ipa0 root pfifo_fast && R=0; exit $R',
-        CheckCommand: 'tc qdisc show dev wlan0 2>/dev/null; tc qdisc show dev rmnet_data0 2>/dev/null; tc qdisc show dev rmnet_ipa0 2>/dev/null || true',
-        Expect: 'fq_codel', ONLabel: 'Optimized', OFFLabel: 'Unoptimized',
+        ONCommand: TuneNet('fq_codel quantum 300 noecn'),
+        OFFCommand: TuneNet('pfifo_fast'),
+        CheckCommand: 'tc qdisc show 2>/dev/null | grep -c fq_codel || true',
+        Expect: ['1', '2', '3', '4', '5', '6', '7', '8', '9'], ONLabel: 'Optimized', OFFLabel: 'Unoptimized',
     },
     "Wi-Fi Force Low Latency Mode": {
         Label: 'Enable Wi-Fi Force Low Latency Mode', Icon: 'Wi-FiForceLowLatencyMode',
@@ -553,14 +569,7 @@ async function CheckTweaks() {
 async function RenderTweaks() {
     const Container = document.getElementById('PageTweaks');
     const Template = document.getElementById('TweakCardTemplate');
-    TweakState = await FetchJSON('Core/Tweaks.json');
-    if (!TweakState) {
-        try {
-            const Raw = await exec(`cat ${Core}/Tweaks.json 2>/dev/null`);
-            if (Raw) TweakState = JSON.parse(Raw);
-        } catch { }
-        TweakState = TweakState || {};
-    }
+    TweakState = await FetchJSON('Tweaks.json') || {};
     Log('Tweaks', TweakState);
 
     await DetectRoot();
@@ -613,10 +622,10 @@ async function ApplyTweak(ID, Enabled) {
             await exec(Command(Enabled ? Tweak.ONCommand : Tweak.OFFCommand));
             if (!TweakState) TweakState = {};
             TweakState[ID] = Enabled ? 'ON' : 'OFF';
-            const Content = JSON.stringify(TweakState).replace(/"/g, '\\"');
-            await exec(`echo "${Content}" > ${Core}/Tweaks.json`);
             Log('Tweaks', TweakState);
             Toast(`${Tweak.Label || ID} > ${Enabled ? Tweak.ONLabel : Tweak.OFFLabel}`);
+            const Content = JSON.stringify(TweakState).replace(/"/g, '\\"');
+            exec(`echo "${Content}" > ${Core}/Tweaks.json`).catch(Err => Log('TweakSave', `${ID}: ${Err || 'state not persisted'}`));
         } catch (Err) {
             Log('TweakFail', `${ID}: ${Err || 'unknown error'}`);
             Toast('Unable to apply tweak');
