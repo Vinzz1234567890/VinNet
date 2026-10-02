@@ -47,6 +47,9 @@ const PageWidth = () => PagesElement.clientWidth || 0;
 function RenderPages() {
     PagesElement.style.setProperty('--page-base', `${CurrentPageIndex * -100}%`);
     PagesElement.style.setProperty('--page-drag', `${DragOffset}px`);
+}
+
+function SyncPageAttributes() {
     Array.from(PagesElement.children).forEach((Child, I) => {
         const Active = I === CurrentPageIndex;
         Child.toggleAttribute('inert', !Active);
@@ -79,6 +82,7 @@ function SetActivePage(ID) {
     CurrentPageID = ID;
     CurrentPageIndex = Index;
     RenderPages();
+    SyncPageAttributes();
     if (!NavigationButtons) {
         NavigationButtons = document.querySelectorAll('.NavigationBar, .NavigationBarActive');
         NavigationButtonMap = new Map([...NavigationButtons].map(B => [B.dataset.page, B]));
@@ -129,15 +133,20 @@ function BeginGesture(X, Y, Kind, PointerID) {
 
 function MoveGesture(X, Y, Event, OnAxisLock) {
     if (!Dragging) return;
-    const DeltaX = X - GestureStartX, DeltaY = Y - GestureStartY;
     if (GestureAxis === null) {
-        const AbsX = Math.abs(DeltaX);
-        if (AbsX === 0 || AbsX < Math.abs(DeltaY)) return;
+        const DeltaX = X - GestureStartX, DeltaY = Y - GestureStartY;
+        const AbsX = Math.abs(DeltaX), AbsY = Math.abs(DeltaY);
+        if (AbsX < 10 && AbsY < 10) return;
+        // First dominant direction wins for the whole touch: vertical stays a native
+        // scroll (a later circle must not drag pages), horizontal becomes a drag.
+        if (AbsY >= AbsX) { GestureAxis = 'y'; return; }
         GestureAxis = 'x';
+        GestureStartX = X;
         if (OnAxisLock) try { OnAxisLock(); } catch { }
     }
+    if (GestureAxis !== 'x') return;
     if (Event.cancelable) Event.preventDefault();
-    let Offset = DeltaX;
+    let Offset = X - GestureStartX;
     if ((CurrentPageIndex === 0 && Offset > 0) || (CurrentPageIndex === PageList.length - 1 && Offset < 0)) {
         Offset /= EdgeResistance;
     }
@@ -200,6 +209,7 @@ document.getElementById('Navigation').addEventListener('click', E => {
 
 CurrentPageID = PageList[0];
 RenderPages();
+SyncPageAttributes();
 
 const SnackElement = document.getElementById('Snack');
 let SnackTimer;
