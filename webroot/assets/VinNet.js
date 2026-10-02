@@ -2,12 +2,13 @@ const Core = '/data/adb/VinNet';
 const LogPath = '/storage/emulated/0/Download/VinNet.log';
 const LogCache = new Map();
 
+let LogQueue = Promise.resolve();
 const Log = (Tag, Data) => {
-    const Content = JSON.stringify(Data);
+    const Content = JSON.stringify(Data, (K, V) => K === 'Timestamp' ? undefined : V);
     if (LogCache.get(Tag) === Content) return;
     LogCache.set(Tag, Content);
     const Safe = Content.replace(/'/g, "'\\''");
-    exec(`printf '[%s] %s: %s\\n' "$(date +%T)" "${Tag}" '${Safe}' >> ${LogPath}`).catch(() => { });
+    LogQueue = LogQueue.then(() => exec(`grep -v "^\\[.*\\] ${Tag}:" ${LogPath} 2>/dev/null > ${LogPath}.tmp; printf '[%s] %s: %s\\n' "$(date +%T)" "${Tag}" '${Safe}' >> ${LogPath}.tmp; mv -f ${LogPath}.tmp ${LogPath}`)).catch(() => { });
 };
 
 const Page = {
@@ -513,6 +514,7 @@ const Tweaks = {
         Description: 'Preventing Wi-Fi from suddenly disconnecting when network is unstable.',
         ONCommand: 'cmd wifi set-ipreach-disconnect disabled', OFFCommand: 'cmd wifi set-ipreach-disconnect enabled',
         CheckCommand: 'cmd wifi get-ipreach-disconnect', Expect: 'false', ONLabel: 'Disabled', OFFLabel: 'Enabled',
+        Warn: 'Reset after reboot',
     },
     "QDISC": {
         Label: 'Optimize QDISC', Icon: 'QDISC',
