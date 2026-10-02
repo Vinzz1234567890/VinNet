@@ -3,46 +3,38 @@ until [ "$(resetprop sys.boot_completed)" = "1" ]; do sleep 3; done
 sleep 3
 
 ModuleDirectory="${0%/*}"
-Core="$ModuleDirectory/webroot/Core"
+Core="/data/adb/VinNet"
 LogPath="/storage/emulated/0/Download/VinNet.log"
 
 Log() { echo "[$(date +%T)] $1: $2" >> "$LogPath" 2> /dev/null; }
-ProbeWrite() { : > "$Core/.WriteProbe" 2> /dev/null && rm -f "$Core/.WriteProbe"; }
+ProbeWrite() { : > "$1/.WriteProbe" 2> /dev/null && rm -f "$1/.WriteProbe"; }
 
-[ -d "$Core" ] || mkdir -p "$Core" 2> /dev/null
-if ! ProbeWrite; then
-    mount -o remount,rw "$ModuleDirectory" 2> /dev/null || mount -o remount,rw /data/adb/modules 2> /dev/null
-    if ! ProbeWrite; then
-        if mount -t tmpfs -o size=2M tmpfs "$Core" 2> /dev/null && ProbeWrite; then
-            Log CoreMountedTmpfs "webroot/Core read-only, mounted tmpfs on $Core"
-        else
-            Core="/data/local/tmp/VinNetCore"
-            mkdir -p "$Core" 2> /dev/null
-            Log CoreFallback "webroot/Core not writable, using $Core"
-        fi
-    fi
-fi
+# State lives outside the module directory: /data/adb/modules can be a read-only loop image and
+# webroot/ is wiped on every module update. No fallback -- if this path is not writable the latch
+# in Write() disables persistence for the session and the Web UI keeps working on live checks.
+mkdir -p "$Core" 2> /dev/null
 
 Monitor="$Core/Monitor.json"
 Environment="$Core/Environment.json"
 Metadata="$Core/Metadata.json"
-Tweaks="$Core/Tweaks.json"
 ProcessID="$Core/ProcessID.json"
 Identity="$ModuleDirectory/module.prop"
 CoreWritable=1
 
 Write() {
     [ "$CoreWritable" -eq 0 ] && return 1
-    local Destination="$1" Temporary="${Destination}.tmp.$$" ErrorOutput
-    ErrorOutput=$({ cat > "$Temporary" && mv -f "$Temporary" "$Destination"; } 2>&1)
+    local Destination="$1"
+    local Temporary="${Destination}.tmp.$$"
+    local ErrorOutput
+    ErrorOutput=$({ printf '%s\n' "$2" > "$Temporary" && mv -f "$Temporary" "$Destination"; } 2>&1)
     [ $? -eq 0 ] && return 0
 
     Log WriteFail "$Destination : ${ErrorOutput:-unknown error}"
     rm -f "$Temporary" 2> /dev/null
     case "$ErrorOutput" in
-        *"Read-only file system"*)
+        *"Read-only file system"*|*"No space left on device"*)
             CoreWritable=0
-            Log CoreReadOnly "$Core read-only, stopping further write attempts this session"
+            Log CoreReadOnly "$Core unwritable, runtime state disabled this session"
             ;;
     esac
 }
@@ -59,40 +51,21 @@ Diagnose() {
             Log Diagnose "$Bin MISSING"
         fi
     done
-    [ -w "$Core" ] && Log Diagnose "$Core writable" || Log Diagnose "$Core NOT writable"
+    if ProbeWrite "$Core"; then
+        Log Diagnose "$Core writable"
+    else
+        Log Diagnose "$Core NOT writable"
+        Log Diagnose "mount -- $(mount 2>/dev/null | grep -E ' /data |modules' | tr '\n' ' ')"
+    fi
     DmesgLines=$(dmesg 2> /dev/null | grep -iE "f2fs|erofs|remount" | tail -5)
     [ -n "$DmesgLines" ] && Log Diagnose "dmesg -- $DmesgLines"
 }
 
-ProcessID() { printf '{"PID":%s,"Timestamp":%s}\n' "$$" "$(date +%s)" | Write "$ProcessID"; }
+ProcessID() { Write "$ProcessID" "$(printf '{"PID":%s,"Timestamp":%s}\n' "$$" "$(date +%s)")"; }
 
 Cleanup() {
     rm -f "$ProcessID" "$Core"/*.tmp.$$ 2> /dev/null
     exit 0
-}
-
-ApplyTweaks() {
-    local State=$(printf '%s' "$2" | tr '[:upper:]' '[:lower:]')
-    local On=$([ "$State" = "on" ] && echo 1 || echo 0)
-
-    case "$1" in
-        "IP Reach Disconnect") cmd wifi set-ipreach-disconnect $([ "$On" -eq 1 ] && echo disabled || echo enabled) ;;
-        "QDISC")
-            local QDISC=$([ "$On" -eq 1 ] && echo "fq_codel quantum 300 noecn" || echo "pfifo_fast")
-            for Interface in wlan0 rmnet_data0 rmnet_ipa0; do tc qdisc replace dev "$Interface" root $QDISC 2> /dev/null; done
-            ;;
-        "Wi-Fi Force Low Latency Mode")
-            local Mode=$([ "$On" -eq 1 ] && echo enabled || echo disabled)
-            local Out=$(cmd wifi force-low-latency-mode "$Mode" 2> /dev/null)
-            case "$Out" in *"Command execution failed"*) cmd wifi force-hi-perf-mode "$Mode" 2> /dev/null ;; esac
-            ;;
-        "Network Avoid Bad Wi-Fi") settings put global network_avoid_bad_wifi $([ "$On" -eq 1 ] && echo 0 || echo 1) ;;
-        "BLE Scan Always Enabled") settings put global ble_scan_always_enabled $([ "$On" -eq 1 ] && echo 0 || echo 1) ;;
-        "Mobile Data Always ON") settings put global mobile_data_always_on $([ "$On" -eq 1 ] && echo 0 || echo 1) ;;
-        "Wi-Fi Country Code") resetprop ro.boot.wificountrycode $([ "$On" -eq 1 ] && echo US || echo 00) ;;
-        "Force LTE CA") resetprop -p persist.sys.radio.force_lte_ca $([ "$On" -eq 1 ] && echo true || echo false) ;;
-        "Wi-Fi Scan Throttle") settings put global wifi_scan_throttle_enabled "$On" ;;
-    esac
 }
 
 Metadata() {
@@ -105,8 +78,8 @@ Metadata() {
         esac
     done < "$Identity"
 
-    printf '{"ID":"%s","Name":"%s","Version":"%s","VersionCode":"%s","Author":"%s","Description":"%s"}\n' \
-        "$ID" "$Name" "$Version" "$VersionCode" "$Author" "$Description" | Write "$Metadata"
+    Write "$Metadata" "$(printf '{"ID":"%s","Name":"%s","Version":"%s","VersionCode":"%s","Author":"%s","Description":"%s"}\n' \
+        "$ID" "$Name" "$Version" "$VersionCode" "$Author" "$Description")"
 }
 
 Environment() {
@@ -117,9 +90,9 @@ Environment() {
         }
     }
 
-    printf '{"Brand":"%s","Model":"%s","Android":"%s","Kernel":"%s","Architecture":"%s","Root":"%s"}\n' \
+    Write "$Environment" "$(printf '{"Brand":"%s","Model":"%s","Android":"%s","Kernel":"%s","Architecture":"%s","Root":"%s"}\n' \
         "$(resetprop ro.product.brand)" "$(resetprop ro.product.model)" "$(resetprop ro.build.version.release)" \
-        "$(uname -r)" "$(resetprop ro.product.cpu.abi)" "$Root" | Write "$Environment"
+        "$(uname -r)" "$(resetprop ro.product.cpu.abi)" "$Root")"
 }
 
 LastLatency="x" LastJitter="x" LastMonitorWrite=0 FailCount=0
@@ -152,7 +125,7 @@ Monitor() {
             FailCount=0
             if [ "$Latency" != "$LastLatency" ] || [ "$Jitter" != "$LastJitter" ] || [ $((Timestamp - LastMonitorWrite)) -ge 20 ]; then
                 LastLatency="$Latency" LastJitter="$Jitter" LastMonitorWrite="$Timestamp"
-                printf '{"Latency":%s,"Jitter":%s,"Timestamp":%s}\n' "$Latency" "$Jitter" "$Timestamp" | Write "$Monitor"
+                Write "$Monitor" "$(printf '{"Latency":%s,"Jitter":%s,"Timestamp":%s}\n' "$Latency" "$Jitter" "$Timestamp")"
             fi
             return
         fi
@@ -161,7 +134,7 @@ Monitor() {
     FailCount=$((FailCount + 1))
     if [ "$FailCount" -ge 3 ] && { [ "$LastLatency" != "—" ] || [ $((Timestamp - LastMonitorWrite)) -ge 20 ]; }; then
         LastLatency="—" LastJitter="—" LastMonitorWrite="$Timestamp"
-        printf '{"Latency":"—","Jitter":"—","Timestamp":%s}\n' "$Timestamp" | Write "$Monitor"
+        Write "$Monitor" "$(printf '{"Latency":"—","Jitter":"—","Timestamp":%s}\n' "$Timestamp")"
         Log MonitorFail "${LastError:-no output from ping}"
     fi
 }
@@ -184,12 +157,6 @@ if [ -f "$ProcessID" ]; then
 fi
 ProcessID
 trap Cleanup TERM EXIT INT
-
-if [ -f "$Tweaks" ]; then
-    awk -F'"' '{for (i=2; i<=NF; i+=4) print $i "=" $(i+2)}' "$Tweaks" 2> /dev/null | while IFS='=' read -r Key Value; do
-        [ -n "$Key" ] && ApplyTweaks "$Key" "$Value"
-    done
-fi
 
 Metadata
 Environment
