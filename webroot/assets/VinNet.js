@@ -331,6 +331,22 @@ const Metadata = [
     ['MetadataAuthor', 'Author'], ['MetadataDescription', 'Description'],
 ];
 
+const IndexRowTemplate = document.getElementById('IndexRowTemplate');
+
+function RenderRows(ContainerID, Rows) {
+    const Container = document.getElementById(ContainerID);
+    for (const [ID, Label] of Rows) {
+        const Row = IndexRowTemplate.content.cloneNode(true);
+        Row.querySelector('.IndexRowlabel').textContent = Label;
+        Row.querySelector('.IndexRowValue').id = ID;
+        Container.appendChild(Row);
+    }
+}
+
+RenderRows('MonitorRows', [['Latency', 'Latency'], ['Jitter', 'Jitter']]);
+RenderRows('EnvironmentRows', [...Environment, ['Root', 'Root'], ['Vendor', 'Vendor']]);
+RenderRows('MetadataRows', [...Metadata, ['MetadataVersion', 'Version']]);
+
 async function LoadMetadata() {
     let Cached = await FetchJSON('Metadata.json');
     Log('Metadata', Cached);
@@ -505,6 +521,7 @@ const Tweaks = {
         OFFCommand: TuneNet('pfifo_fast'),
         CheckCommand: 'tc qdisc show 2>/dev/null | grep -c fq_codel || true',
         Expect: ['1', '2', '3', '4', '5', '6', '7', '8', '9'], ONLabel: 'Optimized', OFFLabel: 'Unoptimized',
+        Warn: 'Reset after reboot',
     },
     "Wi-Fi Force Low Latency Mode": {
         Label: 'Enable Wi-Fi Force Low Latency Mode', Icon: 'Wi-FiForceLowLatencyMode',
@@ -513,6 +530,7 @@ const Tweaks = {
         OFFCommand: 'Out=$(cmd wifi force-low-latency-mode disabled 2>/dev/null); case "$Out" in *"Command execution failed"*) cmd wifi force-hi-perf-mode disabled;; esac',
         CheckCommand: "dumpsys wifi 2>/dev/null | grep -oE 'mPowerSaveDisableRequests [0-9]+' | head -n 1 | awk '{print $2 % 4}'",
         Expect: ['2', '3'], ONLabel: 'Enabled', OFFLabel: 'Disabled',
+        Warn: 'Reset after interface changes',
     },
     "Network Avoid Bad Wi-Fi": {
         Label: 'Disable Network Avoid Bad Wi-Fi', Icon: 'NetworkAvoidBadWi-Fi',
@@ -537,6 +555,7 @@ const Tweaks = {
         Description: 'Change country code to “US” to bypass certain restrictions on Wi-Fi.',
         ONCommand: () => ResetProp('ro.boot.wificountrycode', 'US'), OFFCommand: () => ResetProp('ro.boot.wificountrycode', '00'),
         CheckCommand: () => ResetProp('ro.boot.wificountrycode'), Expect: 'US', ONLabel: 'Changed', OFFLabel: 'Unchanged',
+        Warn: 'Reset after reboot',
     },
     "Force LTE CA": {
         Label: 'Enable Force LTE CA', Icon: 'ForceLTECA',
