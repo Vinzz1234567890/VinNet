@@ -5,49 +5,36 @@
     font-display: swap;
 }
 
-/* ==========================================================================
-   1. Design Tokens & Variables
-   ========================================================================== */
 :root {
-    /* Layout Dimensions */
     --topbar-h: 70px;
     --botnav-h: 68px;
 
-    /* Motion Curves */
     --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
     --ease-smooth: cubic-bezier(0.2, 1, 0.2, 1);
 
-    /* Primary Palette */
     --pri: #AACAE9;
     --on-pri: #10334C;
     --pri-mix-40: color-mix(in srgb, var(--pri) 40%, transparent);
     --pri-mix-14: color-mix(in srgb, var(--pri) 14%, transparent);
 
-    /* Backgrounds & Surfaces */
     --bg: #1C1B1F;
     --surf-lo: #1C1B1F;
     --surf-c: #211F26;
     --surf-hi: #2B2930;
     --surf-xhi: #36343B;
 
-    /* Text & Outlines */
     --on-surf: #E6E0E9;
     --on-surf-var: #CAC4D0;
     --outline: #938F99;
     --out-var: #49454F;
 
-    /* Status Indicators */
     --Good: #6EF2A8;
     --Warn: #FFD166;
     --Bad: #FF6B6B;
 
-    /* Brand Specific */
     --brand-telegram: #26A5E4;
 }
 
-/* ==========================================================================
-   2. Reset & Base Styles
-   ========================================================================== */
 *,
 *::before,
 *::after {
@@ -76,9 +63,6 @@ img {
     pointer-events: none;
 }
 
-/* ==========================================================================
-   3. App Shell & Loading Screen
-   ========================================================================== */
 #WebUI {
     display: flex;
     flex-direction: column;
@@ -145,9 +129,6 @@ img {
     }
 }
 
-/* ==========================================================================
-   4. Header Bar
-   ========================================================================== */
 .Header {
     position: absolute;
     inset: 0 0 auto;
@@ -185,9 +166,6 @@ img {
     margin-top: 3px;
 }
 
-/* ==========================================================================
-   5. Pages & Swiper Lane
-   ========================================================================== */
 .Pages {
     position: relative;
     flex: 1;
@@ -232,9 +210,6 @@ img {
     transition: none;
 }
 
-/* ==========================================================================
-   6. Bottom Navigation Bar
-   ========================================================================== */
 .Navigation {
     position: absolute;
     inset: auto 0 0;
@@ -302,7 +277,6 @@ img {
     opacity: 1;
 }
 
-/* Interactive Tap Feedback */
 :is(.NavigationBar, .NavigationBarActive, .ir-link, .chip) {
     cursor: pointer;
     transition: transform 0.15s ease;
@@ -312,9 +286,6 @@ img {
     transform: scale(0.94);
 }
 
-/* ==========================================================================
-   7. Dashboard Banner & Process Overlay
-   ========================================================================== */
 .BannerWrap {
     position: relative;
     width: 100%;
@@ -343,14 +314,17 @@ img {
 }
 
 @keyframes BannerCrossfade {
+
     0%,
     31.4% {
         opacity: 1;
     }
+
     33.3%,
     98.1% {
         opacity: 0;
     }
+
     100% {
         opacity: 1;
     }
@@ -389,9 +363,6 @@ img {
     transition: opacity 0.15s;
 }
 
-/* ==========================================================================
-   8. Cards & Metric Rows
-   ========================================================================== */
 .Card {
     background: var(--surf-c);
     border-radius: 24px;
@@ -445,7 +416,6 @@ img {
     font-variant-numeric: tabular-nums;
 }
 
-/* Row & Tweak Divider Resets */
 .IndexRow:first-child,
 .Tweak:first-child {
     padding-top: 0;
@@ -457,9 +427,6 @@ img {
     padding-bottom: 0;
 }
 
-/* ==========================================================================
-   9. Tweaks & Switch Control
-   ========================================================================== */
 .Tweak {
     display: flex;
     align-items: flex-start;
@@ -503,7 +470,6 @@ img {
     margin-top: 4px;
 }
 
-/* Switch Component */
 .Switch {
     position: relative;
     width: 52px;
@@ -547,19 +513,16 @@ img {
     cursor: default;
 }
 
-.Switch input:checked ~ .SwitchTrack {
+.Switch input:checked~.SwitchTrack {
     background-color: var(--pri);
     border-color: var(--pri);
 }
 
-.Switch input:checked ~ .SwitchTrack .SwitchThumb {
+.Switch input:checked~.SwitchTrack .SwitchThumb {
     transform: translateY(-50%) translateX(18px) scale(1.5);
     background-color: var(--on-pri);
 }
 
-/* ==========================================================================
-   10. Links & Chips (Contributors / Info)
-   ========================================================================== */
 .ir-link {
     font-size: 13px;
     font-weight: 600;
@@ -613,9 +576,6 @@ img {
     margin: 0;
 }
 
-/* ==========================================================================
-   11. Toast Notification (Snackbar)
-   ========================================================================== */
 .Snack {
     position: fixed;
     bottom: 80px;
