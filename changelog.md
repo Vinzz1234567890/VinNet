@@ -2,7 +2,89 @@
 
 ---
 
-## v1.2.0-Leaks - 2026-09-28 - Latest
+## v1.2.1-JioGraze - 2026-09-30 - Latest
+
+### ✨Added
+
+- Persistent VinNet Core directory at `/data/adb/VinNet`
+- Log deduplication and 128 KiB log rotation
+- Diagnostic log buffering and flushing
+- Dynamic Web UI information-row rendering through `IndexRowTemplate`
+- Tweak warnings for settings that may reset after reboot or interface changes
+- Automatic QDISC targeting for eligible network interfaces
+- Cached `resetprop` invoker detection for KernelSU, APatch, and Magisk
+- Other additions
+
+### 🔄️Changed
+
+- Module version from `1.2.0-Leaks` to `1.2.1-JioGraze`
+- Module version code from `20260928` to `20260930`
+- Core data location from module `webroot/Core` to `/data/adb/VinNet`
+- Web UI Core path to use `/data/adb/VinNet`
+- `Log()` implementation to suppress duplicate entries and replace previous entries with the same tag
+- Log handling to truncate `VinNet.log` when it exceeds 128 KiB
+- Core write handling to treat both read-only and out-of-space errors as unwritable runtime state
+- Diagnostic handling to buffer diagnostic output before flushing it into `VinNet.log`
+- Process ID writing to use the centralized `Write()` function
+- Metadata and environment JSON generation to use the centralized `Write()` function
+- Monitor JSON generation to use the centralized `Write()` function
+- `QDISC` tweak from targeting `wlan0`, `rmnet_data0`, and `rmnet_ipa0` to automatically targeting eligible network interfaces while excluding unsupported/system interfaces
+- QDISC status detection to check for `fq_codel` across available interfaces
+- `resetprop` execution to use a detected root-specific invoker
+- Web UI JSON loading to read Core files directly through root execution
+- Web UI information cards from hardcoded rows to dynamically generated rows
+- Tweak state loading to use the simplified Core path
+- Tweak application to persist state asynchronously
+- Web UI gesture detection to distinguish horizontal and vertical movement before locking the gesture axis
+- Web UI page accessibility state to update through `inert` and `aria-hidden`
+- Web UI CSS selectors and transition definitions to use normalized lowercase HTML selectors and reusable variables
+- Service startup order to run diagnostics before creating the active process state
+- Module uninstall cleanup to remove `/data/adb/VinNet`
+- Log removal in `uninstall.sh` to use `rm -f`
+- Other internal refactoring
+
+### 📈Improved
+
+- Runtime Core reliability by moving writable state outside the read-only module filesystem
+- Logging reliability and storage management
+- Diagnostic information handling
+- QDISC compatibility across different network interface layouts
+- `resetprop` compatibility across KernelSU, APatch, and Magisk
+- Web UI maintainability by removing repeated information-row markup
+- Web UI gesture handling and prevention of accidental vertical-page interference
+- Web UI accessibility of inactive pages
+- Tweak state persistence reliability
+- Service write consistency
+- General code structure and reduction of redundant implementation
+
+### 🔧Fixed
+
+- Runtime state failures caused by attempting to write Core data inside the module filesystem
+- Excessive growth of `VinNet.log`
+- Duplicate log entries for identical tags
+- QDISC failure when the expected `wlan0`, `rmnet_data0`, or `rmnet_ipa0` interfaces are unavailable
+- `resetprop` execution issues caused by assuming a single executable path
+- Web UI gesture misclassification between horizontal swipes and vertical movement
+- Web UI information-row duplication caused by hardcoded markup
+- Other minor runtime and Web UI issues
+
+### 🔥Deleted
+
+- Runtime Core recovery logic using module remount
+- Runtime Core tmpfs fallback
+- `/data/local/tmp/VinNetCore` fallback
+- Automatic boot-time application of saved tweaks through `ApplyTweaks()`
+- `InitTweaks` service initialization call
+- Service-side `Tweaks.json` parsing and application logic
+- Separate `Tweaks` path variable in `service.sh`
+- Hardcoded Monitor, Environment, and Metadata rows from `index.html`
+- Previous Web UI `resetprop` wrapper implementation
+- Obsolete gesture-axis handling logic
+- Other redundant implementation
+
+---
+
+## v1.2.0-Leaks - 2026-09-28
 
 ### ✨Added
 
