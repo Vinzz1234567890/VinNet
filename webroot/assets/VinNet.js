@@ -532,7 +532,7 @@ const Tweaks = {
         Description: 'Force Android to enable built-in low-latency mode at system level, falling back to hi-perf mode on devices that lack it.',
         ONCommand: 'Out=$(cmd wifi force-low-latency-mode enabled 2>/dev/null); case "$Out" in *"Command execution failed"*) cmd wifi force-hi-perf-mode enabled;; esac',
         OFFCommand: 'Out=$(cmd wifi force-low-latency-mode disabled 2>/dev/null); case "$Out" in *"Command execution failed"*) cmd wifi force-hi-perf-mode disabled;; esac',
-        CheckCommand: "dumpsys wifi 2>/dev/null | grep -oE 'mPowerSaveDisableRequests [0-9]+' | head -n 1 | awk '{print $2 % 4}'",
+        CheckCommand: "dumpsys wifi 2>/dev/null | awk '/Dump of ClientModeImpl/ { quit=0; comp=0; seen=1 } /curState=<QUIT>/ { quit=1 } /Supplicant state: COMPLETED/ { comp=1 } /mPowerSaveDisableRequests/ { if (comp) { cmask=$2; hasc=1 } else if (!quit && !live) { lmask=$2; live=1 } } END { if (hasc) print cmask % 4; else if (live) print lmask % 4; else if (seen) print \"0\" }'",
         Expect: ['2', '3'], ONLabel: 'Enabled', OFFLabel: 'Disabled',
         Warn: 'Reset after interface changes',
     },
