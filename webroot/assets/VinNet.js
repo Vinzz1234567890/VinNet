@@ -137,8 +137,6 @@ function MoveGesture(X, Y, Event, OnAxisLock) {
         const DeltaX = X - GestureStartX, DeltaY = Y - GestureStartY;
         const AbsX = Math.abs(DeltaX), AbsY = Math.abs(DeltaY);
         if (AbsX < 10 && AbsY < 10) return;
-        // First dominant direction wins for the whole touch: vertical stays a native
-        // scroll (a later circle must not drag pages), horizontal becomes a drag.
         if (AbsY >= AbsX) { GestureAxis = 'y'; return; }
         GestureAxis = 'x';
         GestureStartX = X;
@@ -224,8 +222,6 @@ function OpenLink(URL) {
     exec(`am start -a android.intent.action.VIEW -d "${URL}"`).catch(() => Toast('Unable to open link'));
 }
 
-// State lives at /data/adb/VinNet, outside webroot/, so fetch() cannot reach it
-// (WebViewAssetLoader enforces canonical path containment). Read via root shell instead.
 async function FetchJSON(File) {
     try {
         const Raw = await exec(`cat ${Core}/${File} 2>/dev/null`);
@@ -501,10 +497,6 @@ const ResetProp = (...Args) => PropInvoker
 
 const Command = C => typeof C === 'function' ? C() : C;
 
-// ponytail: qdisc is volatile -- wlan0 is destroyed/recreated on Wi-Fi toggle, so this can only
-// ever be a runtime tweak. Interface names are vendor-specific (rmnet_data* is AOSP-only), so
-// enumerate /sys/class/net instead of hardcoding them. Fails only when no interface accepts the
-// qdisc kind, which reports "unsupported" instead of failing on a missing device name.
 const NetDeny = '^(lo|dummy[0-9]*|tun[0-9]*|tap[0-9]*|ip6tnl[0-9]*|sit[0-9]*|ifb[0-9]*|veth.*|rmnet_mux[0-9]*|rmnet_ctl|rmtfs[0-9]*|radio[0-9]*|wlan0h.*|wlan0bss.*)$';
 
 const TuneNet = Spec => {
