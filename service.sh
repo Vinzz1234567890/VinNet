@@ -23,15 +23,11 @@ Log() {
 }
 ProbeWrite() { : > "$1/.WriteProbe" 2> /dev/null && rm -f "$1/.WriteProbe"; }
 
-# Cap the log so it cannot grow unbounded across sessions
 if [ -f "$LogPath" ] && [ "$(wc -c < "$LogPath" 2> /dev/null)" -gt 131072 ]; then
     : > "$LogPath" 2> /dev/null
     Log LogRotate "previous log exceeded 128K, truncated"
 fi
 
-# State lives outside the module directory: /data/adb/modules can be a read-only loop image and
-# webroot/ is wiped on every module update. No fallback -- if this path is not writable the latch
-# in Write() disables persistence for the session and the Web UI keeps working on live checks.
 mkdir -p "$Core" 2> /dev/null
 
 Monitor="$Core/Monitor.json"
@@ -52,7 +48,7 @@ Write() {
     Log WriteFail "$Destination : ${ErrorOutput:-unknown error}"
     rm -f "$Temporary" 2> /dev/null
     case "$ErrorOutput" in
-        *"Read-only file system"*|*"No space left on device"*)
+        *"Read-only file system"* | *"No space left on device"*)
             CoreWritable=0
             Log CoreReadOnly "$Core unwritable, runtime state disabled this session"
             ;;
@@ -77,7 +73,7 @@ Diagnose() {
             echo "[$(date +%T)] Diagnose: $Core writable"
         else
             echo "[$(date +%T)] Diagnose: $Core NOT writable"
-            echo "[$(date +%T)] Diagnose: mount -- $(mount 2>/dev/null | grep -E ' /data |modules' | tr '\n' ' ')"
+            echo "[$(date +%T)] Diagnose: mount -- $(mount 2> /dev/null | grep -E ' /data |modules' | tr '\n' ' ')"
         fi
         DmesgLines=$(dmesg 2> /dev/null | grep -iE "f2fs|erofs|remount" | tail -5)
         if [ -n "$DmesgLines" ]; then
@@ -90,8 +86,6 @@ Diagnose() {
     FlushDiagnose
 }
 
-# Staged in $Core because /storage/emulated can be unwritable right after sys.boot_completed;
-# without the retry below a failed write left stale Diagnose lines until the next lucky boot.
 FlushDiagnose() {
     local Pending="$Core/.Diagnose.tmp" ExistingLines
     [ -f "$Pending" ] || return 0
@@ -191,7 +185,7 @@ WebUIActive() {
     local MTime
     MTime=$(date -r "$Monitor" +%s 2> /dev/null)
     [ -n "$MTime" ] || return 1
-    [ $(( $(date +%s) - MTime )) -le 15 ]
+    [ $(($(date +%s) - MTime)) -le 15 ]
 }
 
 Diagnose
