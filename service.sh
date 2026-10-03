@@ -60,23 +60,9 @@ Write() {
 }
 
 Diagnose() {
-    local ABI Arch="Unsupported" DmesgLines ExistingLines
+    local ABI Arch="Unsupported" DmesgLines Pending="$Core/.Diagnose.tmp"
     ABI=$(resetprop ro.product.cpu.abi)
     case "$ABI" in arm64*) Arch="Supported (arm64)" ;; armeabi*) Arch="Supported (arm)" ;; esac
-
-    for TmpFile in "${LogPath}.tmp"*; do
-        if [ -f "$TmpFile" ]; then
-            if [ ! -s "$LogPath" ] && [ -s "$TmpFile" ]; then
-                cat "$TmpFile" > "$LogPath" 2> /dev/null
-            fi
-            rm -f "$TmpFile" 2> /dev/null
-        fi
-    done
-
-    ExistingLines=""
-    if [ -f "$LogPath" ]; then
-        ExistingLines=$(grep -v "Diagnose:" "$LogPath" 2> /dev/null | grep -vE '^\s*\[\s*[0-9]+\.[0-9]+\]')
-    fi
 
     {
         echo "[$(date +%T)] Diagnose: ABI=$ABI Architecture=$Arch"
@@ -99,8 +85,27 @@ Diagnose() {
                 [ -n "$Line" ] && echo "[$(date +%T)] Diagnose: dmesg -- $Line"
             done
         fi
-        [ -n "$ExistingLines" ] && printf '%s\n' "$ExistingLines"
-    } > "$LogPath" 2> /dev/null
+    } > "$Pending" 2> /dev/null
+
+    FlushDiagnose
+}
+
+# Staged in $Core because /storage/emulated can be unwritable right after sys.boot_completed;
+# without the retry below a failed write left stale Diagnose lines until the next lucky boot.
+FlushDiagnose() {
+    local Pending="$Core/.Diagnose.tmp" ExistingLines
+    [ -f "$Pending" ] || return 0
+    [ -w "${LogPath%/*}" ] || return 1
+
+    ExistingLines=""
+    if [ -f "$LogPath" ]; then
+        ExistingLines=$(grep -v "Diagnose:" "$LogPath" 2> /dev/null | grep -vE '^\s*\[\s*[0-9]+\.[0-9]+\]')
+    fi
+
+    {
+        cat "$Pending"
+        [ -z "$ExistingLines" ] || printf '%s\n' "$ExistingLines"
+    } > "$LogPath" 2> /dev/null && rm -f "$Pending"
 }
 
 ProcessID() { Write "$ProcessID" "$(printf '{"PID":%s,"Timestamp":%s}\n' "$$" "$(date +%s)")"; }
@@ -207,6 +212,7 @@ Monitor "$(date +%s)"
 while true; do
     Now=$(date +%s)
     [ -d "$Core" ] || mkdir -p "$Core" 2> /dev/null
+    FlushDiagnose
     [ -f "$ProcessID" ] || ProcessID
     [ -f "$Metadata" ] || Metadata
     [ -f "$Environment" ] || Environment
