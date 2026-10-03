@@ -181,11 +181,11 @@ Monitor() {
 }
 
 WebUIActive() {
-    [ -f "$Monitor" ] || return 1
+    [ -f "$ProcessID" ] || return 1
     local MTime
-    MTime=$(date -r "$Monitor" +%s 2> /dev/null)
+    MTime=$(date -r "$ProcessID" +%s 2> /dev/null)
     [ -n "$MTime" ] || return 1
-    [ $(($(date +%s) - MTime)) -le 15 ]
+    [ $(($(date +%s) - MTime)) -le 12 ]
 }
 
 Diagnose
@@ -201,17 +201,15 @@ trap Cleanup TERM EXIT INT
 
 Metadata
 Environment
-Monitor "$(date +%s)"
 
 while true; do
     Now=$(date +%s)
     [ -d "$Core" ] || mkdir -p "$Core" 2> /dev/null
     FlushDiagnose
-    [ -f "$ProcessID" ] || ProcessID
+    [ -s "$ProcessID" ] || ProcessID
     [ -f "$Metadata" ] || Metadata
     [ -f "$Environment" ] || Environment
     if WebUIActive; then
-        ProcessID
         Monitor "$Now"
         sleep 4
     else
