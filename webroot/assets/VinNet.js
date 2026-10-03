@@ -426,6 +426,7 @@ function ApplyMonitor(Data) {
 }
 
 async function FetchMonitor() {
+    exec(`touch ${Core}/ProcessID.json`).catch(() => { });
     const Cached = await FetchJSON('Monitor.json');
     Log('Monitor', Cached);
     if (Cached && Cached.Latency != null) {
