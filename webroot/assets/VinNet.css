@@ -5,6 +5,49 @@
     font-display: swap;
 }
 
+/* ==========================================================================
+   1. Design Tokens & Variables
+   ========================================================================== */
+:root {
+    /* Layout Dimensions */
+    --topbar-h: 70px;
+    --botnav-h: 68px;
+
+    /* Motion Curves */
+    --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --ease-smooth: cubic-bezier(0.2, 1, 0.2, 1);
+
+    /* Primary Palette */
+    --pri: #AACAE9;
+    --on-pri: #10334C;
+    --pri-mix-40: color-mix(in srgb, var(--pri) 40%, transparent);
+    --pri-mix-14: color-mix(in srgb, var(--pri) 14%, transparent);
+
+    /* Backgrounds & Surfaces */
+    --bg: #1C1B1F;
+    --surf-lo: #1C1B1F;
+    --surf-c: #211F26;
+    --surf-hi: #2B2930;
+    --surf-xhi: #36343B;
+
+    /* Text & Outlines */
+    --on-surf: #E6E0E9;
+    --on-surf-var: #CAC4D0;
+    --outline: #938F99;
+    --out-var: #49454F;
+
+    /* Status Indicators */
+    --Good: #6EF2A8;
+    --Warn: #FFD166;
+    --Bad: #FF6B6B;
+
+    /* Brand Specific */
+    --brand-telegram: #26A5E4;
+}
+
+/* ==========================================================================
+   2. Reset & Base Styles
+   ========================================================================== */
 *,
 *::before,
 *::after {
@@ -15,34 +58,8 @@
     outline: none;
 }
 
-:root {
-    --topbar-h: 70px;
-    --botnav-h: 68px;
-    --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
-
-    --pri: #AACAE9;
-    --on-pri: #10334C;
-    --pri-mix-40: color-mix(in srgb, var(--pri) 40%, transparent);
-    --pri-mix-14: color-mix(in srgb, var(--pri) 14%, transparent);
-
-    --bg: #1C1B1F;
-    --surf-lo: #1C1B1F;
-    --surf-c: #211F26;
-    --surf-hi: #2B2930;
-    --surf-xhi: #36343B;
-
-    --on-surf: #E6E0E9;
-    --on-surf-var: #CAC4D0;
-    --outline: #938F99;
-    --out-var: #49454F;
-
-    --Good: #6EF2A8;
-    --Warn: #FFD166;
-    --Bad: #FF6B6B;
-}
-
-HTML,
-Body {
+html,
+body {
     height: 100%;
     overflow: hidden;
     background: var(--bg);
@@ -53,12 +70,15 @@ Body {
     -webkit-user-select: none;
 }
 
-IMG {
+img {
     -webkit-user-drag: none;
     user-drag: none;
     pointer-events: none;
 }
 
+/* ==========================================================================
+   3. App Shell & Loading Screen
+   ========================================================================== */
 #WebUI {
     display: flex;
     flex-direction: column;
@@ -74,6 +94,60 @@ IMG {
     opacity: 1;
 }
 
+#LoadingScreen {
+    position: fixed;
+    inset: 0;
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    z-index: 9999;
+    transition: opacity 0.3s;
+    touch-action: none;
+    contain: layout style paint;
+}
+
+#LoadingScreen.Hide {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.LoadingScreenAnimation {
+    position: relative;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+}
+
+.LoadingScreenAnimation::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: conic-gradient(transparent, var(--pri));
+    -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 2px));
+    mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 2px));
+    animation: spin 0.8s linear infinite;
+}
+
+.LoadingScreenText {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--on-surf-var);
+    letter-spacing: 0.3px;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* ==========================================================================
+   4. Header Bar
+   ========================================================================== */
 .Header {
     position: absolute;
     inset: 0 0 auto;
@@ -111,6 +185,9 @@ IMG {
     margin-top: 3px;
 }
 
+/* ==========================================================================
+   5. Pages & Swiper Lane
+   ========================================================================== */
 .Pages {
     position: relative;
     flex: 1;
@@ -127,7 +204,7 @@ IMG {
     inset: 0;
     --page-lane: 0%;
     transform: translateX(calc(var(--page-base) + var(--page-drag) + var(--page-lane)));
-    transition: transform 0.4s cubic-bezier(0.2, 1, 0.2, 1);
+    transition: transform 0.4s var(--ease-smooth);
     will-change: transform;
     overflow-y: auto;
     overscroll-behavior-y: none;
@@ -137,6 +214,10 @@ IMG {
     flex-direction: column;
     gap: 12px;
     scrollbar-width: none;
+}
+
+.Page::-webkit-scrollbar {
+    display: none;
 }
 
 .Page:nth-child(2) {
@@ -151,10 +232,9 @@ IMG {
     transition: none;
 }
 
-.Page::-webkit-scrollbar {
-    display: none;
-}
-
+/* ==========================================================================
+   6. Bottom Navigation Bar
+   ========================================================================== */
 .Navigation {
     position: absolute;
     inset: auto 0 0;
@@ -192,12 +272,6 @@ IMG {
     align-items: center;
     padding: 10px 0 14px;
     gap: 4px;
-    cursor: pointer;
-    transition: transform 0.15s;
-}
-
-:is(.NavigationBar, .NavigationBarActive, .ir-link, .chip):active {
-    transform: scale(0.94);
 }
 
 :is(.NavigationBar, .NavigationBarActive) svg {
@@ -218,7 +292,7 @@ IMG {
     font-size: 11px;
     font-weight: 500;
     color: var(--on-surf-var);
-    opacity: .7;
+    opacity: 0.7;
     transition: color 0.2s, opacity 0.2s;
 }
 
@@ -228,6 +302,19 @@ IMG {
     opacity: 1;
 }
 
+/* Interactive Tap Feedback */
+:is(.NavigationBar, .NavigationBarActive, .ir-link, .chip) {
+    cursor: pointer;
+    transition: transform 0.15s ease;
+}
+
+:is(.NavigationBar, .NavigationBarActive, .ir-link, .chip):active {
+    transform: scale(0.94);
+}
+
+/* ==========================================================================
+   7. Dashboard Banner & Process Overlay
+   ========================================================================== */
 .BannerWrap {
     position: relative;
     width: 100%;
@@ -256,22 +343,55 @@ IMG {
 }
 
 @keyframes BannerCrossfade {
-
     0%,
     31.4% {
         opacity: 1;
     }
-
     33.3%,
     98.1% {
         opacity: 0;
     }
-
     100% {
         opacity: 1;
     }
 }
 
+.ProcessOverlay {
+    position: absolute;
+    bottom: 14px;
+    left: 14px;
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    padding: 7px 12px;
+    background: rgb(0 0 0 / 0.45);
+    border-radius: 14px;
+    border: 1px solid rgb(255 255 255 / 0.08);
+    box-shadow: 0 4px 16px rgb(0 0 0 / 0.35);
+}
+
+.ProcessLabel,
+.ProcessValue {
+    font-size: 11px;
+    font-weight: 700;
+    color: rgb(255 255 255 / 0.5);
+    line-height: 1;
+}
+
+.ProcessLabel {
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+}
+
+.ProcessValue {
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.5px;
+    transition: opacity 0.15s;
+}
+
+/* ==========================================================================
+   8. Cards & Metric Rows
+   ========================================================================== */
 .Card {
     background: var(--surf-c);
     border-radius: 24px;
@@ -321,39 +441,25 @@ IMG {
 
 #Latency,
 #Jitter {
-    transition: opacity .15s;
+    transition: opacity 0.15s;
     font-variant-numeric: tabular-nums;
 }
 
-.ir-link {
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--pri);
-    text-decoration: none;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    cursor: pointer;
-    transition: transform 0.15s;
+/* Row & Tweak Divider Resets */
+.IndexRow:first-child,
+.Tweak:first-child {
+    padding-top: 0;
 }
 
-.ir-link svg {
-    flex-shrink: 0;
+.IndexRow:last-child,
+.Tweak:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
 }
 
-.ir-icon-github {
-    fill: var(--on-surf);
-}
-
-.ir-icon-telegram {
-    fill: #26A5E4;
-}
-
-.ir-chevron {
-    fill: currentColor;
-    margin-inline-start: auto;
-}
-
+/* ==========================================================================
+   9. Tweaks & Switch Control
+   ========================================================================== */
 .Tweak {
     display: flex;
     align-items: flex-start;
@@ -371,17 +477,6 @@ IMG {
     background: var(--pri-mix-14);
     fill: var(--pri);
     flex-shrink: 0;
-}
-
-.IndexRow:last-child,
-.Tweak:last-child {
-    border-bottom: none;
-    padding-bottom: 0;
-}
-
-.IndexRow:first-child,
-.Tweak:first-child {
-    padding-top: 0;
 }
 
 .TweakBody {
@@ -408,6 +503,7 @@ IMG {
     margin-top: 4px;
 }
 
+/* Switch Component */
 .Switch {
     position: relative;
     width: 52px;
@@ -416,7 +512,7 @@ IMG {
     margin-top: 1px;
 }
 
-.Switch Input {
+.Switch input {
     position: absolute;
     opacity: 0;
     width: 0;
@@ -430,11 +526,6 @@ IMG {
     background: var(--surf-xhi);
     border: 2px solid var(--outline);
     transition: background-color 0.22s, border-color 0.22s;
-}
-
-.Switch:has(Input:disabled) .SwitchTrack {
-    opacity: .5;
-    cursor: default;
 }
 
 .SwitchThumb {
@@ -451,14 +542,49 @@ IMG {
     will-change: transform, background-color;
 }
 
-.Switch Input:checked~.SwitchTrack {
+.Switch:has(input:disabled) .SwitchTrack {
+    opacity: 0.5;
+    cursor: default;
+}
+
+.Switch input:checked ~ .SwitchTrack {
     background-color: var(--pri);
     border-color: var(--pri);
 }
 
-.Switch Input:checked~.SwitchTrack .SwitchThumb {
+.Switch input:checked ~ .SwitchTrack .SwitchThumb {
     transform: translateY(-50%) translateX(18px) scale(1.5);
     background-color: var(--on-pri);
+}
+
+/* ==========================================================================
+   10. Links & Chips (Contributors / Info)
+   ========================================================================== */
+.ir-link {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--pri);
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.ir-link svg {
+    flex-shrink: 0;
+}
+
+.ir-icon-github {
+    fill: var(--on-surf);
+}
+
+.ir-icon-telegram {
+    fill: var(--brand-telegram);
+}
+
+.ir-chevron {
+    fill: currentColor;
+    margin-inline-start: auto;
 }
 
 .chip {
@@ -474,8 +600,6 @@ IMG {
     font-weight: 600;
     margin: 4px 4px 0 0;
     text-decoration: none;
-    cursor: pointer;
-    transition: transform 0.15s;
 }
 
 .chip-avatar {
@@ -489,6 +613,9 @@ IMG {
     margin: 0;
 }
 
+/* ==========================================================================
+   11. Toast Notification (Snackbar)
+   ========================================================================== */
 .Snack {
     position: fixed;
     bottom: 80px;
@@ -512,88 +639,4 @@ IMG {
 .Snack.Show {
     opacity: 1;
     transform: translateX(-50%) translateY(0);
-}
-
-@keyframes spin {
-    to {
-        transform: rotate(360deg);
-    }
-}
-
-#LoadingScreen {
-    position: fixed;
-    inset: 0;
-    background: var(--bg);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 14px;
-    z-index: 9999;
-    transition: opacity 0.3s;
-    touch-action: none;
-    contain: layout style paint;
-}
-
-#LoadingScreen.Hide {
-    opacity: 0;
-    pointer-events: none;
-}
-
-.LoadingScreenAnimation {
-    position: relative;
-    width: 22px;
-    height: 22px;
-    border-radius: 50%;
-}
-
-.LoadingScreenAnimation::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    border-radius: 50%;
-    background: conic-gradient(transparent, var(--pri));
-    -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 2px));
-    mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 2px));
-    animation: spin 0.8s linear infinite;
-}
-
-.LoadingScreenText {
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--on-surf-var);
-    letter-spacing: 0.3px;
-}
-
-.ProcessOverlay {
-    position: absolute;
-    bottom: 14px;
-    left: 14px;
-    display: flex;
-    align-items: baseline;
-    gap: 6px;
-    padding: 7px 12px;
-    background: rgb(0 0 0 / 0.45);
-    border-radius: 14px;
-    border: 1px solid rgb(255 255 255 / 0.08);
-    box-shadow: 0 4px 16px rgb(0 0 0 / 0.35);
-}
-
-.ProcessLabel,
-.ProcessValue {
-    font-size: 11px;
-    font-weight: 700;
-    color: rgb(255 255 255 / 0.5);
-    line-height: 1;
-}
-
-.ProcessLabel {
-    letter-spacing: 0.8px;
-    text-transform: uppercase;
-}
-
-.ProcessValue {
-    font-variant-numeric: tabular-nums;
-    letter-spacing: 0.5px;
-    transition: opacity 0.15s;
 }
