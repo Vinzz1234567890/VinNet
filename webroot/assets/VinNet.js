@@ -29,12 +29,15 @@ function exec(cmd) {
 
 let LogQueue = Promise.resolve();
 const Log = (Tag, Data) => {
-    const Content = JSON.stringify(Data, (K, V) => K === 'Timestamp' ? undefined : V);
-    if (LogCache.get(Tag) === Content) return;
+    if (Data == null) return;
+    const Content = typeof Data === 'string'
+        ? Data
+        : JSON.stringify(Data, (K, V) => K === 'Timestamp' ? undefined : V);
+    if (!Content || LogCache.get(Tag) === Content) return;
     LogCache.set(Tag, Content);
     const Safe = Content.replace(/'/g, "'\\''");
     LogQueue = LogQueue.then(() => exec(
-        `grep -v "^\\[.*\\] ${Tag}:" ${LogPath} 2>/dev/null > ${Core}/.log.tmp; printf '[%s] %s: %s\\n' "$(date +%T)" "${Tag}" '${Safe}' >> ${Core}/.log.tmp; cat ${Core}/.log.tmp > ${LogPath}; rm -f ${Core}/.log.tmp`
+        `R=$(grep -v "^\\[.*\\] ${Tag}:" "${LogPath}" 2>/dev/null); { [ -n "$R" ] && printf '%s\\n' "$R"; printf '[%s] %s: %s\\n' "$(date +%T)" "${Tag}" '${Safe}'; } > "${LogPath}"`
     )).catch(() => { });
 };
 
@@ -327,8 +330,8 @@ const Vendor = [
 
 async function LoadEnvironment() {
     const Cached = await FetchJSON('Environment.json');
-    Log('Environment', Cached);
     if (Cached) {
+        Log('Environment', Cached);
         Root = Cached.Root || 'Unknown';
         RootReady = Promise.resolve();
         requestAnimationFrame(() => {
@@ -337,6 +340,9 @@ async function LoadEnvironment() {
     } else {
         await ExecFields(Environment);
         await DetectRoot();
+        const LiveEnv = Object.fromEntries(Environment.map(([ID]) => [ID, document.getElementById(ID)?.textContent || '—']));
+        LiveEnv.Root = Root;
+        Log('Environment', LiveEnv);
     }
     requestAnimationFrame(() => { const E = document.getElementById('Root'); if (E) E.textContent = Root; });
     await ExecFields(Vendor);
@@ -345,7 +351,6 @@ async function LoadEnvironment() {
 let ProcessID = null;
 async function LoadProcessID() {
     const Cached = await FetchJSON('ProcessID.json');
-    Log('ProcessID', Cached);
     if (!ProcessID) {
         const BannerWrap = document.querySelector('#PageDashboard .BannerWrap');
         if (!BannerWrap) return;
@@ -360,10 +365,12 @@ async function LoadProcessID() {
     }
     if (Cached && Cached.PID != null) {
         ProcessID.textContent = Cached.PID;
+        Log('ProcessID', Cached);
     } else {
         try {
             const PID = await exec('pgrep -f "VinNet/service.sh" | head -n 1');
             ProcessID.textContent = PID || '—';
+            if (PID) Log('ProcessID', { PID });
         } catch {
             ProcessID.textContent = '—';
         }
@@ -392,9 +399,9 @@ function ApplyMonitor(Data) {
 async function FetchMonitor() {
     exec(`touch ${Core}/ProcessID.json`).catch(() => { });
     const Cached = await FetchJSON('Monitor.json');
-    Log('Monitor', Cached);
     if (Cached && Cached.Latency != null) {
         ApplyMonitor(Cached);
+        Log('Monitor', Cached);
         return;
     }
     try {
@@ -405,7 +412,9 @@ async function FetchMonitor() {
             let Jitter = 0;
             for (let I = 1; I < Matches.length; I++) Jitter += Math.abs(Matches[I] - Matches[I - 1]);
             Jitter = Matches.length > 1 ? Math.round(Jitter / (Matches.length - 1)) : 0;
-            ApplyMonitor({ Latency, Jitter });
+            const LiveMetrics = { Latency, Jitter };
+            ApplyMonitor(LiveMetrics);
+            Log('Monitor', LiveMetrics);
             return;
         }
     } catch { }
@@ -526,7 +535,7 @@ async function RenderTweaks() {
     const Container = document.getElementById('PageTweaks');
     const Template = document.getElementById('TweakCardTemplate');
     TweakState = await FetchJSON('Tweaks.json') || {};
-    Log('Tweaks', TweakState);
+    if (Object.keys(TweakState).length > 0) Log('Tweaks', TweakState);
 
     await DetectRoot();
     await DetectProp();
@@ -583,7 +592,6 @@ const Metadata = [
 
 async function LoadMetadata() {
     let Cached = await FetchJSON('Metadata.json');
-    Log('Metadata', Cached);
     if (!Cached) {
         try {
             const Raw = await exec('cat /data/adb/modules/VinNet/module.prop 2>/dev/null');
@@ -594,6 +602,7 @@ async function LoadMetadata() {
         } catch { }
     }
     if (!Cached) return;
+    Log('Metadata', Cached);
     requestAnimationFrame(() => {
         for (const [ID, Key] of Metadata) {
             const Element = document.getElementById(ID);
