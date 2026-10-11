@@ -9,7 +9,8 @@ LogPath="/storage/emulated/0/Download/VinNet.log"
 LastLog=""
 Log() {
     local Tag="$1" Message="$2" Remaining
-    [ "$Tag: $Message" = "$LastLog" ] && return
+    [ -n "$Message" ] || return 0
+    [ "$Tag: $Message" = "$LastLog" ] && return 0
     LastLog="$Tag: $Message"
     if [ -f "$LogPath" ]; then
         Remaining=$(grep -v "^\[.*\] $Tag:" "$LogPath" 2> /dev/null)
@@ -17,8 +18,8 @@ Log() {
             [ -n "$Remaining" ] && printf '%s\n' "$Remaining"
             echo "[$(date +%T)] $Tag: $Message"
         } > "$LogPath" 2> /dev/null
-    else
-        echo "[$(date +%T)] $Tag: $Message" >> "$LogPath" 2> /dev/null
+    elif [ -w "${LogPath%/*}" ]; then
+        echo "[$(date +%T)] $Tag: $Message" > "$LogPath" 2> /dev/null
     fi
 }
 ProbeWrite() { : > "$1/.WriteProbe" 2> /dev/null && rm -f "$1/.WriteProbe"; }
@@ -105,7 +106,7 @@ FlushDiagnose() {
 ProcessID() { Write "$ProcessID" "$(printf '{"PID":%s,"Timestamp":%s}\n' "$$" "$(date +%s)")"; }
 
 Cleanup() {
-    rm -f "$ProcessID" "$Core"/*.tmp.$$ 2> /dev/null
+    rm -f "$ProcessID" "$Core"/*.tmp.$$ "$Core/.Diagnose.tmp" 2> /dev/null
     exit 0
 }
 
