@@ -1,7 +1,7 @@
 id=VinNet
 name=VinNet
-version=1.2.1-JioGraze
-versionCode=20260930
+version=1.2.2-Fless
+versionCode=20261011
 author=Vinzz
 description=Simple Implementation of Network Optimization
 webuiIcon=webroot/assets/VinNetBanner1.webp
