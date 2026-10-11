@@ -475,23 +475,19 @@ const Tweaks = {
         Expect: ['2', '3'], ONLabel: 'Enabled', OFFLabel: 'Disabled',
         Warn: 'Reset after interface changes',
     },
-    "Network Avoid Bad Wi-Fi": {
-        Label: 'Disable Network Avoid Bad Wi-Fi', Icon: 'NetworkAvoidBadWi-Fi',
-        Description: 'Forces system to stay connected to Wi-Fi interface even if signal quality deteriorates.',
-        ONCommand: 'settings put global network_avoid_bad_wifi 0', OFFCommand: 'settings put global network_avoid_bad_wifi 1',
-        CheckCommand: 'settings get global network_avoid_bad_wifi', Expect: '0', ONLabel: 'Disabled', OFFLabel: 'Enabled',
+    "Network Avoid Bad Wi-Fi & Mobile Data Always ON": {
+        Label: 'Disable Network Avoid Bad Wi-Fi & Mobile Data Always ON', Icon: 'NetworkAvoidBadWi-Fi,MobileDataAlwaysON',
+        Description: 'Forces system to stay connected to Wi-Fi interface even if signal quality deteriorates, and prevents background cellular data from disrupting transmission stability.',
+        ONCommand: 'settings put global network_avoid_bad_wifi 0 && settings put global mobile_data_always_on 0',
+        OFFCommand: 'settings put global network_avoid_bad_wifi 1 && settings put global mobile_data_always_on 1',
+        CheckCommand: '[ "$(settings get global network_avoid_bad_wifi)" = "0" ] && [ "$(settings get global mobile_data_always_on)" = "0" ] && echo 0 || echo 1',
+        Expect: '0', ONLabel: 'Disabled', OFFLabel: 'Enabled',
     },
     "BLE Scan Always Enabled": {
         Label: 'Disable BLE Scan Always Enabled', Icon: 'BLEScanAlwaysEnabled',
         Description: 'Minimize jitter and ping spikes when gaming over 2.4 GHz Wi-Fi network.',
         ONCommand: 'settings put global ble_scan_always_enabled 0', OFFCommand: 'settings put global ble_scan_always_enabled 1',
         CheckCommand: 'settings get global ble_scan_always_enabled', Expect: '0', ONLabel: 'Disabled', OFFLabel: 'Enabled',
-    },
-    "Mobile Data Always ON": {
-        Label: 'Disable Mobile Data Always ON', Icon: 'MobileDataAlwaysON',
-        Description: 'Disable functions that are likely to disrupt transmission stability.',
-        ONCommand: 'settings put global mobile_data_always_on 0', OFFCommand: 'settings put global mobile_data_always_on 1',
-        CheckCommand: 'settings get global mobile_data_always_on', Expect: '0', ONLabel: 'Disabled', OFFLabel: 'Enabled',
     },
     "Wi-Fi Country Code": {
         Label: 'Change Wi-Fi Country Code', Icon: 'Wi-FiCountryCode',
