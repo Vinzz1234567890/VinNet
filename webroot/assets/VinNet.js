@@ -2,14 +2,122 @@ const Core = '/data/adb/VinNet';
 const LogPath = '/storage/emulated/0/Download/VinNet.log';
 const LogCache = new Map();
 
+let CallbackCounter = 0;
+function exec(cmd) {
+    return new Promise((resolve, reject) => {
+        if (window.ksu && typeof ksu.exec === 'function') {
+            const CallbackName = `__exec_cb_${++CallbackCounter}`;
+            window[CallbackName] = (Code, Output, Error) => {
+                delete window[CallbackName];
+                Code === 0 ? resolve((Output || '').trim()) : reject((Error || '').trim());
+            };
+            try { ksu.exec(cmd, JSON.stringify({}), CallbackName); } catch (e) { delete window[CallbackName]; reject(String(e)); }
+        } else {
+            const MOCK = {
+                'resetprop ro.product.brand': '—',
+                'resetprop ro.product.model': '—',
+                'resetprop ro.build.version.release': '—',
+                'uname -r': '—',
+                'resetprop ro.product.cpu.abi': '—',
+            };
+            if (MOCK[cmd] !== undefined) { resolve(MOCK[cmd]); return; }
+            if (cmd.toLowerCase().startsWith('ping')) { resolve('—'); return; }
+            resolve('');
+        }
+    });
+}
+
 let LogQueue = Promise.resolve();
 const Log = (Tag, Data) => {
     const Content = JSON.stringify(Data, (K, V) => K === 'Timestamp' ? undefined : V);
     if (LogCache.get(Tag) === Content) return;
     LogCache.set(Tag, Content);
     const Safe = Content.replace(/'/g, "'\\''");
-    LogQueue = LogQueue.then(() => exec(`grep -v "^\\[.*\\] ${Tag}:" ${LogPath} 2>/dev/null > ${Core}/.log.tmp; printf '[%s] %s: %s\\n' "$(date +%T)" "${Tag}" '${Safe}' >> ${Core}/.log.tmp; cat ${Core}/.log.tmp > ${LogPath}; rm -f ${Core}/.log.tmp`)).catch(() => { });
+    LogQueue = LogQueue.then(() => exec(
+        `grep -v "^\\[.*\\] ${Tag}:" ${LogPath} 2>/dev/null > ${Core}/.log.tmp; printf '[%s] %s: %s\\n' "$(date +%T)" "${Tag}" '${Safe}' >> ${Core}/.log.tmp; cat ${Core}/.log.tmp > ${LogPath}; rm -f ${Core}/.log.tmp`
+    )).catch(() => { });
 };
+
+async function FetchJSON(File) {
+    try {
+        const Raw = await exec(`cat ${Core}/${File} 2>/dev/null`);
+        return Raw ? JSON.parse(Raw) : null;
+    } catch { return null; }
+}
+
+function ParseKV(Raw, Lowercase) {
+    return Object.fromEntries(
+        Raw.split('\n')
+            .map(L => L.trim().split('='))
+            .filter(P => P.length >= 2)
+            .map(([K, ...V]) => [Lowercase ? K.trim().toLowerCase() : K.trim(), V.join('=').trim()])
+    );
+}
+
+let Root = '', RootReady = null;
+const Daemon = { KernelSU: 'ksud', APatch: 'apd', Magisk: 'magisk' };
+const RootCommand = 'command -v ksud >/dev/null 2>&1 && echo KernelSU || (command -v apd >/dev/null 2>&1 && echo APatch || (command -v magisk >/dev/null 2>&1 && echo Magisk || echo Unknown))';
+
+const DetectRoot = () => {
+    if (!RootReady) RootReady = exec(RootCommand).then(Name => {
+        Root = Root || Name || 'Unknown';
+    }, () => { });
+    return RootReady;
+};
+
+let PropInvoker = null, PropReady = null;
+const DetectProp = () => {
+    if (PropReady) return PropReady;
+    PropReady = (async () => {
+        const Candidates = [].concat(Daemon[Root] ? `${Daemon[Root]} resetprop` : []);
+        try {
+            const Path = (await exec('command -v resetprop')).trim();
+            if (Path) Candidates.push(Path);
+        } catch (Err) { Log('PropProbe:command -v', `${Err || 'not found'}`); }
+        for (const Invoke of Candidates) {
+            try {
+                await exec(`${Invoke} ro.build.version.release`);
+                PropInvoker = Invoke;
+                Log('PropInvoker', Invoke);
+                return;
+            } catch (Err) { Log(`PropProbe:${Invoke}`, `${Err || 'unsupported'}`); }
+        }
+        Log('PropInvoker', 'unavailable');
+    })();
+    return PropReady;
+};
+
+const SnackElement = document.getElementById('Snack');
+let SnackTimer;
+
+function Toast(Message) {
+    SnackElement.textContent = Message;
+    SnackElement.classList.add('Show');
+    clearTimeout(SnackTimer);
+    SnackTimer = setTimeout(() => SnackElement.classList.remove('Show'), 2400);
+}
+
+function OpenLink(URL) {
+    exec(`am start -a android.intent.action.VIEW -d "${URL}"`).catch(() => Toast('Unable to open link'));
+}
+
+const ElementCache = new Map();
+function GetElement(ID) {
+    if (!ElementCache.has(ID)) ElementCache.set(ID, document.getElementById(ID));
+    return ElementCache.get(ID);
+}
+
+const LatencyColor = v => v <= 30 ? 'var(--Good)' : v <= 50 ? 'var(--Warn)' : 'var(--Bad)';
+const JitterColor = v => v === 0 ? 'var(--Good)' : v <= 10 ? 'var(--Warn)' : 'var(--Bad)';
+
+async function ExecFields(Entries) {
+    const Results = await Promise.all(Entries.map(async ([ID, , CMD]) => {
+        try { return [ID, await exec(CMD) || '—']; } catch { return [ID, '—']; }
+    }));
+    requestAnimationFrame(() => {
+        for (const [ID, Text] of Results) document.getElementById(ID).textContent = Text;
+    });
+}
 
 const Page = {
     Dashboard: { Title: 'VinNet', Description: 'Simple Implementation of Network Optimization' },
@@ -17,32 +125,19 @@ const Page = {
     Info: { Title: 'Info', Description: 'Details about Module' },
 };
 
+const PageList = Object.keys(Page);
+const PagesElement = document.querySelector('.Pages');
+const PageWidth = () => PagesElement.clientWidth || 0;
+
 const CommitRatio = 0.22, CommitMaxPx = 96, CommitMinPx = 64, EdgeResistance = 3;
 
-let CurrentPageID = null, CurrentPageIndex = 0, DragOffset = 0, PendingOffset = 0, DragFrameID = 0, Dragging = false;
+let CurrentPageID = PageList[0];
+let CurrentPageIndex = 0;
+let DragOffset = 0, PendingOffset = 0, DragFrameID = 0, Dragging = false;
 let GestureAxis = null, GestureKind = null, GestureStartX = 0, GestureStartY = 0, GesturePointerID = null;
 
-let NavigationButtons = null, HeaderTitle = null, HeaderDescription = null;
-const PagesElement = document.querySelector('.Pages');
-let NavigationButtonMap = null, NavigationSVGS = null, NavigationSVGButtonMap = null;
-let LastMonitor = { Latency: null, Jitter: null };
-
-const LatencyColor = v => v <= 30 ? 'var(--Good)' : v <= 50 ? 'var(--Warn)' : 'var(--Bad)';
-const JitterColor = v => v === 0 ? 'var(--Good)' : v <= 10 ? 'var(--Warn)' : 'var(--Bad)';
-
-function UpdateNavigationIcons() {
-    if (!NavigationSVGS) {
-        NavigationSVGS = document.querySelectorAll('.NavigationBar svg[data-fill], .NavigationBarActive svg[data-fill]');
-        NavigationSVGButtonMap = new Map([...NavigationSVGS].map(svg => [svg, svg.closest('.NavigationBar, .NavigationBarActive')]));
-    }
-    NavigationSVGS.forEach(SVG => {
-        const Active = NavigationSVGButtonMap.get(SVG)?.classList.contains('NavigationBarActive');
-        SVG.querySelector('path')?.setAttribute('d', SVG.dataset[Active ? 'fill' : 'outline']);
-    });
-}
-
-const PageList = Object.keys(Page);
-const PageWidth = () => PagesElement.clientWidth || 0;
+let NavigationButtons = null, NavigationButtonMap = null, NavigationSVGS = null, NavigationSVGButtonMap = null;
+let HeaderTitle = null, HeaderDescription = null;
 
 function RenderPages() {
     PagesElement.style.setProperty('--page-base', `${CurrentPageIndex * -100}%`);
@@ -54,6 +149,17 @@ function SyncPageAttributes() {
         const Active = I === CurrentPageIndex;
         Child.toggleAttribute('inert', !Active);
         Child.setAttribute('aria-hidden', Active ? 'false' : 'true');
+    });
+}
+
+function UpdateNavigationIcons() {
+    if (!NavigationSVGS) {
+        NavigationSVGS = document.querySelectorAll('.NavigationBar svg[data-fill], .NavigationBarActive svg[data-fill]');
+        NavigationSVGButtonMap = new Map([...NavigationSVGS].map(svg => [svg, svg.closest('.NavigationBar, .NavigationBarActive')]));
+    }
+    NavigationSVGS.forEach(SVG => {
+        const Active = NavigationSVGButtonMap.get(SVG)?.classList.contains('NavigationBarActive');
+        SVG.querySelector('path')?.setAttribute('d', SVG.dataset[Active ? 'fill' : 'outline']);
     });
 }
 
@@ -172,137 +278,40 @@ function EndGesture(Commit, Element) {
     RenderPages();
 }
 
-PagesElement.addEventListener('pointerdown', E => {
-    if (E.pointerType === 'touch' || !E.isPrimary || (E.pointerType === 'mouse' && E.button !== 0)) return;
-    BeginGesture(E.clientX, E.clientY, 'pointer', E.pointerId);
-});
-
-PagesElement.addEventListener('pointermove', E => {
-    if (GestureKind !== 'pointer' || E.pointerId !== GesturePointerID) return;
-    MoveGesture(E.clientX, E.clientY, E, () => {
-        if (!E.currentTarget.hasPointerCapture(E.pointerId)) E.currentTarget.setPointerCapture(E.pointerId);
+function SetupGestureListeners() {
+    PagesElement.addEventListener('pointerdown', E => {
+        if (E.pointerType === 'touch' || !E.isPrimary || (E.pointerType === 'mouse' && E.button !== 0)) return;
+        BeginGesture(E.clientX, E.clientY, 'pointer', E.pointerId);
     });
-}, { passive: false });
 
-PagesElement.addEventListener('pointerup', E => { if (E.pointerId === GesturePointerID) EndGesture(true, E.currentTarget); });
-PagesElement.addEventListener('pointercancel', E => { if (E.pointerId === GesturePointerID) EndGesture(false, E.currentTarget); });
+    PagesElement.addEventListener('pointermove', E => {
+        if (GestureKind !== 'pointer' || E.pointerId !== GesturePointerID) return;
+        MoveGesture(E.clientX, E.clientY, E, () => {
+            if (!E.currentTarget.hasPointerCapture(E.pointerId)) E.currentTarget.setPointerCapture(E.pointerId);
+        });
+    }, { passive: false });
 
-PagesElement.addEventListener('touchstart', E => {
-    if (E.touches.length === 1) BeginGesture(E.touches[0].screenX, E.touches[0].screenY, 'touch', null);
-}, { passive: true });
+    PagesElement.addEventListener('pointerup', E => { if (E.pointerId === GesturePointerID) EndGesture(true, E.currentTarget); });
+    PagesElement.addEventListener('pointercancel', E => { if (E.pointerId === GesturePointerID) EndGesture(false, E.currentTarget); });
 
-PagesElement.addEventListener('touchmove', E => {
-    if (GestureKind === 'touch' && E.touches.length === 1) MoveGesture(E.touches[0].screenX, E.touches[0].screenY, E, null);
-}, { passive: false });
+    PagesElement.addEventListener('touchstart', E => {
+        if (E.touches.length === 1) BeginGesture(E.touches[0].screenX, E.touches[0].screenY, 'touch', null);
+    }, { passive: true });
 
-PagesElement.addEventListener('touchend', E => { if (GestureKind === 'touch' && E.touches.length === 0) EndGesture(true, E.currentTarget); });
-PagesElement.addEventListener('touchcancel', E => { if (GestureKind === 'touch') EndGesture(false, E.currentTarget); });
+    PagesElement.addEventListener('touchmove', E => {
+        if (GestureKind === 'touch' && E.touches.length === 1) MoveGesture(E.touches[0].screenX, E.touches[0].screenY, E, null);
+    }, { passive: false });
 
-document.addEventListener('dragstart', E => E.preventDefault());
+    PagesElement.addEventListener('touchend', E => { if (GestureKind === 'touch' && E.touches.length === 0) EndGesture(true, E.currentTarget); });
+    PagesElement.addEventListener('touchcancel', E => { if (GestureKind === 'touch') EndGesture(false, E.currentTarget); });
 
-document.getElementById('Navigation').addEventListener('click', E => {
-    const Button = E.target.closest('.NavigationBar, .NavigationBarActive');
-    if (Button?.dataset.page) Navigation(Button.dataset.page);
-});
+    document.addEventListener('dragstart', E => E.preventDefault());
 
-CurrentPageID = PageList[0];
-RenderPages();
-SyncPageAttributes();
-
-const SnackElement = document.getElementById('Snack');
-let SnackTimer;
-function Toast(Message) {
-    SnackElement.textContent = Message;
-    SnackElement.classList.add('Show');
-    clearTimeout(SnackTimer);
-    SnackTimer = setTimeout(() => SnackElement.classList.remove('Show'), 2400);
-}
-
-function OpenLink(URL) {
-    exec(`am start -a android.intent.action.VIEW -d "${URL}"`).catch(() => Toast('Unable to open link'));
-}
-
-async function FetchJSON(File) {
-    try {
-        const Raw = await exec(`cat ${Core}/${File} 2>/dev/null`);
-        return Raw ? JSON.parse(Raw) : null;
-    } catch { return null; }
-}
-
-function ParseKV(Raw, Lowercase) {
-    return Object.fromEntries(
-        Raw.split('\n')
-            .map(L => L.trim().split('='))
-            .filter(P => P.length >= 2)
-            .map(([K, ...V]) => [Lowercase ? K.trim().toLowerCase() : K.trim(), V.join('=').trim()])
-    );
-}
-
-async function ExecFields(Entries) {
-    const Results = await Promise.all(Entries.map(async ([ID, , CMD]) => {
-        try { return [ID, await exec(CMD) || '—']; } catch { return [ID, '—']; }
-    }));
-    requestAnimationFrame(() => {
-        for (const [ID, Text] of Results) document.getElementById(ID).textContent = Text;
+    document.getElementById('Navigation').addEventListener('click', E => {
+        const Button = E.target.closest('.NavigationBar, .NavigationBarActive');
+        if (Button?.dataset.page) Navigation(Button.dataset.page);
     });
 }
-
-let CallbackCounter = 0;
-function exec(cmd) {
-    return new Promise((resolve, reject) => {
-        if (window.ksu && typeof ksu.exec === 'function') {
-            const CallbackName = `__exec_cb_${++CallbackCounter}`;
-            window[CallbackName] = (Code, Output, Error) => {
-                delete window[CallbackName];
-                Code === 0 ? resolve((Output || '').trim()) : reject((Error || '').trim());
-            };
-            try { ksu.exec(cmd, JSON.stringify({}), CallbackName); } catch (e) { delete window[CallbackName]; reject(String(e)); }
-        } else {
-            const MOCK = {
-                'resetprop ro.product.brand': '—',
-                'resetprop ro.product.model': '—',
-                'resetprop ro.build.version.release': '—',
-                'uname -r': '—',
-                'resetprop ro.product.cpu.abi': '—',
-            };
-            if (MOCK[cmd] !== undefined) { resolve(MOCK[cmd]); return; }
-            if (cmd.toLowerCase().startsWith('ping')) { resolve('—'); return; }
-            resolve('');
-        }
-    });
-}
-
-let Root = '', RootReady = null;
-const Daemon = { KernelSU: 'ksud', APatch: 'apd', Magisk: 'magisk' };
-const RootCommand = 'command -v ksud >/dev/null 2>&1 && echo KernelSU || (command -v apd >/dev/null 2>&1 && echo APatch || (command -v magisk >/dev/null 2>&1 && echo Magisk || echo Unknown))';
-const DetectRoot = () => {
-    if (!RootReady) RootReady = exec(RootCommand).then(Name => {
-        Root = Root || Name || 'Unknown';
-    }, () => { });
-    return RootReady;
-};
-
-let PropInvoker = null, PropReady = null;
-const DetectProp = () => {
-    if (PropReady) return PropReady;
-    PropReady = (async () => {
-        const Candidates = [].concat(Daemon[Root] ? `${Daemon[Root]} resetprop` : []);
-        try {
-            const Path = (await exec('command -v resetprop')).trim();
-            if (Path) Candidates.push(Path);
-        } catch (Err) { Log('PropProbe:command -v', `${Err || 'not found'}`); }
-        for (const Invoke of Candidates) {
-            try {
-                await exec(`${Invoke} ro.build.version.release`);
-                PropInvoker = Invoke;
-                Log('PropInvoker', Invoke);
-                return;
-            } catch (Err) { Log(`PropProbe:${Invoke}`, `${Err || 'unsupported'}`); }
-        }
-        Log('PropInvoker', 'unavailable');
-    })();
-    return PropReady;
-};
 
 const Environment = [
     ['Brand', 'Brand', 'resetprop ro.product.brand'],
@@ -333,80 +342,35 @@ async function LoadEnvironment() {
     await ExecFields(Vendor);
 }
 
-const Metadata = [
-    ['MetadataID', 'ID'], ['MetadataName', 'Name'],
-    ['MetadataAuthor', 'Author'], ['MetadataDescription', 'Description'],
-];
-
-const IndexRowTemplate = document.getElementById('IndexRowTemplate');
-
-function RenderRows(ContainerID, Rows) {
-    const Container = document.getElementById(ContainerID);
-    for (const [ID, Label] of Rows) {
-        const Row = IndexRowTemplate.content.cloneNode(true);
-        Row.querySelector('.IndexRowlabel').textContent = Label;
-        Row.querySelector('.IndexRowValue').id = ID;
-        Container.appendChild(Row);
+let ProcessID = null;
+async function LoadProcessID() {
+    const Cached = await FetchJSON('ProcessID.json');
+    Log('ProcessID', Cached);
+    if (!ProcessID) {
+        const BannerWrap = document.querySelector('#PageDashboard .BannerWrap');
+        if (!BannerWrap) return;
+        let Overlay = BannerWrap.querySelector('.ProcessOverlay');
+        if (!Overlay) {
+            Overlay = document.createElement('div');
+            Overlay.className = 'ProcessOverlay';
+            Overlay.innerHTML = `<span class="ProcessLabel">PID</span><span class="ProcessValue" id="ProcessID">—</span>`;
+            BannerWrap.appendChild(Overlay);
+        }
+        ProcessID = Overlay.querySelector('#ProcessID');
     }
-}
-
-RenderRows('MonitorRows', [['Latency', 'Latency'], ['Jitter', 'Jitter']]);
-RenderRows('EnvironmentRows', [...Environment, ['Root', 'Root'], ['Vendor', 'Vendor']]);
-RenderRows('MetadataRows', [...Metadata, ['MetadataVersion', 'Version']]);
-
-async function LoadMetadata() {
-    let Cached = await FetchJSON('Metadata.json');
-    Log('Metadata', Cached);
-    if (!Cached) {
+    if (Cached && Cached.PID != null) {
+        ProcessID.textContent = Cached.PID;
+    } else {
         try {
-            const Raw = await exec('cat /data/adb/modules/VinNet/module.prop 2>/dev/null');
-            if (Raw) {
-                const Prop = ParseKV(Raw, true);
-                Cached = { ID: Prop.id, Name: Prop.name, Version: Prop.version, VersionCode: Prop.versioncode, Author: Prop.author, Description: Prop.description };
-            }
-        } catch { }
-    }
-    if (!Cached) return;
-    requestAnimationFrame(() => {
-        for (const [ID, Key] of Metadata) {
-            const Element = document.getElementById(ID);
-            if (Element && Cached[Key]) Element.textContent = Cached[Key];
+            const PID = await exec('pgrep -f "VinNet/service.sh" | head -n 1');
+            ProcessID.textContent = PID || '—';
+        } catch {
+            ProcessID.textContent = '—';
         }
-        const VersionElement = document.getElementById('MetadataVersion');
-        if (VersionElement && Cached.Version) {
-            VersionElement.textContent = Cached.VersionCode ? `${Cached.Version} (${Cached.VersionCode})` : Cached.Version;
-        }
-    });
-}
-
-const Links = [
-    { Label: 'Repository', Href: 'https://github.com/Vinzz1234567890/VinNet', Icon: 'Repository', IconClass: 'ir-icon-github', Text: 'VinNet' },
-    { Label: 'Telegram', Href: 'https://t.me/VinzzRepository', Icon: 'Telegram', IconClass: 'ir-icon-telegram', Text: 'Vinzz Repository' },
-    { Label: 'Feedback', Href: 'https://t.me/Vinzz1234567890', Icon: 'Telegram', IconClass: 'ir-icon-telegram', Text: 'Vinzz' },
-];
-
-function RenderLinks() {
-    const Container = document.getElementById('LinkRows');
-    const Template = document.getElementById('LinkRowTemplate');
-    Container.replaceChildren();
-    for (const Link of Links) {
-        const Row = Template.content.cloneNode(true);
-        Row.querySelector('.IndexRowlabel').textContent = Link.Label;
-        const Anchor = Row.querySelector('.ir-link');
-        Anchor.href = Link.Href;
-        const Icon = Anchor.querySelector('svg');
-        Icon.setAttribute('class', Link.IconClass);
-        Icon.querySelector('use').setAttribute('href', '#' + Link.Icon);
-        Row.querySelector('.ir-link-label').textContent = Link.Text;
-        Container.appendChild(Row);
     }
 }
 
-const ElementCache = new Map();
-function GetElement(ID) {
-    if (!ElementCache.has(ID)) ElementCache.set(ID, document.getElementById(ID));
-    return ElementCache.get(ID);
-}
+let LastMonitor = { Latency: null, Jitter: null };
 
 function SetMonitorValue(ID, Value, Color) {
     const Element = GetElement(ID);
@@ -448,37 +412,7 @@ async function FetchMonitor() {
     ApplyMonitor({ Latency: '—', Jitter: '—' });
 }
 
-let ProcessID = null;
-
-async function LoadProcessID() {
-    const Cached = await FetchJSON('ProcessID.json');
-    Log('ProcessID', Cached);
-    if (!ProcessID) {
-        const BannerWrap = document.querySelector('#PageDashboard .BannerWrap');
-        if (!BannerWrap) return;
-        let Overlay = BannerWrap.querySelector('.ProcessOverlay');
-        if (!Overlay) {
-            Overlay = document.createElement('div');
-            Overlay.className = 'ProcessOverlay';
-            Overlay.innerHTML = `<span class="ProcessLabel">PID</span><span class="ProcessValue" id="ProcessID">—</span>`;
-            BannerWrap.appendChild(Overlay);
-        }
-        ProcessID = Overlay.querySelector('#ProcessID');
-    }
-    if (Cached && Cached.PID != null) {
-        ProcessID.textContent = Cached.PID;
-    } else {
-        try {
-            const PID = await exec('pgrep -f "VinNet/service.sh" | head -n 1');
-            ProcessID.textContent = PID || '—';
-        } catch {
-            ProcessID.textContent = '—';
-        }
-    }
-}
-
-let TweakState = null, LiveTickInterval = null;
-
+let LiveTickInterval = null;
 function StartLiveTicker() {
     if (!LiveTickInterval) LiveTickInterval = setInterval(FetchMonitor, 4000);
 }
@@ -486,11 +420,6 @@ function StartLiveTicker() {
 function StopLiveTicker() {
     if (LiveTickInterval) { clearInterval(LiveTickInterval); LiveTickInterval = null; }
 }
-
-document.addEventListener('visibilitychange', () => {
-    if (document.hidden) StopLiveTicker();
-    else StartLiveTicker();
-});
 
 const ResetProp = (...Args) => PropInvoker
     ? `${PropInvoker} ${Args.join(' ')}`
@@ -576,6 +505,9 @@ const Tweaks = {
     }
 };
 
+let TweakState = null;
+let TweakQueue = Promise.resolve();
+
 async function CheckTweaks() {
     const LiveState = new Map();
     await Promise.all(Object.entries(Tweaks).map(async ([ID, Tweak]) => {
@@ -620,22 +552,6 @@ async function RenderTweaks() {
     }
 }
 
-document.addEventListener('change', Event => {
-    if (Event.target.matches('#PageTweaks Input[type="checkbox"]')) {
-        ApplyTweak(Event.target.dataset.tweakId, Event.target.checked);
-    }
-});
-
-document.addEventListener('click', Event => {
-    const Link = Event.target.closest('#PageInfo A[href]');
-    if (Link) {
-        Event.preventDefault();
-        OpenLink(Link.href);
-    }
-});
-
-let TweakQueue = Promise.resolve();
-
 async function ApplyTweak(ID, Enabled) {
     const Tweak = Tweaks[ID];
     if (!Tweak) return;
@@ -660,6 +576,71 @@ async function ApplyTweak(ID, Enabled) {
     });
 }
 
+const Metadata = [
+    ['MetadataID', 'ID'], ['MetadataName', 'Name'],
+    ['MetadataAuthor', 'Author'], ['MetadataDescription', 'Description'],
+];
+
+async function LoadMetadata() {
+    let Cached = await FetchJSON('Metadata.json');
+    Log('Metadata', Cached);
+    if (!Cached) {
+        try {
+            const Raw = await exec('cat /data/adb/modules/VinNet/module.prop 2>/dev/null');
+            if (Raw) {
+                const Prop = ParseKV(Raw, true);
+                Cached = { ID: Prop.id, Name: Prop.name, Version: Prop.version, VersionCode: Prop.versioncode, Author: Prop.author, Description: Prop.description };
+            }
+        } catch { }
+    }
+    if (!Cached) return;
+    requestAnimationFrame(() => {
+        for (const [ID, Key] of Metadata) {
+            const Element = document.getElementById(ID);
+            if (Element && Cached[Key]) Element.textContent = Cached[Key];
+        }
+        const VersionElement = document.getElementById('MetadataVersion');
+        if (VersionElement && Cached.Version) {
+            VersionElement.textContent = Cached.VersionCode ? `${Cached.Version} (${Cached.VersionCode})` : Cached.Version;
+        }
+    });
+}
+
+const Links = [
+    { Label: 'Repository', Href: 'https://github.com/Vinzz1234567890/VinNet', Icon: 'Repository', IconClass: 'ir-icon-github', Text: 'VinNet' },
+    { Label: 'Telegram', Href: 'https://t.me/VinzzRepository', Icon: 'Telegram', IconClass: 'ir-icon-telegram', Text: 'Vinzz Repository' },
+    { Label: 'Feedback', Href: 'https://t.me/Vinzz1234567890', Icon: 'Telegram', IconClass: 'ir-icon-telegram', Text: 'Vinzz' },
+];
+
+function RenderLinks() {
+    const Container = document.getElementById('LinkRows');
+    const Template = document.getElementById('LinkRowTemplate');
+    Container.replaceChildren();
+    for (const Link of Links) {
+        const Row = Template.content.cloneNode(true);
+        Row.querySelector('.IndexRowlabel').textContent = Link.Label;
+        const Anchor = Row.querySelector('.ir-link');
+        Anchor.href = Link.Href;
+        const Icon = Anchor.querySelector('svg');
+        Icon.setAttribute('class', Link.IconClass);
+        Icon.querySelector('use').setAttribute('href', '#' + Link.Icon);
+        Row.querySelector('.ir-link-label').textContent = Link.Text;
+        Container.appendChild(Row);
+    }
+}
+
+const IndexRowTemplate = document.getElementById('IndexRowTemplate');
+
+function RenderRows(ContainerID, Rows) {
+    const Container = document.getElementById(ContainerID);
+    for (const [ID, Label] of Rows) {
+        const Row = IndexRowTemplate.content.cloneNode(true);
+        Row.querySelector('.IndexRowlabel').textContent = Label;
+        Row.querySelector('.IndexRowValue').id = ID;
+        Container.appendChild(Row);
+    }
+}
+
 async function DecodeImage(ImageElement) {
     if (!ImageElement) return;
     try {
@@ -672,6 +653,37 @@ async function DecodeImage(ImageElement) {
             });
         }
     } catch { }
+}
+
+function SetupEventListeners() {
+    SetupGestureListeners();
+
+    document.addEventListener('change', Event => {
+        if (Event.target.matches('#PageTweaks Input[type="checkbox"]')) {
+            ApplyTweak(Event.target.dataset.tweakId, Event.target.checked);
+        }
+    });
+
+    document.addEventListener('click', Event => {
+        const Link = Event.target.closest('#PageInfo A[href]');
+        if (Link) {
+            Event.preventDefault();
+            OpenLink(Link.href);
+        }
+    });
+
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden) StopLiveTicker();
+        else StartLiveTicker();
+    });
+}
+
+function InitLayout() {
+    RenderRows('MonitorRows', [['Latency', 'Latency'], ['Jitter', 'Jitter']]);
+    RenderRows('EnvironmentRows', [...Environment, ['Root', 'Root'], ['Vendor', 'Vendor']]);
+    RenderRows('MetadataRows', [...Metadata, ['MetadataVersion', 'Version']]);
+    RenderPages();
+    SyncPageAttributes();
 }
 
 async function Load() {
@@ -696,5 +708,14 @@ async function Load() {
     StartLiveTicker();
 }
 
-if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => setTimeout(Load, 100));
-else setTimeout(Load, 100);
+function Boot() {
+    InitLayout();
+    SetupEventListeners();
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => setTimeout(Load, 100));
+    } else {
+        setTimeout(Load, 100);
+    }
+}
+
+Boot();
