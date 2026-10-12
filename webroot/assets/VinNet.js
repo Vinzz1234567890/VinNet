@@ -463,6 +463,7 @@ const Tweaks = {
         ONCommand: TuneNet('fq_codel quantum 300 noecn'),
         OFFCommand: TuneNet('pfifo_fast'),
         CheckCommand: 'tc qdisc show 2>/dev/null | grep -c fq_codel || true',
+        SupportCommand: 'R=1; tc qdisc replace dev lo root fq_codel 2>/dev/null && R=0; tc qdisc del dev lo root 2>/dev/null; exit $R',
         Expect: ['1', '2', '3', '4', '5', '6', '7', '8', '9'], ONLabel: 'Optimized', OFFLabel: 'Unoptimized',
         Warn: 'Reset after reboot',
     },
@@ -489,19 +490,6 @@ const Tweaks = {
         ONCommand: 'settings put global ble_scan_always_enabled 0', OFFCommand: 'settings put global ble_scan_always_enabled 1',
         CheckCommand: 'settings get global ble_scan_always_enabled', Expect: '0', ONLabel: 'Disabled', OFFLabel: 'Enabled',
     },
-    "Wi-Fi Country Code": {
-        Label: 'Change Wi-Fi Country Code', Icon: 'Wi-FiCountryCode',
-        Description: 'Change country code to “US” to bypass certain restrictions on Wi-Fi.',
-        ONCommand: () => ResetProp('ro.boot.wificountrycode', 'US'), OFFCommand: () => ResetProp('ro.boot.wificountrycode', '00'),
-        CheckCommand: () => ResetProp('ro.boot.wificountrycode'), Expect: 'US', ONLabel: 'Changed', OFFLabel: 'Unchanged',
-        Warn: 'Reset after reboot',
-    },
-    "Force LTE CA": {
-        Label: 'Enable Force LTE CA', Icon: 'ForceLTECA',
-        Description: 'Combines two or more cellular frequency bands simultaneously, resulting in significantly faster internet speeds and more stable connection on 4G or 4G+ networks.',
-        ONCommand: () => ResetProp('-p', 'persist.sys.radio.force_lte_ca', 'true'), OFFCommand: () => ResetProp('-p', 'persist.sys.radio.force_lte_ca', 'false'),
-        CheckCommand: () => ResetProp('-p', 'persist.sys.radio.force_lte_ca'), Expect: 'true', ONLabel: 'Enabled', OFFLabel: 'Disabled',
-    },
     "Wi-Fi Scan Throttle": {
         Label: 'Enable Wi-Fi Scan Throttle', Icon: 'Wi-FiScanThrottle',
         Description: 'Limit background Wi-Fi scanning to conserve battery life and prevent jitter.',
@@ -515,16 +503,25 @@ let TweakQueue = Promise.resolve();
 
 async function CheckTweaks() {
     const LiveState = new Map();
+    const Unsupported = new Set();
     await Promise.all(Object.entries(Tweaks).map(async ([ID, Tweak]) => {
         if (!Tweak.CheckCommand) return;
         try {
             const Out = await exec(Command(Tweak.CheckCommand));
-            if (!Out) { Log(`Check:${ID}`, 'no output - check unsupported on this device'); return; }
+            if (!Out) { Unsupported.add(ID); Log(`Check:${ID}`, 'no output - unsupported on this device'); return; }
             LiveState.set(ID, [].concat(Tweak.Expect).some(E => Out.includes(E)));
             Log(`Check:${ID}`, Out);
-        } catch (Err) { Log(`Check:${ID}`, `${Err || 'unknown error'}`); }
+        } catch (Err) {
+            Unsupported.add(ID);
+            Log(`Check:${ID}`, `${Err || 'unknown error'}`);
+        }
     }));
-    return LiveState;
+    await Promise.all(Object.entries(Tweaks).map(async ([ID, Tweak]) => {
+        if (!Tweak.SupportCommand || Unsupported.has(ID)) return;
+        try { await exec(Command(Tweak.SupportCommand)); }
+        catch (Err) { Unsupported.add(ID); Log(`Support:${ID}`, `${Err || 'unsupported on this device'}`); }
+    }));
+    return { LiveState, Unsupported };
 }
 
 async function RenderTweaks() {
@@ -535,7 +532,7 @@ async function RenderTweaks() {
 
     await DetectRoot();
     await DetectProp();
-    const LiveState = await CheckTweaks();
+    const { LiveState, Unsupported } = await CheckTweaks();
 
     Container.replaceChildren();
     for (const [ID, Tweak] of Object.entries(Tweaks)) {
@@ -543,15 +540,17 @@ async function RenderTweaks() {
         Card.querySelector('.TweakIcon use').setAttribute('href', '#' + Tweak.Icon);
         Card.querySelector('.TweakName').textContent = Tweak.Label || ID;
         Card.querySelector('.TweakDescription').textContent = Tweak.Description;
-        if (Tweak.Warn) {
+        const WarnText = Unsupported.has(ID) ? 'Not supported' : Tweak.Warn;
+        if (WarnText) {
             const Warn = document.createElement('div');
-            Warn.className = 'TweakWarn';
-            Warn.textContent = Tweak.Warn;
+            Warn.className = Unsupported.has(ID) ? 'TweakWarn TweakUnsupported' : 'TweakWarn';
+            Warn.textContent = WarnText;
             Card.querySelector('.TweakBody').appendChild(Warn);
         }
         const Input = Card.querySelector('Input');
         Input.id = 'Tweak-' + ID;
         Input.checked = LiveState.has(ID) ? LiveState.get(ID) : TweakState[ID] === 'ON';
+        Input.disabled = Unsupported.has(ID);
         Input.dataset.tweakId = ID;
         Container.appendChild(Card);
     }
