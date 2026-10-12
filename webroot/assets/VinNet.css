@@ -470,6 +470,10 @@ img {
     margin-top: 4px;
 }
 
+.TweakWarn.TweakUnsupported {
+    color: var(--Bad);
+}
+
 .Switch {
     position: relative;
     width: 52px;
