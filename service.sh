@@ -57,7 +57,7 @@ Write() {
 }
 
 Diagnose() {
-    local ABI Arch="Unsupported" DmesgLines Pending="$Core/.Diagnose.tmp"
+    local ABI Arch="Unsupported" DmesgLines WifiLines Pending="$Core/.Diagnose.tmp"
     ABI=$(resetprop ro.product.cpu.abi)
     case "$ABI" in arm64*) Arch="Supported (arm64)" ;; armeabi*) Arch="Supported (arm)" ;; esac
 
@@ -80,6 +80,12 @@ Diagnose() {
         if [ -n "$DmesgLines" ]; then
             printf '%s\n' "$DmesgLines" | while IFS= read -r Line; do
                 [ -n "$Line" ] && echo "[$(date +%T)] Diagnose: dmesg -- $Line"
+            done
+        fi
+        WifiLines=$(dumpsys wifi 2> /dev/null | grep -E 'Wi-Fi is|Dump of ClientModeImpl|curState=|Supplicant state|mPowerSaveDisableRequests' | head -20)
+        if [ -n "$WifiLines" ]; then
+            printf '%s\n' "$WifiLines" | while IFS= read -r Line; do
+                [ -n "$Line" ] && echo "[$(date +%T)] Diagnose: wifi -- $Line"
             done
         fi
     } > "$Pending" 2> /dev/null
