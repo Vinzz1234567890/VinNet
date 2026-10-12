@@ -1,6 +1,5 @@
 #!/system/bin/sh
 rm -rf /data/adb/VinNet
-resetprop --delete ro.boot.wificountrycode
 resetprop -p --delete persist.sys.radio.force_lte_ca
 settings delete global network_avoid_bad_wifi
 settings delete global ble_scan_always_enabled
