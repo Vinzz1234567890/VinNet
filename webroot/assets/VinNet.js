@@ -460,11 +460,16 @@ const Tweaks = {
     "QDISC": {
         Label: 'Optimize QDISC', Icon: 'QDISC',
         Description: 'Split data traffic into multiple paths and prioritize small data packets so they aren\'t held up by large data packets.',
-        ONCommand: TuneNet('fq_codel quantum 300 noecn'),
-        OFFCommand: TuneNet('pfifo_fast'),
-        CheckCommand: 'tc qdisc show 2>/dev/null | grep -c fq_codel || true',
-        SupportCommand: 'R=1; tc qdisc replace dev lo root fq_codel 2>/dev/null && R=0; tc qdisc del dev lo root 2>/dev/null; exit $R',
-        Expect: ['1', '2', '3', '4', '5', '6', '7', '8', '9'], ONLabel: 'Optimized', OFFLabel: 'Unoptimized',
+        Type: 'select',
+        Options: {
+            pfifo_fast: { Label: 'Default (pfifo_fast)', Spec: 'pfifo_fast', Builtin: true },
+            cake: { Label: 'CAKE', Spec: 'cake' },
+            fq_codel: { Label: 'FQ-CoDel', Spec: 'fq_codel quantum 300 noecn' },
+            fq: { Label: 'FQ', Spec: 'fq' },
+            sfq: { Label: 'SFQ', Spec: 'sfq' },
+        },
+        Default: 'pfifo_fast',
+        CheckCommand: "tc qdisc show 2>/dev/null | awk '$0 ~ / root / {print $2}'",
         Warn: 'Reset after reboot',
     },
     "Wi-Fi Force Low Latency Mode": {
@@ -501,27 +506,51 @@ const Tweaks = {
 let TweakState = null;
 let TweakQueue = Promise.resolve();
 
+async function ProbeSelect(Tweak) {
+    const Keys = Object.keys(Tweak.Options);
+    const Candidates = Keys.filter(K => !Tweak.Options[K].Builtin);
+    if (!Candidates.length) return Keys;
+    const Out = await exec(`(command -v tc > /dev/null 2>&1 || exit 1)
+for Q in ${Candidates.join(' ')}; do tc qdisc replace dev lo root $Q 2>/dev/null && echo $Q; done
+tc qdisc del dev lo root 2>/dev/null || true`);
+    const Accepted = new Set(Out.split('\n'));
+    return Keys.filter(K => Tweak.Options[K].Builtin || Accepted.has(K));
+}
+
 async function CheckTweaks() {
     const LiveState = new Map();
     const Unsupported = new Set();
+    const SelectOptions = new Map();
     await Promise.all(Object.entries(Tweaks).map(async ([ID, Tweak]) => {
         if (!Tweak.CheckCommand) return;
         try {
             const Out = await exec(Command(Tweak.CheckCommand));
             if (!Out) { Unsupported.add(ID); Log(`Check:${ID}`, 'no output - unsupported on this device'); return; }
-            LiveState.set(ID, [].concat(Tweak.Expect).some(E => Out.includes(E)));
             Log(`Check:${ID}`, Out);
+            if (Tweak.Type === 'select') {
+                const Lines = Out.split('\n');
+                const Found = Object.keys(Tweak.Options).filter(K => K !== Tweak.Default && Lines.includes(K));
+                LiveState.set(ID, Found.length ? Found[0] : Tweak.Default);
+            } else {
+                LiveState.set(ID, [].concat(Tweak.Expect).some(E => Out.includes(E)));
+            }
         } catch (Err) {
             Unsupported.add(ID);
             Log(`Check:${ID}`, `${Err || 'unknown error'}`);
         }
     }));
     await Promise.all(Object.entries(Tweaks).map(async ([ID, Tweak]) => {
-        if (!Tweak.SupportCommand || Unsupported.has(ID)) return;
+        if (Unsupported.has(ID)) return;
+        if (Tweak.Type === 'select') {
+            try { SelectOptions.set(ID, await ProbeSelect(Tweak)); }
+            catch (Err) { Unsupported.add(ID); Log(`Support:${ID}`, `${Err || 'unsupported on this device'}`); }
+            return;
+        }
+        if (!Tweak.SupportCommand) return;
         try { await exec(Command(Tweak.SupportCommand)); }
         catch (Err) { Unsupported.add(ID); Log(`Support:${ID}`, `${Err || 'unsupported on this device'}`); }
     }));
-    return { LiveState, Unsupported };
+    return { LiveState, Unsupported, SelectOptions };
 }
 
 async function RenderTweaks() {
@@ -532,7 +561,7 @@ async function RenderTweaks() {
 
     await DetectRoot();
     await DetectProp();
-    const { LiveState, Unsupported } = await CheckTweaks();
+    const { LiveState, Unsupported, SelectOptions } = await CheckTweaks();
 
     Container.replaceChildren();
     for (const [ID, Tweak] of Object.entries(Tweaks)) {
@@ -548,6 +577,25 @@ async function RenderTweaks() {
             Card.querySelector('.TweakBody').appendChild(Warn);
         }
         const Input = Card.querySelector('Input');
+        if (Tweak.Type === 'select') {
+            Input.closest('.Switch').style.display = 'none';
+            const Select = Card.querySelector('.TweakSelect');
+            Select.hidden = false;
+            Select.id = 'Tweak-' + ID;
+            Select.dataset.tweakId = ID;
+            for (const Key of SelectOptions.get(ID) || []) {
+                const Option = document.createElement('option');
+                Option.value = Key;
+                Option.textContent = Tweak.Options[Key].Label;
+                Select.appendChild(Option);
+            }
+            Select.value = LiveState.has(ID) ? LiveState.get(ID)
+                : (Tweak.Options[TweakState[ID]] ? TweakState[ID] : Tweak.Default);
+            Select.dataset.current = Select.value;
+            Select.disabled = Unsupported.has(ID);
+            Container.appendChild(Card);
+            continue;
+        }
         Input.id = 'Tweak-' + ID;
         Input.checked = LiveState.has(ID) ? LiveState.get(ID) : TweakState[ID] === 'ON';
         Input.disabled = Unsupported.has(ID);
@@ -556,24 +604,26 @@ async function RenderTweaks() {
     }
 }
 
-async function ApplyTweak(ID, Enabled) {
+async function ApplyTweak(ID, Payload) {
     const Tweak = Tweaks[ID];
     if (!Tweak) return;
     const Element = document.getElementById('Tweak-' + ID);
+    const IsSelect = Tweak.Type === 'select';
     Element.disabled = true;
     TweakQueue = TweakQueue.then(async () => {
         try {
-            await exec(Command(Enabled ? Tweak.ONCommand : Tweak.OFFCommand));
+            await exec(IsSelect ? TuneNet(Tweak.Options[Payload].Spec) : Command(Payload ? Tweak.ONCommand : Tweak.OFFCommand));
             if (!TweakState) TweakState = {};
-            TweakState[ID] = Enabled ? 'ON' : 'OFF';
+            TweakState[ID] = IsSelect ? Payload : (Payload ? 'ON' : 'OFF');
             Log('Tweaks', TweakState);
-            Toast(`${Tweak.Label || ID} > ${Enabled ? Tweak.ONLabel : Tweak.OFFLabel}`);
+            Toast(`${Tweak.Label || ID} > ${IsSelect ? Tweak.Options[Payload].Label : (Payload ? Tweak.ONLabel : Tweak.OFFLabel)}`);
             const Content = JSON.stringify(TweakState).replace(/"/g, '\\"');
             exec(`echo "${Content}" > ${Core}/Tweaks.json`).catch(Err => Log('TweakSave', `${ID}: ${Err || 'state not persisted'}`));
+            if (IsSelect) Element.dataset.current = Payload;
         } catch (Err) {
             Log('TweakFail', `${ID}: ${Err || 'unknown error'}`);
             Toast('Unable to apply tweak');
-            Element.checked = !Enabled;
+            if (IsSelect) Element.value = Element.dataset.current; else Element.checked = !Payload;
         } finally {
             Element.disabled = false;
         }
@@ -665,6 +715,8 @@ function SetupEventListeners() {
     document.addEventListener('change', Event => {
         if (Event.target.matches('#PageTweaks Input[type="checkbox"]')) {
             ApplyTweak(Event.target.dataset.tweakId, Event.target.checked);
+        } else if (Event.target.matches('#PageTweaks select.TweakSelect')) {
+            ApplyTweak(Event.target.dataset.tweakId, Event.target.value);
         }
     });
 
