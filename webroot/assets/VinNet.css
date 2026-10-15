@@ -474,6 +474,23 @@ img {
     color: var(--Bad);
 }
 
+.TweakSelect {
+    flex-shrink: 0;
+    margin-top: 2px;
+    max-width: 46%;
+    padding: 7px 10px;
+    border: 1px solid var(--out-var);
+    border-radius: 12px;
+    background: var(--pri-mix-14);
+    color: var(--on-surf);
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.TweakSelect:disabled {
+    opacity: 0.5;
+}
+
 .Switch {
     position: relative;
     width: 52px;
