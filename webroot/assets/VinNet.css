@@ -429,6 +429,7 @@ img {
 
 .Tweak {
     display: flex;
+    flex-wrap: wrap;
     align-items: flex-start;
     justify-content: space-between;
     gap: 14px;
@@ -475,20 +476,107 @@ img {
 }
 
 .TweakSelect {
-    flex-shrink: 0;
-    margin-top: 2px;
-    max-width: 46%;
-    padding: 7px 10px;
+    position: relative;
+    width: 100%;
+}
+
+.TweakSelectField {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    width: 100%;
+    padding: 11px 14px;
     border: 1px solid var(--out-var);
     border-radius: 12px;
     background: var(--pri-mix-14);
     color: var(--on-surf);
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 600;
+    cursor: pointer;
+    transition: border-color 0.15s var(--ease-smooth);
 }
 
-.TweakSelect:disabled {
+.TweakSelectField:active {
+    border-color: var(--outline);
+}
+
+.TweakSelectChevron {
+    width: 18px;
+    height: 18px;
+    fill: var(--on-surf-var);
+    flex-shrink: 0;
+    transition: transform 0.2s var(--ease-smooth);
+}
+
+.TweakSelect.TweakSelectOpen .TweakSelectChevron {
+    transform: rotate(180deg);
+}
+
+.TweakSelectMenu {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    right: 0;
+    z-index: 20;
+    padding: 6px;
+    border: 1px solid var(--out-var);
+    border-radius: 16px;
+    background: var(--surf-hi);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+    transform-origin: top;
+    animation: TweakSelectIn 0.16s var(--ease-smooth);
+}
+
+@keyframes TweakSelectIn {
+    from {
+        opacity: 0;
+        transform: scaleY(0.92) translateY(-4px);
+    }
+}
+
+.TweakSelectItem {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    width: 100%;
+    padding: 12px 12px;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--on-surf);
+    font-size: 13px;
+    font-weight: 500;
+    text-align: left;
+    cursor: pointer;
+}
+
+.TweakSelectItem:active {
+    background: var(--pri-mix-14);
+}
+
+.TweakSelectItem.TweakSelectCurrent {
+    background: var(--pri-mix-14);
+    color: var(--pri);
+    font-weight: 700;
+}
+
+.TweakSelectItem svg {
+    width: 18px;
+    height: 18px;
+    fill: var(--pri);
+    flex-shrink: 0;
+    visibility: hidden;
+}
+
+.TweakSelectItem.TweakSelectCurrent svg {
+    visibility: visible;
+}
+
+.TweakSelect.TweakSelectDisabled {
     opacity: 0.5;
+    pointer-events: none;
 }
 
 .Switch {
