@@ -517,6 +517,21 @@ tc qdisc del dev lo root 2>/dev/null || true`);
     return Keys.filter(K => Tweak.Options[K].Builtin || Accepted.has(K));
 }
 
+function UpdateSelectDisplay(Select, Tweak, Value) {
+    Select.dataset.current = Value;
+    Select.querySelector('.TweakSelectValue').textContent = Tweak.Options[Value] ? Tweak.Options[Value].Label : Value;
+    for (const Item of Select.querySelectorAll('.TweakSelectItem')) {
+        Item.classList.toggle('TweakSelectCurrent', Item.dataset.value === Value);
+    }
+}
+
+function CloseSelectMenus() {
+    for (const Select of document.querySelectorAll('.TweakSelect.TweakSelectOpen')) {
+        Select.classList.remove('TweakSelectOpen');
+        Select.querySelector('.TweakSelectMenu').hidden = true;
+    }
+}
+
 async function CheckTweaks() {
     const LiveState = new Map();
     const Unsupported = new Set();
@@ -583,16 +598,19 @@ async function RenderTweaks() {
             Select.hidden = false;
             Select.id = 'Tweak-' + ID;
             Select.dataset.tweakId = ID;
+            const Menu = Select.querySelector('.TweakSelectMenu');
             for (const Key of SelectOptions.get(ID) || []) {
-                const Option = document.createElement('option');
-                Option.value = Key;
-                Option.textContent = Tweak.Options[Key].Label;
-                Select.appendChild(Option);
+                const Item = document.createElement('button');
+                Item.type = 'button';
+                Item.className = 'TweakSelectItem';
+                Item.dataset.value = Key;
+                Item.innerHTML = '<span></span><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>';
+                Item.querySelector('span').textContent = Tweak.Options[Key].Label;
+                Menu.appendChild(Item);
             }
-            Select.value = LiveState.has(ID) ? LiveState.get(ID)
-                : (Tweak.Options[TweakState[ID]] ? TweakState[ID] : Tweak.Default);
-            Select.dataset.current = Select.value;
-            Select.disabled = Unsupported.has(ID);
+            UpdateSelectDisplay(Select, Tweak, LiveState.has(ID) ? LiveState.get(ID)
+                : (Tweak.Options[TweakState[ID]] ? TweakState[ID] : Tweak.Default));
+            Select.classList.toggle('TweakSelectDisabled', Unsupported.has(ID));
             Container.appendChild(Card);
             continue;
         }
@@ -609,7 +627,7 @@ async function ApplyTweak(ID, Payload) {
     if (!Tweak) return;
     const Element = document.getElementById('Tweak-' + ID);
     const IsSelect = Tweak.Type === 'select';
-    Element.disabled = true;
+    if (IsSelect) Element.classList.add('TweakSelectDisabled'); else Element.disabled = true;
     TweakQueue = TweakQueue.then(async () => {
         try {
             await exec(IsSelect ? TuneNet(Tweak.Options[Payload].Spec) : Command(Payload ? Tweak.ONCommand : Tweak.OFFCommand));
@@ -619,13 +637,13 @@ async function ApplyTweak(ID, Payload) {
             Toast(`${Tweak.Label || ID} > ${IsSelect ? Tweak.Options[Payload].Label : (Payload ? Tweak.ONLabel : Tweak.OFFLabel)}`);
             const Content = JSON.stringify(TweakState).replace(/"/g, '\\"');
             exec(`echo "${Content}" > ${Core}/Tweaks.json`).catch(Err => Log('TweakSave', `${ID}: ${Err || 'state not persisted'}`));
-            if (IsSelect) Element.dataset.current = Payload;
+            if (IsSelect) UpdateSelectDisplay(Element, Tweak, Payload);
         } catch (Err) {
             Log('TweakFail', `${ID}: ${Err || 'unknown error'}`);
             Toast('Unable to apply tweak');
-            if (IsSelect) Element.value = Element.dataset.current; else Element.checked = !Payload;
+            if (!IsSelect) Element.checked = !Payload;
         } finally {
-            Element.disabled = false;
+            if (IsSelect) Element.classList.remove('TweakSelectDisabled'); else Element.disabled = false;
         }
     });
 }
@@ -715,9 +733,29 @@ function SetupEventListeners() {
     document.addEventListener('change', Event => {
         if (Event.target.matches('#PageTweaks Input[type="checkbox"]')) {
             ApplyTweak(Event.target.dataset.tweakId, Event.target.checked);
-        } else if (Event.target.matches('#PageTweaks select.TweakSelect')) {
-            ApplyTweak(Event.target.dataset.tweakId, Event.target.value);
         }
+    });
+
+    document.addEventListener('click', Event => {
+        const Field = Event.target.closest('.TweakSelectField');
+        if (Field) {
+            const Select = Field.closest('.TweakSelect');
+            const WillOpen = !Select.classList.contains('TweakSelectOpen');
+            CloseSelectMenus();
+            if (WillOpen) {
+                Select.classList.add('TweakSelectOpen');
+                Select.querySelector('.TweakSelectMenu').hidden = false;
+            }
+            return;
+        }
+        const Item = Event.target.closest('.TweakSelectItem');
+        if (Item) {
+            const Select = Item.closest('.TweakSelect');
+            CloseSelectMenus();
+            if (Item.dataset.value !== Select.dataset.current) ApplyTweak(Select.dataset.tweakId, Item.dataset.value);
+            return;
+        }
+        CloseSelectMenus();
     });
 
     document.addEventListener('click', Event => {
