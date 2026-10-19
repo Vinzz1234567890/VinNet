@@ -519,6 +519,11 @@ img {
     left: 0;
     right: 0;
     z-index: 20;
+    max-height: 260px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
     padding: 6px;
     border: 1px solid var(--out-var);
     border-radius: 16px;
@@ -526,6 +531,10 @@ img {
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
     transform-origin: top;
     animation: TweakSelectIn 0.16s var(--ease-smooth);
+}
+
+.TweakSelectMenu::-webkit-scrollbar {
+    display: none;
 }
 
 @keyframes TweakSelectIn {
