@@ -463,10 +463,24 @@ const Tweaks = {
         Type: 'select',
         Options: {
             pfifo_fast: { Label: 'Default (pfifo_fast)', Spec: 'pfifo_fast', Builtin: true },
-            cake: { Label: 'CAKE', Spec: 'cake' },
             fq_codel: { Label: 'FQ-CoDel', Spec: 'fq_codel quantum 300 noecn' },
+            cake: { Label: 'CAKE', Spec: 'cake' },
             fq: { Label: 'FQ', Spec: 'fq' },
             sfq: { Label: 'SFQ', Spec: 'sfq' },
+            codel: { Label: 'CoDel', Spec: 'codel' },
+            pie: { Label: 'PIE', Spec: 'pie' },
+            fq_pie: { Label: 'FQ-PIE', Spec: 'fq_pie' },
+            prio: { Label: 'PRIO', Spec: 'prio' },
+            pfifo: { Label: 'PFIFO', Spec: 'pfifo limit 1000' },
+            bfifo: { Label: 'BFIFO', Spec: 'bfifo limit 1000000' },
+            tbf: { Label: 'TBF', Spec: 'tbf rate 1000mbit burst 100k latency 50ms' },
+            red: { Label: 'RED', Spec: 'red limit 1000000 min 30000 max 90000 avpkt 1000 burst 55' },
+            htb: { Label: 'HTB', Spec: 'htb default 1' },
+            netem: { Label: 'NETEM', Spec: 'netem' },
+            drr: { Label: 'DRR', Spec: 'drr' },
+            hhf: { Label: 'HHF', Spec: 'hhf' },
+            sfb: { Label: 'SFB', Spec: 'sfb' },
+            choke: { Label: 'CHOKe', Spec: 'choke limit 1000000 min 30000 max 90000 avpkt 1000 burst 55' },
         },
         Default: 'pfifo_fast',
         CheckCommand: "tc qdisc show 2>/dev/null | awk '$0 ~ / root / {print $2}'",
@@ -510,10 +524,21 @@ async function ProbeSelect(Tweak) {
     const Keys = Object.keys(Tweak.Options);
     const Candidates = Keys.filter(K => !Tweak.Options[K].Builtin);
     if (!Candidates.length) return Keys;
-    const Out = await exec(`(command -v tc > /dev/null 2>&1 || exit 1)
-for Q in ${Candidates.join(' ')}; do tc qdisc replace dev lo root $Q 2>/dev/null && echo $Q; done
-tc qdisc del dev lo root 2>/dev/null || true`);
-    const Accepted = new Set(Out.split('\n'));
+    const Probes = Candidates.map(K =>
+        `tc qdisc replace dev "$D" root ${Tweak.Options[K].Spec} 2>/dev/null && echo "${K}"`
+    ).join('\n');
+    const Out = await exec(`command -v tc > /dev/null 2>&1 || exit 1
+D=""
+for P in /sys/class/net/*; do
+  N=\${P##*/}
+  echo "$N" | grep -qE '${NetDeny}' && continue
+  D=$N; break
+done
+[ -n "$D" ] || D="lo"
+O=$(tc qdisc show dev "$D" root 2>/dev/null | awk '{print $2; exit}')
+${Probes}
+tc qdisc replace dev "$D" root $O 2>/dev/null || tc qdisc del dev "$D" root 2>/dev/null || true`);
+    const Accepted = new Set(Out.split('\n').map(S => S.trim()).filter(Boolean));
     return Keys.filter(K => Tweak.Options[K].Builtin || Accepted.has(K));
 }
 
