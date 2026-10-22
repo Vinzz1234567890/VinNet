@@ -284,6 +284,7 @@ function EndGesture(Commit, Element) {
 function SetupGestureListeners() {
     PagesElement.addEventListener('pointerdown', E => {
         if (E.pointerType === 'touch' || !E.isPrimary || (E.pointerType === 'mouse' && E.button !== 0)) return;
+        if (E.target.closest('.TweakChips, .TweakSelect, .TweakSelectMenu')) return;
         BeginGesture(E.clientX, E.clientY, 'pointer', E.pointerId);
     });
 
@@ -298,6 +299,7 @@ function SetupGestureListeners() {
     PagesElement.addEventListener('pointercancel', E => { if (E.pointerId === GesturePointerID) EndGesture(false, E.currentTarget); });
 
     PagesElement.addEventListener('touchstart', E => {
+        if (E.target.closest('.TweakChips, .TweakSelect, .TweakSelectMenu')) return;
         if (E.touches.length === 1) BeginGesture(E.touches[0].screenX, E.touches[0].screenY, 'touch', null);
     }, { passive: true });
 
@@ -437,13 +439,18 @@ const ResetProp = (...Args) => PropInvoker
 const Command = C => typeof C === 'function' ? C() : C;
 
 const NetDeny = '^(lo|dummy[0-9]*|tun[0-9]*|tap[0-9]*|ip6tnl[0-9]*|sit[0-9]*|ifb[0-9]*|veth.*|rmnet_mux[0-9]*|rmnet_ctl|rmtfs[0-9]*|radio[0-9]*|wlan0h.*|wlan0bss.*)$';
+const MainInterfaceRegex = '^(wlan[0-9]+|rmnet_data[0-1]|rmnet_ipa0|rmnet[0-1]|ccmni[0-9]+|rndis[0-9]+|usb[0-9]+|eth[0-9]+)$';
 
-const TuneNet = Spec => {
+const TuneNet = (Spec, Target = 'all') => {
     const Kind = Spec.split(' ')[0];
+    if (Target && Target !== 'all') {
+        return `tc qdisc replace dev "${Target}" root ${Spec} 2>/dev/null || { echo "interface ${Target} rejected ${Kind}" >&2; exit 1; }`;
+    }
     return `N=0
 for P in /sys/class/net/*; do
   D=\${P##*/}
   echo "$D" | grep -qE '${NetDeny}' && continue
+  echo "$D" | grep -qE '${MainInterfaceRegex}' || continue
   tc qdisc replace dev "$D" root ${Spec} 2>/dev/null && N=$((N+1))
 done
 [ "$N" -gt 0 ] || { echo "no interface accepted ${Kind}" >&2; exit 1; }`;
@@ -461,6 +468,7 @@ const Tweaks = {
         Label: 'Optimize QDISC', Icon: 'QDISC',
         Description: 'Split data traffic into multiple paths and prioritize small data packets so they aren\'t held up by large data packets.',
         Type: 'select',
+        HasInterfaces: true,
         Options: {
             pfifo_fast: { Label: 'Default (pfifo_fast)', Spec: 'pfifo_fast', Builtin: true },
             fq_codel: { Label: 'FQ-CoDel', Spec: 'fq_codel quantum 300 noecn' },
@@ -483,7 +491,7 @@ const Tweaks = {
             choke: { Label: 'CHOKe', Spec: 'choke limit 1000000 min 30000 max 90000 avpkt 1000 burst 55' },
         },
         Default: 'pfifo_fast',
-        CheckCommand: "tc qdisc show 2>/dev/null | awk '$0 ~ / root / {print $2}'",
+        CheckCommand: `tc qdisc show 2>/dev/null | awk '$0 ~ / root / {for(i=1;i<=NF;i++) if($i=="dev" && $(i+1) ~ /${MainInterfaceRegex}/) print $(i+1), $2}'`,
         Warn: 'Reset after reboot',
     },
     "Wi-Fi Force Low Latency Mode": {
@@ -519,6 +527,44 @@ const Tweaks = {
 
 let TweakState = null;
 let TweakQueue = Promise.resolve();
+const SelectDevMaps = new Map();
+const SelectIfaces = new Map();
+
+async function FetchInterfaces() {
+    try {
+        const Out = await exec(`for Dev in $( { tc qdisc show 2>/dev/null | awk '$0 ~ / root / {for(i=1;i<=NF;i++) if($i=="dev") print $(i+1)}'; ls -1 /sys/class/net 2>/dev/null; } | sort -u ); do
+  echo "$Dev" | grep -qE '${NetDeny}' && continue
+  echo "$Dev" | grep -qE '${MainInterfaceRegex}' || continue
+  tc qdisc show dev "$Dev" 2>/dev/null | grep -qE 'root|qdisc' || continue
+  echo "$Dev"
+done`);
+        return Out ? Out.split('\n').map(S => S.trim()).filter(Boolean) : [];
+    } catch {
+        return [];
+    }
+}
+
+function ClassifyInterface(Name) {
+    if (Name.startsWith('wlan') || Name.startsWith('swlan')) return { Label: Name, Icon: 'wifi' };
+    if (Name.startsWith('rmnet') || Name.startsWith('ccmni') || Name.startsWith('pdp')) return { Label: Name, Icon: 'cellular' };
+    if (Name.startsWith('rndis') || Name.startsWith('usb')) return { Label: Name, Icon: 'usb' };
+    if (Name.startsWith('eth')) return { Label: Name, Icon: 'ethernet' };
+    return { Label: Name, Icon: 'network' };
+}
+
+function RenderInterfaceChip(Target, Name, IconName) {
+    const Chip = document.createElement('button');
+    Chip.type = 'button';
+    Chip.className = 'TweakChip' + (Target === 'all' ? ' TweakChipActive' : '');
+    Chip.dataset.target = Target;
+    let SvgHtml = '';
+    if (IconName === 'wifi') SvgHtml = '<svg viewBox="0 0 24 24"><path d="M12 4C7.31 4 3.07 5.9 0 8.98L12 21 24 8.98C20.93 5.9 16.69 4 12 4z"/></svg>';
+    else if (IconName === 'cellular') SvgHtml = '<svg viewBox="0 0 24 24"><path d="M2 22h20V2z"/></svg>';
+    else if (IconName === 'all') SvgHtml = '<svg viewBox="0 0 24 24"><path d="M4 6h16v2H4zm0 5h16v2H4zm0 5h16v2H4z"/></svg>';
+    else SvgHtml = '<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/></svg>';
+    Chip.innerHTML = `${SvgHtml}<span>${Name}</span>`;
+    return Chip;
+}
 
 async function ProbeSelect(Tweak) {
     const Keys = Object.keys(Tweak.Options);
@@ -528,16 +574,9 @@ async function ProbeSelect(Tweak) {
         `tc qdisc replace dev "$D" root ${Tweak.Options[K].Spec} 2>/dev/null && echo "${K}"`
     ).join('\n');
     const Out = await exec(`command -v tc > /dev/null 2>&1 || exit 1
-D=""
-for P in /sys/class/net/*; do
-  N=\${P##*/}
-  echo "$N" | grep -qE '${NetDeny}' && continue
-  D=$N; break
-done
-[ -n "$D" ] || D="lo"
-O=$(tc qdisc show dev "$D" root 2>/dev/null | awk '{print $2; exit}')
+D="lo"
 ${Probes}
-tc qdisc replace dev "$D" root $O 2>/dev/null || tc qdisc del dev "$D" root 2>/dev/null || true`);
+tc qdisc del dev "$D" root 2>/dev/null || true`);
     const Accepted = new Set(Out.split('\n').map(S => S.trim()).filter(Boolean));
     return Keys.filter(K => Tweak.Options[K].Builtin || Accepted.has(K));
 }
@@ -568,9 +607,15 @@ async function CheckTweaks() {
             if (!Out) { Unsupported.add(ID); Log(`Check:${ID}`, 'no output - unsupported on this device'); return; }
             Log(`Check:${ID}`, Out);
             if (Tweak.Type === 'select') {
-                const Lines = Out.split('\n');
-                const Found = Object.keys(Tweak.Options).filter(K => K !== Tweak.Default && Lines.includes(K));
-                LiveState.set(ID, Found.length ? Found[0] : Tweak.Default);
+                const Lines = Out.split('\n').map(L => L.trim()).filter(Boolean);
+                const DevMap = {};
+                for (const Line of Lines) {
+                    const [Dev, Q] = Line.split(/\s+/);
+                    if (Dev && Q && Tweak.Options[Q]) DevMap[Dev] = Q;
+                }
+                const Values = Object.values(DevMap);
+                DevMap.all = Values.length && Values.every(V => V === Values[0]) ? Values[0] : (Values[0] || Tweak.Default);
+                LiveState.set(ID, DevMap);
             } else {
                 LiveState.set(ID, [].concat(Tweak.Expect).some(E => Out.includes(E)));
             }
@@ -582,8 +627,15 @@ async function CheckTweaks() {
     await Promise.all(Object.entries(Tweaks).map(async ([ID, Tweak]) => {
         if (Unsupported.has(ID)) return;
         if (Tweak.Type === 'select') {
-            try { SelectOptions.set(ID, await ProbeSelect(Tweak)); }
-            catch (Err) { Unsupported.add(ID); Log(`Support:${ID}`, `${Err || 'unsupported on this device'}`); }
+            try {
+                SelectOptions.set(ID, await ProbeSelect(Tweak));
+                if (Tweak.HasInterfaces) {
+                    SelectIfaces.set(ID, await FetchInterfaces());
+                }
+            } catch (Err) {
+                Unsupported.add(ID);
+                Log(`Support:${ID}`, `${Err || 'unsupported on this device'}`);
+            }
             return;
         }
         if (!Tweak.SupportCommand) return;
@@ -623,7 +675,27 @@ async function RenderTweaks() {
             Select.hidden = false;
             Select.id = 'Tweak-' + ID;
             Select.dataset.tweakId = ID;
+            Select.dataset.target = 'all';
+
+            const DevMap = (LiveState.get(ID) && typeof LiveState.get(ID) === 'object') ? LiveState.get(ID) : {};
+            SelectDevMaps.set(ID, DevMap);
+
+            if (Tweak.HasInterfaces) {
+                const ChipsContainer = Card.querySelector('.TweakChips');
+                const Ifaces = SelectIfaces.get(ID) || [];
+                if (ChipsContainer && Ifaces.length > 0) {
+                    ChipsContainer.hidden = false;
+                    ChipsContainer.replaceChildren();
+                    ChipsContainer.appendChild(RenderInterfaceChip('all', 'All', 'all'));
+                    for (const Dev of Ifaces) {
+                        const Info = ClassifyInterface(Dev);
+                        ChipsContainer.appendChild(RenderInterfaceChip(Dev, Info.Label, Info.Icon));
+                    }
+                }
+            }
+
             const Menu = Select.querySelector('.TweakSelectMenu');
+            Menu.replaceChildren();
             for (const Key of SelectOptions.get(ID) || []) {
                 const Item = document.createElement('button');
                 Item.type = 'button';
@@ -633,8 +705,11 @@ async function RenderTweaks() {
                 Item.querySelector('span').textContent = Tweak.Options[Key].Label;
                 Menu.appendChild(Item);
             }
-            UpdateSelectDisplay(Select, Tweak, LiveState.has(ID) ? LiveState.get(ID)
-                : (Tweak.Options[TweakState[ID]] ? TweakState[ID] : Tweak.Default));
+
+            const InitialTarget = 'all';
+            const SavedState = typeof TweakState[ID] === 'object' && TweakState[ID] !== null ? TweakState[ID] : { all: TweakState[ID] };
+            const InitialVal = DevMap[InitialTarget] || SavedState[InitialTarget] || Tweak.Default;
+            UpdateSelectDisplay(Select, Tweak, InitialVal);
             Select.classList.toggle('TweakSelectDisabled', Unsupported.has(ID));
             Container.appendChild(Card);
             continue;
@@ -647,7 +722,7 @@ async function RenderTweaks() {
     }
 }
 
-async function ApplyTweak(ID, Payload) {
+async function ApplyTweak(ID, Payload, Target = 'all') {
     const Tweak = Tweaks[ID];
     if (!Tweak) return;
     const Element = document.getElementById('Tweak-' + ID);
@@ -655,11 +730,28 @@ async function ApplyTweak(ID, Payload) {
     if (IsSelect) Element.classList.add('TweakSelectDisabled'); else Element.disabled = true;
     TweakQueue = TweakQueue.then(async () => {
         try {
-            await exec(IsSelect ? TuneNet(Tweak.Options[Payload].Spec) : Command(Payload ? Tweak.ONCommand : Tweak.OFFCommand));
+            await exec(IsSelect ? TuneNet(Tweak.Options[Payload].Spec, Target) : Command(Payload ? Tweak.ONCommand : Tweak.OFFCommand));
             if (!TweakState) TweakState = {};
-            TweakState[ID] = IsSelect ? Payload : (Payload ? 'ON' : 'OFF');
+            if (IsSelect) {
+                if (typeof TweakState[ID] !== 'object' || TweakState[ID] === null) {
+                    TweakState[ID] = {};
+                }
+                TweakState[ID][Target] = Payload;
+                const DevMap = SelectDevMaps.get(ID) || {};
+                DevMap[Target] = Payload;
+                if (Target === 'all') {
+                    for (const Dev of (SelectIfaces.get(ID) || [])) {
+                        TweakState[ID][Dev] = Payload;
+                        DevMap[Dev] = Payload;
+                    }
+                    DevMap.all = Payload;
+                }
+            } else {
+                TweakState[ID] = Payload ? 'ON' : 'OFF';
+            }
             Log('Tweaks', TweakState);
-            Toast(`${Tweak.Label || ID} > ${IsSelect ? Tweak.Options[Payload].Label : (Payload ? Tweak.ONLabel : Tweak.OFFLabel)}`);
+            const TargetLabel = Target === 'all' ? 'All' : Target;
+            Toast(`${Tweak.Label || ID}${IsSelect ? ` (${TargetLabel})` : ''} > ${IsSelect ? Tweak.Options[Payload].Label : (Payload ? Tweak.ONLabel : Tweak.OFFLabel)}`);
             const Content = JSON.stringify(TweakState).replace(/"/g, '\\"');
             exec(`echo "${Content}" > ${Core}/Tweaks.json`).catch(Err => Log('TweakSave', `${ID}: ${Err || 'state not persisted'}`));
             if (IsSelect) UpdateSelectDisplay(Element, Tweak, Payload);
@@ -762,6 +854,30 @@ function SetupEventListeners() {
     });
 
     document.addEventListener('click', Event => {
+        const Chip = Event.target.closest('.TweakChip');
+        if (Chip) {
+            const ChipsContainer = Chip.closest('.TweakChips');
+            const Card = Chip.closest('.Card');
+            if (!ChipsContainer || !Card) return;
+            for (const C of ChipsContainer.querySelectorAll('.TweakChip')) {
+                C.classList.toggle('TweakChipActive', C === Chip);
+            }
+            const Target = Chip.dataset.target;
+            const Select = Card.querySelector('.TweakSelect');
+            if (Select) {
+                Select.dataset.target = Target;
+                const TweakID = Select.dataset.tweakId;
+                const Tweak = Tweaks[TweakID];
+                if (Tweak) {
+                    const DevMap = SelectDevMaps.get(TweakID) || {};
+                    const SavedState = typeof TweakState?.[TweakID] === 'object' && TweakState?.[TweakID] !== null ? TweakState[TweakID] : {};
+                    const CurrentVal = DevMap[Target] || SavedState[Target] || (Target === 'all' ? (DevMap.all || Tweak.Default) : Tweak.Default);
+                    UpdateSelectDisplay(Select, Tweak, CurrentVal);
+                }
+            }
+            return;
+        }
+
         const Field = Event.target.closest('.TweakSelectField');
         if (Field) {
             const Select = Field.closest('.TweakSelect');
@@ -777,7 +893,8 @@ function SetupEventListeners() {
         if (Item) {
             const Select = Item.closest('.TweakSelect');
             CloseSelectMenus();
-            if (Item.dataset.value !== Select.dataset.current) ApplyTweak(Select.dataset.tweakId, Item.dataset.value);
+            const Target = Select.dataset.target || 'all';
+            if (Item.dataset.value !== Select.dataset.current) ApplyTweak(Select.dataset.tweakId, Item.dataset.value, Target);
             return;
         }
         CloseSelectMenus();
