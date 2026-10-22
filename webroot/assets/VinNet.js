@@ -491,7 +491,7 @@ const Tweaks = {
             choke: { Label: 'CHOKe', Spec: 'choke limit 1000000 min 30000 max 90000 avpkt 1000 burst 55' },
         },
         Default: 'pfifo_fast',
-        CheckCommand: `tc qdisc show 2>/dev/null | awk '$0 ~ / root / {for(i=1;i<=NF;i++) if($i=="dev" && $(i+1) ~ /${MainInterfaceRegex}/) print $(i+1), $2}'`,
+        CheckCommand: `tc qdisc show 2>/dev/null | awk '{D=""; R=0; for(i=1;i<=NF;i++){ if($i=="dev") D=$(i+1); if($i=="root") R=1 } if (D !~ /${MainInterfaceRegex}/) next; if (R) print D, $2; else if ($0 ~ / parent :/ && !(D in Seen)) { Seen[D]=1; print D, $2 }}'`,
         Warn: 'Reset after reboot',
     },
     "Wi-Fi Force Low Latency Mode": {
@@ -611,10 +611,10 @@ async function CheckTweaks() {
                 const DevMap = {};
                 for (const Line of Lines) {
                     const [Dev, Q] = Line.split(/\s+/);
-                    if (Dev && Q && Tweak.Options[Q]) DevMap[Dev] = Q;
+                    if (Dev && Q && Tweak.Options[Q] && !DevMap[Dev]) DevMap[Dev] = Q;
                 }
                 const Values = Object.values(DevMap);
-                DevMap.all = Values.length && Values.every(V => V === Values[0]) ? Values[0] : (Values[0] || Tweak.Default);
+                DevMap.all = Values[0] || '';
                 LiveState.set(ID, DevMap);
             } else {
                 LiveState.set(ID, [].concat(Tweak.Expect).some(E => Out.includes(E)));
@@ -706,16 +706,16 @@ async function RenderTweaks() {
                 Menu.appendChild(Item);
             }
 
-            const InitialTarget = 'all';
-            const SavedState = typeof TweakState[ID] === 'object' && TweakState[ID] !== null ? TweakState[ID] : { all: TweakState[ID] };
-            const InitialVal = DevMap[InitialTarget] || SavedState[InitialTarget] || Tweak.Default;
+            const InitialVal = DevMap.all || '-';
             UpdateSelectDisplay(Select, Tweak, InitialVal);
             Select.classList.toggle('TweakSelectDisabled', Unsupported.has(ID));
             Container.appendChild(Card);
             continue;
         }
         Input.id = 'Tweak-' + ID;
-        Input.checked = LiveState.has(ID) ? LiveState.get(ID) : TweakState[ID] === 'ON';
+        const Known = LiveState.has(ID);
+        Input.checked = Known ? LiveState.get(ID) : false;
+        Input.indeterminate = !Known;
         Input.disabled = Unsupported.has(ID);
         Input.dataset.tweakId = ID;
         Container.appendChild(Card);
@@ -870,8 +870,7 @@ function SetupEventListeners() {
                 const Tweak = Tweaks[TweakID];
                 if (Tweak) {
                     const DevMap = SelectDevMaps.get(TweakID) || {};
-                    const SavedState = typeof TweakState?.[TweakID] === 'object' && TweakState?.[TweakID] !== null ? TweakState[TweakID] : {};
-                    const CurrentVal = DevMap[Target] || SavedState[Target] || (Target === 'all' ? (DevMap.all || Tweak.Default) : Tweak.Default);
+                    const CurrentVal = DevMap[Target] || '-';
                     UpdateSelectDisplay(Select, Tweak, CurrentVal);
                 }
             }
