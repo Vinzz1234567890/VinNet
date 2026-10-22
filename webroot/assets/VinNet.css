@@ -475,6 +475,55 @@ img {
     color: var(--Bad);
 }
 
+.TweakChips {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 2px 0 4px;
+}
+
+.TweakChip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 12px;
+    border: 1px solid var(--out-var);
+    background: var(--surf-hi);
+    color: var(--on-surf-var);
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background-color 0.2s var(--ease-smooth),
+        border-color 0.2s var(--ease-smooth),
+        color 0.2s var(--ease-smooth),
+        transform 0.15s ease;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.TweakChip:active {
+    transform: scale(0.95);
+}
+
+.TweakChip svg {
+    width: 14px;
+    height: 14px;
+    fill: currentColor;
+    flex-shrink: 0;
+}
+
+.TweakChip.TweakChipActive {
+    background: var(--pri);
+    border-color: var(--pri);
+    color: var(--on-pri);
+    font-weight: 700;
+    box-shadow: 0 2px 10px var(--pri-mix-40);
+}
+
 .TweakSelect {
     position: relative;
     width: 100%;
