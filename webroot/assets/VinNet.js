@@ -438,9 +438,6 @@ const ResetProp = (...Args) => PropInvoker
 
 const Command = C => typeof C === 'function' ? C() : C;
 
-const NetDeny = '^(lo|dummy[0-9]*|tun[0-9]*|tap[0-9]*|ip6tnl[0-9]*|sit[0-9]*|ifb[0-9]*|veth.*|rmnet_mux[0-9]*|rmnet_ctl|rmtfs[0-9]*|radio[0-9]*|wlan0h.*|wlan0bss.*)$';
-const MainInterfaceRegex = '^(wlan[0-9]+|rmnet_data[0-1]|rmnet_ipa0|rmnet[0-1]|ccmni[0-9]+|rndis[0-9]+|usb[0-9]+|eth[0-9]+)$';
-
 const TuneNet = (Spec, Target = 'all', Ifaces = null) => {
     const Kind = Spec.split(' ')[0];
     if (Target && Target !== 'all') {
@@ -470,7 +467,7 @@ const Tweaks = {
         Type: 'select',
         HasInterfaces: true,
         Options: {
-            pfifo_fast: { Label: 'pfifo_fast', Spec: 'pfifo_fast', Builtin: true },
+            pfifo_fast: { Label: 'pfifo_fast', Spec: 'pfifo_fast' },
             fq_codel: { Label: 'fq_codel', Spec: 'fq_codel quantum 300 noecn' },
             cake: { Label: 'cake', Spec: 'cake' },
             fq: { Label: 'fq', Spec: 'fq' },
@@ -493,9 +490,13 @@ const Tweaks = {
         CheckCommand: `Found=0
 for P in /sys/class/net/*; do
   D=\${P##*/}
-  echo "$D" | grep -qE '${NetDeny}' && continue
-  echo "$D" | grep -qE '${MainInterfaceRegex}' || continue
-  F=$(cat "/sys/class/net/$D/flags" 2>/dev/null)
+  case "$D" in
+    lo|dummy*|tun*|tap*|ip6tnl*|sit*|ifb*|veth*|rmnet_mux*|rmnet_ctl|rmtfs*|radio*|wlan0h*|wlan0bss*) continue ;;
+    wlan[0-9]*|rmnet_data0|rmnet_data1|rmnet_ipa0|rmnet0|rmnet1|ccmni[0-9]*|rndis[0-9]*|usb[0-9]*|eth[0-9]*) ;;
+    *) continue ;;
+  esac
+  F=""
+  read -r F < "/sys/class/net/$D/flags" 2>/dev/null
   [ -n "$F" ] && [ $((F & 1)) -eq 1 ] || continue
   Found=1
   tc qdisc show dev "$D" 2>/dev/null | awk -v D="$D" '{R=0; for(i=1;i<=NF;i++) if($i=="root") R=1; if (R) print D, $2; else if ($0 ~ / parent :/ && !seen) { seen=1; print D, $2 }}'
@@ -539,22 +540,6 @@ let TweakQueue = Promise.resolve();
 const SelectDevMaps = new Map();
 const SelectIfaces = new Map();
 
-async function FetchInterfaces() {
-    try {
-        const Out = await exec(`for Dev in $( { tc qdisc show 2>/dev/null | awk '$0 ~ / root / {for(i=1;i<=NF;i++) if($i=="dev") print $(i+1)}'; ls -1 /sys/class/net 2>/dev/null; } | sort -u ); do
-  echo "$Dev" | grep -qE '${NetDeny}' && continue
-  echo "$Dev" | grep -qE '${MainInterfaceRegex}' || continue
-  F=$(cat "/sys/class/net/$Dev/flags" 2>/dev/null)
-  [ -n "$F" ] && [ $((F & 1)) -eq 1 ] || continue
-  tc qdisc show dev "$Dev" 2>/dev/null | grep -qE 'root|qdisc' || continue
-  echo "$Dev"
-done`);
-        return Out ? Out.split('\n').map(S => S.trim()).filter(Boolean) : [];
-    } catch {
-        return [];
-    }
-}
-
 function ClassifyInterface(Name) {
     if (Name.startsWith('wlan') || Name.startsWith('swlan')) return { Label: Name, Icon: 'wifi' };
     if (Name.startsWith('rmnet') || Name.startsWith('ccmni') || Name.startsWith('pdp')) return { Label: Name, Icon: 'cellular' };
@@ -579,17 +564,19 @@ function RenderInterfaceChip(Target, Name, IconName) {
 
 async function ProbeSelect(Tweak) {
     const Keys = Object.keys(Tweak.Options);
-    const Candidates = Keys.filter(K => !Tweak.Options[K].Builtin);
-    if (!Candidates.length) return Keys;
-    const Probes = Candidates.map(K =>
-        `tc qdisc replace dev "$D" root ${Tweak.Options[K].Spec} 2>/dev/null && echo "${K}"`
-    ).join('\n');
-    const Out = await exec(`command -v tc > /dev/null 2>&1 || exit 1
+    try {
+        const Probes = Keys.map(K =>
+            `tc qdisc replace dev "$D" root ${Tweak.Options[K].Spec} 2>/dev/null && echo "${K}"`
+        ).join('\n');
+        const Out = await exec(`command -v tc > /dev/null 2>&1 || exit 1
 D="lo"
 ${Probes}
 tc qdisc del dev "$D" root 2>/dev/null || true`);
-    const Accepted = new Set(Out.split('\n').map(S => S.trim()).filter(Boolean));
-    return Keys.filter(K => Tweak.Options[K].Builtin || Accepted.has(K));
+        const Accepted = new Set(Out.split('\n').map(S => S.trim()).filter(Boolean));
+        return Keys.filter(K => K === 'pfifo_fast' || Accepted.has(K));
+    } catch {
+        return Keys;
+    }
 }
 
 function UpdateSelectDisplay(Select, Tweak, Value) {
@@ -647,6 +634,10 @@ async function CheckTweaks() {
     const LiveState = new Map();
     const Unsupported = new Set();
     const SelectOptions = new Map();
+    const SupportTasks = new Map();
+    for (const [ID, Tweak] of Object.entries(Tweaks)) {
+        if (Tweak.Type === 'select') SupportTasks.set(ID, ProbeSelect(Tweak));
+    }
     await Promise.all(Object.entries(Tweaks).map(async ([ID, Tweak]) => {
         if (!Tweak.CheckCommand) return;
         try {
@@ -667,9 +658,10 @@ async function CheckTweaks() {
         if (Unsupported.has(ID)) return;
         if (Tweak.Type === 'select') {
             try {
-                SelectOptions.set(ID, await ProbeSelect(Tweak));
+                SelectOptions.set(ID, await SupportTasks.get(ID));
                 if (Tweak.HasInterfaces) {
-                    SelectIfaces.set(ID, await FetchInterfaces());
+                    const DevMap = LiveState.get(ID) || {};
+                    SelectIfaces.set(ID, Object.keys(DevMap).filter(Key => Key !== 'all'));
                 }
             } catch (Err) {
                 Unsupported.add(ID);
@@ -684,15 +676,12 @@ async function CheckTweaks() {
     return { LiveState, Unsupported, SelectOptions };
 }
 
-async function RenderTweaks() {
+function RenderTweakCards(State) {
     const Container = document.getElementById('PageTweaks');
     const Template = document.getElementById('TweakCardTemplate');
-    TweakState = await FetchJSON('Tweaks.json') || {};
-    if (Object.keys(TweakState).length > 0) Log('Tweaks', TweakState);
-
-    await DetectRoot();
-    await DetectProp();
-    const { LiveState, Unsupported, SelectOptions } = await CheckTweaks();
+    const LiveState = State.LiveState;
+    const Unsupported = State.Unsupported;
+    const SelectOptions = State.SelectOptions;
 
     Container.replaceChildren();
     for (const [ID, Tweak] of Object.entries(Tweaks)) {
@@ -759,6 +748,19 @@ async function RenderTweaks() {
         Input.dataset.tweakId = ID;
         Container.appendChild(Card);
     }
+}
+
+async function RenderTweaks() {
+    const StateTask = CheckTweaks();
+    const RootTask = (async () => {
+        await DetectRoot();
+        await DetectProp();
+    })();
+    TweakState = await FetchJSON('Tweaks.json') || {};
+    if (Object.keys(TweakState).length > 0) Log('Tweaks', TweakState);
+    const State = await StateTask;
+    await RootTask;
+    RenderTweakCards(State);
 }
 
 async function ApplyTweak(ID, Payload, Target = 'all') {
@@ -964,9 +966,9 @@ function InitLayout() {
 }
 
 async function Load() {
+    FetchMonitor().catch(() => { });
     await Promise.allSettled([
         LoadEnvironment(),
-        FetchMonitor(),
         LoadMetadata(),
         LoadProcessID(),
         RenderLinks(),
