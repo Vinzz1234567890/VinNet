@@ -535,7 +535,6 @@ done
     }
 };
 
-let TweakState = null;
 let TweakQueue = Promise.resolve();
 const SelectDevMaps = new Map();
 const SelectIfaces = new Map();
@@ -756,8 +755,6 @@ async function RenderTweaks() {
         await DetectRoot();
         await DetectProp();
     })();
-    TweakState = await FetchJSON('Tweaks.json') || {};
-    if (Object.keys(TweakState).length > 0) Log('Tweaks', TweakState);
     const State = await StateTask;
     await RootTask;
     RenderTweakCards(State);
@@ -772,28 +769,17 @@ async function ApplyTweak(ID, Payload, Target = 'all') {
     TweakQueue = TweakQueue.then(async () => {
         try {
             const Out = await exec(IsSelect ? TuneNet(Tweak.Options[Payload].Spec, Target, SelectIfaces.get(ID) || []) : Command(Payload ? Tweak.ONCommand : Tweak.OFFCommand));
-            if (!TweakState) TweakState = {};
             if (IsSelect) {
-                if (typeof TweakState[ID] !== 'object' || TweakState[ID] === null) {
-                    TweakState[ID] = {};
-                }
                 const Accepted = Out.split('\n').map(S => S.trim()).filter(Boolean);
                 if (Target !== 'all' && !Accepted.length) Accepted.push(Target);
-                TweakState[ID][Target] = Payload;
                 const DevMap = SelectDevMaps.get(ID) || {};
                 for (const Dev of Accepted) {
-                    TweakState[ID][Dev] = Payload;
                     DevMap[Dev] = Payload;
                 }
                 DevMap.all = ComputeAll(ID, DevMap);
-            } else {
-                TweakState[ID] = Payload ? 'ON' : 'OFF';
             }
-            Log('Tweaks', TweakState);
             const TargetLabel = Target === 'all' ? 'All' : Target;
             Toast(`${Tweak.Label || ID}${IsSelect ? ` (${TargetLabel})` : ''} > ${IsSelect ? Tweak.Options[Payload].Label : (Payload ? Tweak.ONLabel : Tweak.OFFLabel)}`);
-            const Content = JSON.stringify(TweakState).replace(/"/g, '\\"');
-            exec(`echo "${Content}" > ${Core}/Tweaks.json`).catch(Err => Log('TweakSave', `${ID}: ${Err || 'state not persisted'}`));
             if (IsSelect) {
                 const Current = Element.dataset.target || 'all';
                 const DevMap = SelectDevMaps.get(ID) || {};
