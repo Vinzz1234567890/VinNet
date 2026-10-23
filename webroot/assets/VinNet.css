@@ -302,14 +302,18 @@ img {
     height: 100%;
     object-fit: cover;
     opacity: 0;
+    animation: none;
+}
+
+#WebUI.Ready .Banner {
     animation: BannerCrossfade 15.9s infinite;
 }
 
-.Banner:nth-of-type(2) {
+#WebUI.Ready .Banner:nth-of-type(2) {
     animation-delay: -10.6s;
 }
 
-.Banner:nth-of-type(3) {
+#WebUI.Ready .Banner:nth-of-type(3) {
     animation-delay: -5.3s;
 }
 
