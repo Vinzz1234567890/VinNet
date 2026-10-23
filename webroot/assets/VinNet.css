@@ -610,6 +610,10 @@ img {
     cursor: pointer;
 }
 
+.TweakSelectItem[hidden] {
+    display: none;
+}
+
 .TweakSelectItem:active {
     background: var(--pri-mix-14);
 }
