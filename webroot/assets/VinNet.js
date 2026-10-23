@@ -284,7 +284,7 @@ function EndGesture(Commit, Element) {
 function SetupGestureListeners() {
     PagesElement.addEventListener('pointerdown', E => {
         if (E.pointerType === 'touch' || !E.isPrimary || (E.pointerType === 'mouse' && E.button !== 0)) return;
-        if (E.target.closest('.TweakChips, .TweakSelect, .TweakSelectMenu')) return;
+        if (DropdownOwnsGesture(E.target)) return;
         BeginGesture(E.clientX, E.clientY, 'pointer', E.pointerId);
     });
 
@@ -299,7 +299,7 @@ function SetupGestureListeners() {
     PagesElement.addEventListener('pointercancel', E => { if (E.pointerId === GesturePointerID) EndGesture(false, E.currentTarget); });
 
     PagesElement.addEventListener('touchstart', E => {
-        if (E.target.closest('.TweakChips, .TweakSelect, .TweakSelectMenu')) return;
+        if (DropdownOwnsGesture(E.target)) return;
         if (E.touches.length === 1) BeginGesture(E.touches[0].screenX, E.touches[0].screenY, 'touch', null);
     }, { passive: true });
 
@@ -594,6 +594,14 @@ function CloseSelectMenus() {
         Select.classList.remove('TweakSelectOpen');
         Select.querySelector('.TweakSelectMenu').hidden = true;
     }
+}
+
+function DropdownOwnsGesture(Target) {
+    const Open = document.querySelector('.TweakSelect.TweakSelectOpen');
+    if (!Open) return false;
+    if (Open.contains(Target)) return true;
+    CloseSelectMenus();
+    return false;
 }
 
 async function CheckTweaks() {
