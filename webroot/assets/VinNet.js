@@ -441,17 +441,17 @@ const Command = C => typeof C === 'function' ? C() : C;
 const NetDeny = '^(lo|dummy[0-9]*|tun[0-9]*|tap[0-9]*|ip6tnl[0-9]*|sit[0-9]*|ifb[0-9]*|veth.*|rmnet_mux[0-9]*|rmnet_ctl|rmtfs[0-9]*|radio[0-9]*|wlan0h.*|wlan0bss.*)$';
 const MainInterfaceRegex = '^(wlan[0-9]+|rmnet_data[0-1]|rmnet_ipa0|rmnet[0-1]|ccmni[0-9]+|rndis[0-9]+|usb[0-9]+|eth[0-9]+)$';
 
-const TuneNet = (Spec, Target = 'all') => {
+const TuneNet = (Spec, Target = 'all', Ifaces = null) => {
     const Kind = Spec.split(' ')[0];
     if (Target && Target !== 'all') {
-        return `tc qdisc replace dev "${Target}" root ${Spec} 2>/dev/null || { echo "interface ${Target} rejected ${Kind}" >&2; exit 1; }`;
+        return `tc qdisc replace dev "${Target}" root ${Spec} 2>/dev/null && echo "${Target}" || { echo "interface ${Target} rejected ${Kind}" >&2; exit 1; }`;
     }
+    const List = (Ifaces || []).filter(Boolean);
+    if (!List.length) return `echo "no interface available" >&2; exit 1`;
+    const Devs = List.map(Dev => `"${Dev}"`).join(' ');
     return `N=0
-for P in /sys/class/net/*; do
-  D=\${P##*/}
-  echo "$D" | grep -qE '${NetDeny}' && continue
-  echo "$D" | grep -qE '${MainInterfaceRegex}' || continue
-  tc qdisc replace dev "$D" root ${Spec} 2>/dev/null && N=$((N+1))
+for D in ${Devs}; do
+  tc qdisc replace dev "$D" root ${Spec} 2>/dev/null && { echo "$D"; N=$((N+1)); }
 done
 [ "$N" -gt 0 ] || { echo "no interface accepted ${Kind}" >&2; exit 1; }`;
 };
@@ -470,28 +470,37 @@ const Tweaks = {
         Type: 'select',
         HasInterfaces: true,
         Options: {
-            pfifo_fast: { Label: 'Default (pfifo_fast)', Spec: 'pfifo_fast', Builtin: true },
-            fq_codel: { Label: 'FQ-CoDel', Spec: 'fq_codel quantum 300 noecn' },
-            cake: { Label: 'CAKE', Spec: 'cake' },
-            fq: { Label: 'FQ', Spec: 'fq' },
-            sfq: { Label: 'SFQ', Spec: 'sfq' },
-            codel: { Label: 'CoDel', Spec: 'codel' },
-            pie: { Label: 'PIE', Spec: 'pie' },
-            fq_pie: { Label: 'FQ-PIE', Spec: 'fq_pie' },
-            prio: { Label: 'PRIO', Spec: 'prio' },
-            pfifo: { Label: 'PFIFO', Spec: 'pfifo limit 1000' },
-            bfifo: { Label: 'BFIFO', Spec: 'bfifo limit 1000000' },
-            tbf: { Label: 'TBF', Spec: 'tbf rate 1000mbit burst 100k latency 50ms' },
-            red: { Label: 'RED', Spec: 'red limit 1000000 min 30000 max 90000 avpkt 1000 burst 55' },
-            htb: { Label: 'HTB', Spec: 'htb default 1' },
-            netem: { Label: 'NETEM', Spec: 'netem' },
-            drr: { Label: 'DRR', Spec: 'drr' },
-            hhf: { Label: 'HHF', Spec: 'hhf' },
-            sfb: { Label: 'SFB', Spec: 'sfb' },
-            choke: { Label: 'CHOKe', Spec: 'choke limit 1000000 min 30000 max 90000 avpkt 1000 burst 55' },
+            pfifo_fast: { Label: 'pfifo_fast', Spec: 'pfifo_fast', Builtin: true },
+            fq_codel: { Label: 'fq_codel', Spec: 'fq_codel quantum 300 noecn' },
+            cake: { Label: 'cake', Spec: 'cake' },
+            fq: { Label: 'fq', Spec: 'fq' },
+            sfq: { Label: 'sfq', Spec: 'sfq' },
+            codel: { Label: 'codel', Spec: 'codel' },
+            pie: { Label: 'pie', Spec: 'pie' },
+            fq_pie: { Label: 'fq_pie', Spec: 'fq_pie' },
+            prio: { Label: 'prio', Spec: 'prio' },
+            pfifo: { Label: 'pfifo', Spec: 'pfifo limit 1000' },
+            bfifo: { Label: 'bfifo', Spec: 'bfifo limit 1000000' },
+            tbf: { Label: 'tbf', Spec: 'tbf rate 1000mbit burst 100k latency 50ms' },
+            red: { Label: 'red', Spec: 'red limit 1000000 min 30000 max 90000 avpkt 1000 burst 55' },
+            htb: { Label: 'htb', Spec: 'htb default 1' },
+            netem: { Label: 'netem', Spec: 'netem' },
+            drr: { Label: 'drr', Spec: 'drr' },
+            hhf: { Label: 'hhf', Spec: 'hhf' },
+            sfb: { Label: 'sfb', Spec: 'sfb' },
+            choke: { Label: 'choke', Spec: 'choke limit 1000000 min 30000 max 90000 avpkt 1000 burst 55' },
         },
-        Default: 'pfifo_fast',
-        CheckCommand: `tc qdisc show 2>/dev/null | awk '{D=""; R=0; for(i=1;i<=NF;i++){ if($i=="dev") D=$(i+1); if($i=="root") R=1 } if (D !~ /${MainInterfaceRegex}/) next; if (R) print D, $2; else if ($0 ~ / parent :/ && !(D in Seen)) { Seen[D]=1; print D, $2 }}'`,
+        CheckCommand: `Found=0
+for P in /sys/class/net/*; do
+  D=\${P##*/}
+  echo "$D" | grep -qE '${NetDeny}' && continue
+  echo "$D" | grep -qE '${MainInterfaceRegex}' || continue
+  F=$(cat "/sys/class/net/$D/flags" 2>/dev/null)
+  [ -n "$F" ] && [ $((F & 1)) -eq 1 ] || continue
+  Found=1
+  tc qdisc show dev "$D" 2>/dev/null | awk -v D="$D" '{R=0; for(i=1;i<=NF;i++) if($i=="root") R=1; if (R) print D, $2; else if ($0 ~ / parent :/ && !seen) { seen=1; print D, $2 }}'
+done
+[ "$Found" -eq 1 ] || echo "- -"`,
         Warn: 'Reset after reboot',
     },
     "Wi-Fi Force Low Latency Mode": {
@@ -535,6 +544,8 @@ async function FetchInterfaces() {
         const Out = await exec(`for Dev in $( { tc qdisc show 2>/dev/null | awk '$0 ~ / root / {for(i=1;i<=NF;i++) if($i=="dev") print $(i+1)}'; ls -1 /sys/class/net 2>/dev/null; } | sort -u ); do
   echo "$Dev" | grep -qE '${NetDeny}' && continue
   echo "$Dev" | grep -qE '${MainInterfaceRegex}' || continue
+  F=$(cat "/sys/class/net/$Dev/flags" 2>/dev/null)
+  [ -n "$F" ] && [ $((F & 1)) -eq 1 ] || continue
   tc qdisc show dev "$Dev" 2>/dev/null | grep -qE 'root|qdisc' || continue
   echo "$Dev"
 done`);
@@ -583,7 +594,8 @@ tc qdisc del dev "$D" root 2>/dev/null || true`);
 
 function UpdateSelectDisplay(Select, Tweak, Value) {
     Select.dataset.current = Value;
-    Select.querySelector('.TweakSelectValue').textContent = Tweak.Options[Value] ? Tweak.Options[Value].Label : Value;
+    const Label = Value === 'custom' ? 'Custom' : (Tweak.Options[Value] ? Tweak.Options[Value].Label : Value);
+    Select.querySelector('.TweakSelectValue').textContent = Label;
     for (const Item of Select.querySelectorAll('.TweakSelectItem')) {
         Item.classList.toggle('TweakSelectCurrent', Item.dataset.value === Value);
     }
@@ -604,6 +616,33 @@ function DropdownOwnsGesture(Target) {
     return false;
 }
 
+function SyncSelectMenu(Select) {
+    let Visible = 0;
+    for (const Item of Select.querySelectorAll('.TweakSelectItem')) {
+        Item.hidden = Item.dataset.value === Select.dataset.current;
+        if (!Item.hidden) Visible++;
+    }
+    return Visible;
+}
+
+function ComputeAll(ID, DevMap) {
+    const Ifaces = SelectIfaces.get(ID);
+    const Names = Ifaces && Ifaces.length ? Ifaces : Object.keys(DevMap).filter(Key => Key !== 'all');
+    const Values = Names.map(Name => DevMap[Name] || '');
+    if (!Values.length) return '';
+    return Values.every(Value => Value === Values[0]) ? Values[0] : 'custom';
+}
+
+function ParseSelectOutput(ID, Tweak, Out) {
+    const DevMap = {};
+    for (const Line of Out.split('\n').map(L => L.trim()).filter(Boolean)) {
+        const [Dev, Q] = Line.split(/\s+/);
+        if (Dev && Q && Tweak.Options[Q] && !DevMap[Dev]) DevMap[Dev] = Q;
+    }
+    DevMap.all = ComputeAll(ID, DevMap);
+    return DevMap;
+}
+
 async function CheckTweaks() {
     const LiveState = new Map();
     const Unsupported = new Set();
@@ -615,15 +654,7 @@ async function CheckTweaks() {
             if (!Out) { Unsupported.add(ID); Log(`Check:${ID}`, 'no output - unsupported on this device'); return; }
             Log(`Check:${ID}`, Out);
             if (Tweak.Type === 'select') {
-                const Lines = Out.split('\n').map(L => L.trim()).filter(Boolean);
-                const DevMap = {};
-                for (const Line of Lines) {
-                    const [Dev, Q] = Line.split(/\s+/);
-                    if (Dev && Q && Tweak.Options[Q] && !DevMap[Dev]) DevMap[Dev] = Q;
-                }
-                const Values = Object.values(DevMap);
-                DevMap.all = Values[0] || '';
-                LiveState.set(ID, DevMap);
+                LiveState.set(ID, ParseSelectOutput(ID, Tweak, Out));
             } else {
                 LiveState.set(ID, [].concat(Tweak.Expect).some(E => Out.includes(E)));
             }
@@ -738,22 +769,21 @@ async function ApplyTweak(ID, Payload, Target = 'all') {
     if (IsSelect) Element.classList.add('TweakSelectDisabled'); else Element.disabled = true;
     TweakQueue = TweakQueue.then(async () => {
         try {
-            await exec(IsSelect ? TuneNet(Tweak.Options[Payload].Spec, Target) : Command(Payload ? Tweak.ONCommand : Tweak.OFFCommand));
+            const Out = await exec(IsSelect ? TuneNet(Tweak.Options[Payload].Spec, Target, SelectIfaces.get(ID) || []) : Command(Payload ? Tweak.ONCommand : Tweak.OFFCommand));
             if (!TweakState) TweakState = {};
             if (IsSelect) {
                 if (typeof TweakState[ID] !== 'object' || TweakState[ID] === null) {
                     TweakState[ID] = {};
                 }
+                const Accepted = Out.split('\n').map(S => S.trim()).filter(Boolean);
+                if (Target !== 'all' && !Accepted.length) Accepted.push(Target);
                 TweakState[ID][Target] = Payload;
                 const DevMap = SelectDevMaps.get(ID) || {};
-                DevMap[Target] = Payload;
-                if (Target === 'all') {
-                    for (const Dev of (SelectIfaces.get(ID) || [])) {
-                        TweakState[ID][Dev] = Payload;
-                        DevMap[Dev] = Payload;
-                    }
-                    DevMap.all = Payload;
+                for (const Dev of Accepted) {
+                    TweakState[ID][Dev] = Payload;
+                    DevMap[Dev] = Payload;
                 }
+                DevMap.all = ComputeAll(ID, DevMap);
             } else {
                 TweakState[ID] = Payload ? 'ON' : 'OFF';
             }
@@ -762,7 +792,11 @@ async function ApplyTweak(ID, Payload, Target = 'all') {
             Toast(`${Tweak.Label || ID}${IsSelect ? ` (${TargetLabel})` : ''} > ${IsSelect ? Tweak.Options[Payload].Label : (Payload ? Tweak.ONLabel : Tweak.OFFLabel)}`);
             const Content = JSON.stringify(TweakState).replace(/"/g, '\\"');
             exec(`echo "${Content}" > ${Core}/Tweaks.json`).catch(Err => Log('TweakSave', `${ID}: ${Err || 'state not persisted'}`));
-            if (IsSelect) UpdateSelectDisplay(Element, Tweak, Payload);
+            if (IsSelect) {
+                const Current = Element.dataset.target || 'all';
+                const DevMap = SelectDevMaps.get(ID) || {};
+                UpdateSelectDisplay(Element, Tweak, DevMap[Current] || '-');
+            }
         } catch (Err) {
             Log('TweakFail', `${ID}: ${Err || 'unknown error'}`);
             Toast('Unable to apply tweak');
@@ -890,7 +924,7 @@ function SetupEventListeners() {
             const Select = Field.closest('.TweakSelect');
             const WillOpen = !Select.classList.contains('TweakSelectOpen');
             CloseSelectMenus();
-            if (WillOpen) {
+            if (WillOpen && SyncSelectMenu(Select)) {
                 Select.classList.add('TweakSelectOpen');
                 Select.querySelector('.TweakSelectMenu').hidden = false;
             }
