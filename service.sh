@@ -57,35 +57,37 @@ Write() {
 }
 
 Diagnose() {
-    local ABI Arch="Unsupported" DmesgLines WifiLines Pending="$Core/.Diagnose.tmp"
+    local ABI Arch="Unsupported" DmesgLines WifiLines Pending="$Core/.Diagnose.tmp" Stamp BinPath
     ABI=$(resetprop ro.product.cpu.abi)
     case "$ABI" in arm64*) Arch="Supported (arm64)" ;; armeabi*) Arch="Supported (arm)" ;; esac
+    Stamp=$(date +%T)
 
     {
-        echo "[$(date +%T)] Diagnose: ABI=$ABI Architecture=$Arch"
+        echo "[$Stamp] Diagnose: ABI=$ABI Architecture=$Arch"
         for Bin in ping awk tc resetprop; do
-            if command -v "$Bin" > /dev/null 2>&1; then
-                echo "[$(date +%T)] Diagnose: $Bin found at $(command -v "$Bin")"
+            BinPath=$(command -v "$Bin" 2> /dev/null)
+            if [ -n "$BinPath" ]; then
+                echo "[$Stamp] Diagnose: $Bin found at $BinPath"
             else
-                echo "[$(date +%T)] Diagnose: $Bin MISSING"
+                echo "[$Stamp] Diagnose: $Bin MISSING"
             fi
         done
         if ProbeWrite "$Core"; then
-            echo "[$(date +%T)] Diagnose: $Core writable"
+            echo "[$Stamp] Diagnose: $Core writable"
         else
-            echo "[$(date +%T)] Diagnose: $Core NOT writable"
-            echo "[$(date +%T)] Diagnose: mount -- $(mount 2> /dev/null | grep -E ' /data |modules' | tr '\n' ' ')"
+            echo "[$Stamp] Diagnose: $Core NOT writable"
+            echo "[$Stamp] Diagnose: mount -- $(mount 2> /dev/null | grep -E ' /data |modules' | tr '\n' ' ')"
         fi
         DmesgLines=$(dmesg 2> /dev/null | grep -iE "f2fs|erofs|remount" | tail -5)
         if [ -n "$DmesgLines" ]; then
             printf '%s\n' "$DmesgLines" | while IFS= read -r Line; do
-                [ -n "$Line" ] && echo "[$(date +%T)] Diagnose: dmesg -- $Line"
+                [ -n "$Line" ] && echo "[$Stamp] Diagnose: dmesg -- $Line"
             done
         fi
         WifiLines=$(dumpsys wifi 2> /dev/null | grep -E 'Wi-Fi is|Dump of ClientModeImpl|curState=|Supplicant state|mPowerSaveDisableRequests' | head -20)
         if [ -n "$WifiLines" ]; then
             printf '%s\n' "$WifiLines" | while IFS= read -r Line; do
-                [ -n "$Line" ] && echo "[$(date +%T)] Diagnose: wifi -- $Line"
+                [ -n "$Line" ] && echo "[$Stamp] Diagnose: wifi -- $Line"
             done
         fi
     } > "$Pending" 2> /dev/null
@@ -148,9 +150,12 @@ LastLatency="x" LastJitter="x" LastMonitorWrite=0 FailCount=0
 Monitor() {
     local Timestamp="$1" Output Latency Jitter Host RawOutput="" LastError=""
 
-    for Host in 8.8.8.8 1.1.1.1 8.8.4.4 1.0.0.1; do
-        Output=$(ping -c 1 -W 1 -w 1 "$Host" 2>&1)
-        [ $? -eq 0 ] && RawOutput="$RawOutput $Output" || LastError="$Output"
+    for Host in 1.1.1.1 1.0.0.1; do
+        Output=$(ping -c 1 -W 1 "$Host" 2>&1)
+        case "$Output" in
+            *"time="*) RawOutput="$RawOutput$Output"$'\n' ;;
+            *) LastError="$Output" ;;
+        esac
     done
 
     if [ -n "$RawOutput" ]; then
@@ -192,7 +197,7 @@ WebUIActive() {
     local MTime
     MTime=$(date -r "$ProcessID" +%s 2> /dev/null)
     [ -n "$MTime" ] || return 1
-    [ $(($(date +%s) - MTime)) -le 12 ]
+    [ $(($1 - MTime)) -le 12 ]
 }
 
 Diagnose
@@ -216,7 +221,7 @@ while true; do
     [ -s "$ProcessID" ] || ProcessID
     [ -f "$Metadata" ] || Metadata
     [ -f "$Environment" ] || Environment
-    if WebUIActive; then
+    if WebUIActive "$Now"; then
         Monitor "$Now"
         sleep 4
     else
