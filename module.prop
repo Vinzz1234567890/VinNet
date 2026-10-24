@@ -1,8 +1,8 @@
 id=VinNet
 name=VinNet
-version=1.2.2-Fless
-versionCode=20261011
+version=1.2.3-Gatom
+versionCode=20261024
 author=Vinzz
 description=Simple Implementation of Network Optimization
-webuiIcon=webroot/assets/VinNetBanner1.webp
+webuiIcon=webroot/assets/VinNetBanner3.webp
 updateJson=https://raw.githubusercontent.com/Vinzz1234567890/VinNet/refs/heads/main/update.json
