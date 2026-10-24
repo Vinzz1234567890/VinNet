@@ -20,6 +20,7 @@ Log() {
         return 1
     }
 }
+
 ProbeWrite() { : > "$1/.WriteProbe" 2> /dev/null && rm -f "$1/.WriteProbe"; }
 
 if [ -f "$LogPath" ] && [ "$(wc -c < "$LogPath" 2> /dev/null)" -gt 131072 ]; then
@@ -38,9 +39,7 @@ CoreWritable=1
 
 Write() {
     [ "$CoreWritable" -eq 0 ] && return 1
-    local Destination="$1"
-    local Temporary="${Destination}.tmp.$$"
-    local ErrorOutput
+    local Destination="$1" Temporary="${Destination}.tmp.$$" ErrorOutput
     ErrorOutput=$({ printf '%s\n' "$2" > "$Temporary" && mv -f "$Temporary" "$Destination"; } 2>&1)
     [ $? -eq 0 ] && return 0
 
@@ -65,11 +64,7 @@ Diagnose() {
         echo "[$Stamp] Diagnose: module=$(sed -n 's/^version=//p' "$Identity" 2> /dev/null)"
         for Bin in ping awk tc resetprop; do
             BinPath=$(command -v "$Bin" 2> /dev/null)
-            if [ -n "$BinPath" ]; then
-                echo "[$Stamp] Diagnose: $Bin found at $BinPath"
-            else
-                echo "[$Stamp] Diagnose: $Bin MISSING"
-            fi
+            [ -n "$BinPath" ] && echo "[$Stamp] Diagnose: $Bin found at $BinPath" || echo "[$Stamp] Diagnose: $Bin MISSING"
         done
         if ProbeWrite "$Core"; then
             echo "[$Stamp] Diagnose: $Core writable"
@@ -78,31 +73,20 @@ Diagnose() {
             echo "[$Stamp] Diagnose: mount -- $(mount 2> /dev/null | grep -E ' /data |modules' | tr '\n' ' ')"
         fi
         DmesgLines=$(dmesg 2> /dev/null | grep -iE "f2fs|erofs|remount" | tail -5)
-        if [ -n "$DmesgLines" ]; then
-            printf '%s\n' "$DmesgLines" | while IFS= read -r Line; do
-                [ -n "$Line" ] && echo "[$Stamp] Diagnose: dmesg -- $Line"
-            done
-        fi
+        [ -n "$DmesgLines" ] && printf '%s\n' "$DmesgLines" | while IFS= read -r Line; do [ -n "$Line" ] && echo "[$Stamp] Diagnose: dmesg -- $Line"; done
         WifiLines=$(dumpsys wifi 2> /dev/null | grep -E 'Wi-Fi is|Dump of ClientModeImpl|curState=|Supplicant state|mPowerSaveDisableRequests' | head -20)
-        if [ -n "$WifiLines" ]; then
-            printf '%s\n' "$WifiLines" | while IFS= read -r Line; do
-                [ -n "$Line" ] && echo "[$Stamp] Diagnose: wifi -- $Line"
-            done
-        fi
+        [ -n "$WifiLines" ] && printf '%s\n' "$WifiLines" | while IFS= read -r Line; do [ -n "$Line" ] && echo "[$Stamp] Diagnose: wifi -- $Line"; done
     } > "$Pending" 2> /dev/null
 
     FlushDiagnose
 }
 
 FlushDiagnose() {
-    local Pending="$Core/.Diagnose.tmp" ExistingLines
+    local Pending="$Core/.Diagnose.tmp" ExistingLines=""
     [ -f "$Pending" ] || return 0
     [ -w "${LogPath%/*}" ] || return 1
 
-    ExistingLines=""
-    if [ -f "$LogPath" ]; then
-        ExistingLines=$(grep -v "Diagnose:" "$LogPath" 2> /dev/null | grep -vE '^\s*\[\s*[0-9]+\.[0-9]+\]')
-    fi
+    [ -f "$LogPath" ] && ExistingLines=$(grep -v "Diagnose:" "$LogPath" 2> /dev/null | grep -vE '^\s*\[\s*[0-9]+\.[0-9]+\]')
 
     {
         cat "$Pending"
