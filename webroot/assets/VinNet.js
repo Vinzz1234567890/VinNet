@@ -29,40 +29,31 @@ function exec(cmd) {
 let LogQueue = Promise.resolve();
 const Log = (Tag, Data) => {
     if (Data == null) return;
-    const Content = (typeof Data === 'string'
-        ? Data
-        : JSON.stringify(Data, (K, V) => K === 'Timestamp' ? undefined : V))
-        .replace(/\r?\n/g, ' | ');
+    const Content = (typeof Data === 'string' ? Data : JSON.stringify(Data, (K, V) => K === 'Timestamp' ? undefined : V)).replace(/\r?\n/g, ' | ');
     if (!Content) return;
-    const TagSafe = Tag.replace(/'/g, "'\\''");
-    const Safe = Content.replace(/'/g, "'\\''");
+    const TagSafe = Tag.replace(/'/g, "'\\''"), Safe = Content.replace(/'/g, "'\\''");
     LogQueue = LogQueue.then(() => exec(
         `F='${LogFile}'; T="$F.tmp.$$"; { grep -vF '] ${TagSafe}: ${Safe}' "$F" 2>/dev/null; printf '[%s] %s: %s\\n' "$(date '+%F %T')" '${TagSafe}' '${Safe}'; } > "$T" 2>/dev/null && mv -f "$T" "$F" 2>/dev/null || rm -f "$T"`
     )).catch(() => { });
 };
 
 addEventListener('error', Event => {
-    const Target = Event.target;
-    const Source = Event.filename || (Target && Target.src) || 'unknown';
-    const Stack = Event.error && Event.error.stack ? `\n${Event.error.stack}` : '';
+    const Target = Event.target, Source = Event.filename || Target?.src || 'unknown';
+    const Stack = Event.error?.stack ? `\n${Event.error.stack}` : '';
     Log('Error:window', `${Event.message || 'resource error'} @ ${Source}:${Event.lineno || 0}:${Event.colno || 0}${Stack}`);
 });
 
 addEventListener('unhandledrejection', Event => {
     const Reason = Event.reason;
-    Log('Error:promise', `${Reason && Reason.stack ? Reason.stack : Reason || 'unknown'}`);
+    Log('Error:promise', `${Reason?.stack || Reason || 'unknown'}`);
 });
 
 async function FetchJSON(File) {
     let Raw = '';
     try { Raw = await exec(`cat ${Core}/${File} 2>/dev/null`); } catch { return null; }
     if (!Raw) return null;
-    try {
-        return JSON.parse(Raw);
-    } catch (Err) {
-        Log(`JSON:${File}`, `${Err || 'parse failed'} | ${Raw.slice(0, 200)}`);
-        return null;
-    }
+    try { return JSON.parse(Raw); }
+    catch (Err) { Log(`JSON:${File}`, `${Err || 'parse failed'} | ${Raw.slice(0, 200)}`); return null; }
 }
 
 function ParseKV(Raw, Lowercase) {
@@ -78,9 +69,7 @@ let Root = '', RootReady = null;
 const RootCommand = 'command -v ksud >/dev/null 2>&1 && echo KernelSU || (command -v apd >/dev/null 2>&1 && echo APatch || (command -v magisk >/dev/null 2>&1 && echo Magisk || echo Unknown))';
 
 const DetectRoot = () => {
-    if (!RootReady) RootReady = exec(RootCommand).then(Name => {
-        Root = Root || Name || 'Unknown';
-    }, Err => { Log('Root', `${RootCommand} | ${Err || 'failed'}`); });
+    if (!RootReady) RootReady = exec(RootCommand).then(Name => { Root = Root || Name || 'Unknown'; }, Err => { Log('Root', `${RootCommand} | ${Err || 'failed'}`); });
     return RootReady;
 };
 
@@ -132,8 +121,7 @@ const PageWidth = () => PagesElement.clientWidth || 0;
 
 const CommitRatio = 0.22, CommitMaxPx = 96, CommitMinPx = 64, EdgeResistance = 3;
 
-let CurrentPageID = PageList[0];
-let CurrentPageIndex = 0;
+let CurrentPageID = PageList[0], CurrentPageIndex = 0;
 let DragOffset = 0, PendingOffset = 0, DragFrameID = 0, Dragging = false;
 let GestureAxis = null, GestureKind = null, GestureStartX = 0, GestureStartY = 0, GesturePointerID = null;
 
@@ -186,8 +174,7 @@ function UpdateHeader(Meta) {
 function SetActivePage(ID) {
     const Index = PageList.indexOf(ID);
     if (Index === -1 || ID === CurrentPageID) return;
-    CurrentPageID = ID;
-    CurrentPageIndex = Index;
+    CurrentPageID = ID; CurrentPageIndex = Index;
     RenderPages();
     SyncPageAttributes();
     if (!NavigationButtons) {
@@ -406,8 +393,7 @@ async function FetchMonitor() {
             let Jitter = 0;
             for (let I = 1; I < Matches.length; I++) Jitter += Math.abs(Matches[I] - Matches[I - 1]);
             Jitter = Matches.length > 1 ? Math.round(Jitter / (Matches.length - 1)) : 0;
-            const LiveMetrics = { Latency, Jitter };
-            ApplyMonitor(LiveMetrics);
+            ApplyMonitor({ Latency, Jitter });
             return;
         }
         Log('MonitorFail', `no time samples | ${Output.slice(0, 200)}`);
@@ -437,11 +423,7 @@ const TuneNet = (Spec, Target = 'all', Ifaces = null) => {
     const List = (Ifaces || []).filter(Boolean);
     if (!List.length) return `echo "no interface available" >&2; exit 1`;
     const Devs = List.map(Dev => `"${Dev}"`).join(' ');
-    return `N=0
-for D in ${Devs}; do
-  tc qdisc replace dev "$D" root ${Spec} 2>/dev/null && { echo "$D"; N=$((N+1)); }
-done
-[ "$N" -gt 0 ] || { echo "no interface accepted ${Kind}" >&2; exit 1; }`;
+    return `N=0\nfor D in ${Devs}; do\n  tc qdisc replace dev "$D" root ${Spec} 2>/dev/null && { echo "$D"; N=$((N+1)); }\ndone\n[ "$N" -gt 0 ] || { echo "no interface accepted ${Kind}" >&2; exit 1; }`;
 };
 
 const Tweaks = {
@@ -455,8 +437,7 @@ const Tweaks = {
     "QDISC": {
         Label: 'Optimize QDISC', Icon: 'QDISC',
         Description: 'Split data traffic into multiple paths and prioritize small data packets so they aren\'t held up by large data packets.',
-        Type: 'select',
-        HasInterfaces: true,
+        Type: 'select', HasInterfaces: true,
         Options: {
             pfifo_fast: { Label: 'pfifo_fast', Spec: 'pfifo_fast' },
             fq_codel: { Label: 'fq_codel', Spec: 'fq_codel quantum 300 noecn' },
@@ -478,21 +459,7 @@ const Tweaks = {
             sfb: { Label: 'sfb', Spec: 'sfb' },
             choke: { Label: 'choke', Spec: 'choke limit 1000000 min 30000 max 90000 avpkt 1000 burst 55' },
         },
-        CheckCommand: `Found=0
-for P in /sys/class/net/*; do
-  D=\${P##*/}
-  case "$D" in
-    lo|dummy*|tun*|tap*|ip6tnl*|sit*|ifb*|veth*|rmnet_mux*|rmnet_ctl|rmtfs*|radio*|wlan0h*|wlan0bss*) continue ;;
-    wlan[0-9]*|rmnet_data0|rmnet_data1|rmnet_ipa0|rmnet0|rmnet1|ccmni[0-9]*|rndis[0-9]*|usb[0-9]*|eth[0-9]*) ;;
-    *) continue ;;
-  esac
-  F=""
-  read -r F < "/sys/class/net/$D/flags" 2>/dev/null
-  [ -n "$F" ] && [ $((F & 1)) -eq 1 ] || continue
-  Found=1
-  tc qdisc show dev "$D" 2>/dev/null | awk -v D="$D" '{R=0; for(i=1;i<=NF;i++) if($i=="root") R=1; if (R) print D, $2; else if ($0 ~ / parent :/ && !seen) { seen=1; print D, $2 }}'
-done
-[ "$Found" -eq 1 ] || echo "- -"`,
+        CheckCommand: `Found=0\nfor P in /sys/class/net/*; do\n  D=\${P##*/}\n  case "$D" in\n    lo|dummy*|tun*|tap*|ip6tnl*|sit*|ifb*|veth*|rmnet_mux*|rmnet_ctl|rmtfs*|radio*|wlan0h*|wlan0bss*) continue ;;\n    wlan[0-9]*|rmnet_data0|rmnet_data1|rmnet_ipa0|rmnet0|rmnet1|ccmni[0-9]*|rndis[0-9]*|usb[0-9]*|eth[0-9]*) ;;\n    *) continue ;;\n  esac\n  F=""\n  read -r F < "/sys/class/net/$D/flags" 2>/dev/null\n  [ -n "$F" ] && [ $((F & 1)) -eq 1 ] || continue\n  Found=1\n  tc qdisc show dev "$D" 2>/dev/null | awk -v D="$D" '{R=0; for(i=1;i<=NF;i++) if($i=="root") R=1; if (R) print D, $2; else if ($0 ~ / parent :/ && !seen) { seen=1; print D, $2 }}'\ndone\n[ "$Found" -eq 1 ] || echo "- -"`,
         Warn: 'Reset after reboot',
     },
     "Wi-Fi Force Low Latency Mode": {
@@ -527,8 +494,7 @@ done
 };
 
 let TweakQueue = Promise.resolve();
-const SelectDevMaps = new Map();
-const SelectIfaces = new Map();
+const SelectDevMaps = new Map(), SelectIfaces = new Map();
 
 function ClassifyInterface(Name) {
     if (Name.startsWith('wlan') || Name.startsWith('swlan')) return { Label: Name, Icon: 'wifi' };
@@ -555,13 +521,8 @@ function RenderInterfaceChip(Target, Name, IconName) {
 async function ProbeSelect(Tweak) {
     const Keys = Object.keys(Tweak.Options);
     try {
-        const Probes = Keys.map(K =>
-            `tc qdisc replace dev "$D" root ${Tweak.Options[K].Spec} 2>/dev/null && echo "${K}"`
-        ).join('\n');
-        const Out = await exec(`command -v tc > /dev/null 2>&1 || exit 1
-D="lo"
-${Probes}
-tc qdisc del dev "$D" root 2>/dev/null || true`);
+        const Probes = Keys.map(K => `tc qdisc replace dev "$D" root ${Tweak.Options[K].Spec} 2>/dev/null && echo "${K}"`).join('\n');
+        const Out = await exec(`command -v tc > /dev/null 2>&1 || exit 1\nD="lo"\n${Probes}\ntc qdisc del dev "$D" root 2>/dev/null || true`);
         const Accepted = new Set(Out.split('\n').map(S => S.trim()).filter(Boolean));
         return Keys.filter(K => K === 'pfifo_fast' || Accepted.has(K));
     } catch (Err) {
@@ -622,10 +583,7 @@ function ParseSelectOutput(ID, Tweak, Out) {
 }
 
 async function CheckTweaks() {
-    const LiveState = new Map();
-    const Unsupported = new Set();
-    const SelectOptions = new Map();
-    const SupportTasks = new Map();
+    const LiveState = new Map(), Unsupported = new Set(), SelectOptions = new Map(), SupportTasks = new Map();
     for (const [ID, Tweak] of Object.entries(Tweaks)) {
         if (Tweak.Type === 'select') SupportTasks.set(ID, ProbeSelect(Tweak));
     }
@@ -635,11 +593,8 @@ async function CheckTweaks() {
         try {
             const Out = await exec(Cmd);
             if (!Out) { Unsupported.add(ID); Log(`Check:${ID}`, `no output | cmd=${Cmd}`); return; }
-            if (Tweak.Type === 'select') {
-                LiveState.set(ID, ParseSelectOutput(ID, Tweak, Out));
-            } else {
-                LiveState.set(ID, [].concat(Tweak.Expect).some(E => Out.includes(E)));
-            }
+            if (Tweak.Type === 'select') LiveState.set(ID, ParseSelectOutput(ID, Tweak, Out));
+            else LiveState.set(ID, [].concat(Tweak.Expect).some(E => Out.includes(E)));
         } catch (Err) {
             Unsupported.add(ID);
             Log(`Check:${ID}`, `cmd=${Cmd} | ${Err || 'unknown error'}`);
@@ -671,9 +626,7 @@ async function CheckTweaks() {
 function RenderTweakCards(State) {
     const Container = document.getElementById('PageTweaks');
     const Template = document.getElementById('TweakCardTemplate');
-    const LiveState = State.LiveState;
-    const Unsupported = State.Unsupported;
-    const SelectOptions = State.SelectOptions;
+    const { LiveState, Unsupported, SelectOptions } = State;
 
     Container.replaceChildren();
     for (const [ID, Tweak] of Object.entries(Tweaks)) {
@@ -726,8 +679,7 @@ function RenderTweakCards(State) {
                 Menu.appendChild(Item);
             }
 
-            const InitialVal = DevMap.all || '-';
-            UpdateSelectDisplay(Select, Tweak, InitialVal);
+            UpdateSelectDisplay(Select, Tweak, DevMap.all || '-');
             Select.classList.toggle('TweakSelectDisabled', Unsupported.has(ID));
             Container.appendChild(Card);
             continue;
@@ -759,9 +711,7 @@ async function ApplyTweak(ID, Payload, Target = 'all') {
                 const Accepted = Out.split('\n').map(S => S.trim()).filter(Boolean);
                 if (Target !== 'all' && !Accepted.length) Accepted.push(Target);
                 const DevMap = SelectDevMaps.get(ID) || {};
-                for (const Dev of Accepted) {
-                    DevMap[Dev] = Payload;
-                }
+                for (const Dev of Accepted) DevMap[Dev] = Payload;
                 DevMap.all = ComputeAll(ID, DevMap);
             }
             const TargetLabel = Target === 'all' ? 'All' : Target;
@@ -876,22 +826,16 @@ function SetupEventListeners() {
     document.addEventListener('click', Event => {
         const Chip = Event.target.closest('.TweakChip');
         if (Chip) {
-            const ChipsContainer = Chip.closest('.TweakChips');
-            const Card = Chip.closest('.Card');
+            const ChipsContainer = Chip.closest('.TweakChips'), Card = Chip.closest('.Card');
             if (!ChipsContainer || !Card) return;
-            for (const C of ChipsContainer.querySelectorAll('.TweakChip')) {
-                C.classList.toggle('TweakChipActive', C === Chip);
-            }
-            const Target = Chip.dataset.target;
-            const Select = Card.querySelector('.TweakSelect');
+            for (const C of ChipsContainer.querySelectorAll('.TweakChip')) C.classList.toggle('TweakChipActive', C === Chip);
+            const Target = Chip.dataset.target, Select = Card.querySelector('.TweakSelect');
             if (Select) {
                 Select.dataset.target = Target;
-                const TweakID = Select.dataset.tweakId;
-                const Tweak = Tweaks[TweakID];
+                const TweakID = Select.dataset.tweakId, Tweak = Tweaks[TweakID];
                 if (Tweak) {
                     const DevMap = SelectDevMaps.get(TweakID) || {};
-                    const CurrentVal = DevMap[Target] || '-';
-                    UpdateSelectDisplay(Select, Tweak, CurrentVal);
+                    UpdateSelectDisplay(Select, Tweak, DevMap[Target] || '-');
                 }
             }
             return;
@@ -899,8 +843,7 @@ function SetupEventListeners() {
 
         const Field = Event.target.closest('.TweakSelectField');
         if (Field) {
-            const Select = Field.closest('.TweakSelect');
-            const WillOpen = !Select.classList.contains('TweakSelectOpen');
+            const Select = Field.closest('.TweakSelect'), WillOpen = !Select.classList.contains('TweakSelectOpen');
             CloseSelectMenus();
             if (WillOpen && SyncSelectMenu(Select)) {
                 Select.classList.add('TweakSelectOpen');
@@ -928,8 +871,7 @@ function SetupEventListeners() {
     });
 
     document.addEventListener('visibilitychange', () => {
-        if (document.hidden) StopLiveTicker();
-        else StartLiveTicker();
+        if (document.hidden) StopLiveTicker(); else StartLiveTicker();
     });
 }
 
@@ -955,7 +897,7 @@ async function Load() {
     ]);
     for (const Result of Results) {
         if (Result.status === 'rejected') {
-            Log('Load', `${Result.reason && Result.reason.stack ? Result.reason.stack : Result.reason || 'failed'}`);
+            Log('Load', `${Result.reason?.stack || Result.reason || 'failed'}`);
         }
     }
 
@@ -972,11 +914,8 @@ async function Load() {
 function Boot() {
     InitLayout();
     SetupEventListeners();
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', () => setTimeout(Load, 100));
-    } else {
-        setTimeout(Load, 100);
-    }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => setTimeout(Load, 100));
+    else setTimeout(Load, 100);
 }
 
 Boot();
