@@ -14,8 +14,8 @@
 
     --pri: #AACAE9;
     --on-pri: #10334C;
-    --pri-mix-40: color-mix(in srgb, var(--pri) 40%, transparent);
-    --pri-mix-14: color-mix(in srgb, var(--pri) 14%, transparent);
+    --pri-mix-40: rgb(170 202 233 / 0.4);
+    --pri-mix-14: rgb(170 202 233 / 0.14);
 
     --bg: #1C1B1F;
     --surf-lo: #1C1B1F;
@@ -59,7 +59,6 @@ body {
 
 img {
     -webkit-user-drag: none;
-    user-drag: none;
     pointer-events: none;
 }
 
@@ -254,7 +253,7 @@ img {
     height: 22px;
     fill: var(--on-surf-var);
     transition: fill 0.25s, transform 0.42s var(--spring);
-    will-change: fill, transform;
+    will-change: transform;
 }
 
 .NavigationBarActive svg {
@@ -680,7 +679,7 @@ img {
     transform: translateY(-50%) translateX(0) scale(1);
     pointer-events: none;
     transition: transform 0.25s var(--spring), background-color 0.2s;
-    will-change: transform, background-color;
+    will-change: transform;
 }
 
 .Switch:has(input:disabled) .SwitchTrack {
