@@ -6,14 +6,19 @@ ModuleDirectory="${0%/*}"
 Core="/data/adb/VinNet"
 LogPath="/storage/emulated/0/Download/VinNet.log"
 
-LastLog=""
 Log() {
-    local Tag="$1" Message="$2"
+    local Tag="$1" Message="$2" Temp
     [ -n "$Message" ] || return 0
-    [ "$Tag: $Message" = "$LastLog" ] && return 0
+    Message=$(printf '%s' "$Message" | tr '\n' ' ')
     [ -w "${LogPath%/*}" ] || return 1
-    printf '[%s] %s: %s\n' "$(date '+%F %T')" "$Tag" "$Message" >> "$LogPath" 2> /dev/null || return 1
-    LastLog="$Tag: $Message"
+    Temp="$LogPath.tmp.$$"
+    {
+        grep -vF "] $Tag: $Message" "$LogPath" 2> /dev/null
+        printf '[%s] %s: %s\n' "$(date '+%F %T')" "$Tag" "$Message"
+    } > "$Temp" 2> /dev/null && mv -f "$Temp" "$LogPath" 2> /dev/null || {
+        rm -f "$Temp"
+        return 1
+    }
 }
 ProbeWrite() { : > "$1/.WriteProbe" 2> /dev/null && rm -f "$1/.WriteProbe"; }
 
@@ -212,14 +217,12 @@ Environment
 while true; do
     Now=$(date +%s)
     [ -d "$Core" ] || mkdir -p "$Core" 2> /dev/null
-    FlushDiagnose
+    [ -f "$Core/.Diagnose.tmp" ] && FlushDiagnose
     [ -s "$ProcessID" ] || ProcessID
     [ -f "$Metadata" ] || Metadata
     [ -f "$Environment" ] || Environment
     if WebUIActive "$Now"; then
         Monitor "$Now"
-        sleep 4
-    else
-        sleep 5
     fi
+    sleep 5
 done
