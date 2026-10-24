@@ -429,8 +429,6 @@ function StopLiveTicker() {
     if (LiveTickInterval) { clearInterval(LiveTickInterval); LiveTickInterval = null; }
 }
 
-const Command = C => typeof C === 'function' ? C() : C;
-
 const TuneNet = (Spec, Target = 'all', Ifaces = null) => {
     const Kind = Spec.split(' ')[0];
     if (Target && Target !== 'all') {
@@ -633,7 +631,7 @@ async function CheckTweaks() {
     }
     await Promise.all(Object.entries(Tweaks).map(async ([ID, Tweak]) => {
         if (!Tweak.CheckCommand) return;
-        const Cmd = Command(Tweak.CheckCommand);
+        const Cmd = Tweak.CheckCommand;
         try {
             const Out = await exec(Cmd);
             if (!Out) { Unsupported.add(ID); Log(`Check:${ID}`, `no output | cmd=${Cmd}`); return; }
@@ -663,7 +661,7 @@ async function CheckTweaks() {
             return;
         }
         if (!Tweak.SupportCommand) return;
-        const Cmd = Command(Tweak.SupportCommand);
+        const Cmd = Tweak.SupportCommand;
         try { await exec(Cmd); }
         catch (Err) { Unsupported.add(ID); Log(`Support:${ID}`, `cmd=${Cmd} | ${Err || 'unsupported on this device'}`); }
     }));
@@ -756,7 +754,7 @@ async function ApplyTweak(ID, Payload, Target = 'all') {
     if (IsSelect) Element.classList.add('TweakSelectDisabled'); else Element.disabled = true;
     TweakQueue = TweakQueue.then(async () => {
         try {
-            const Out = await exec(IsSelect ? TuneNet(Tweak.Options[Payload].Spec, Target, SelectIfaces.get(ID) || []) : Command(Payload ? Tweak.ONCommand : Tweak.OFFCommand));
+            const Out = await exec(IsSelect ? TuneNet(Tweak.Options[Payload].Spec, Target, SelectIfaces.get(ID) || []) : (Payload ? Tweak.ONCommand : Tweak.OFFCommand));
             if (IsSelect) {
                 const Accepted = Out.split('\n').map(S => S.trim()).filter(Boolean);
                 if (Target !== 'all' && !Accepted.length) Accepted.push(Target);
