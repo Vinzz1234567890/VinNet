@@ -2,7 +2,45 @@
 
 ---
 
-## v1.2.2-Fless - 2026-10-11 - Latest
+## v1.2.3-Gatom - 2026-10-24 - Latest
+
+### 🔄️Changed
+
+- Module version from `1.2.2-Fless` to `1.2.3-Gatom`
+- Module version code from `20261011` to `20261024`
+- Web UI icon from `VinNetBanner1.webp` to `VinNetBanner3.webp`
+- Service and Web UI logging from append-only writes and in-memory dedupe to removing a previous matching entry and rewriting the log atomically through a temporary file
+- Active monitor sampling and Web UI refresh interval from 4 seconds to 5 seconds; the idle service interval remains 5 seconds
+- Device identity reads in `Diagnose` and `Environment` from repeated `resetprop`/`uname` calls to cached values
+- Diagnostic flushing in the service loop to run only when `.Diagnose.tmp` exists
+- Web UI hidden SVG sprite and templates moved after the visible app shell
+- Other internal formatting and declaration cleanup
+
+### 📈Improved
+
+- Routine overhead through cached device identity values, conditional diagnostic flushes, and a 5-second sampling cadence
+- Web UI rendering through a leaner stylesheet and a shorter initial markup path
+- Code maintainability through removal of the unused command wrapper and consolidation of declarations and conditionals
+
+### 🔧Fixed
+
+- Identical service and Web UI log entries could accumulate across service restarts and Web UI reloads; both writers now replace matching `Tag: Message` lines with one shared rule
+- Multi-line log messages could break the one-entry-per-line format; service messages now collapse to spaces and Web UI messages to ` | `
+
+### 🔥Deleted
+
+- Service `LastLog` variable and its consecutive-duplicate guard
+- Web UI `LogSeen` in-memory deduplication set
+- `Command` helper and function-based tweak command support
+- `resetprop` deletion commands for `ro.boot.wificountrycode` and `persist.sys.radio.force_lte_ca` from `uninstall.sh`, so legacy properties from those removed tweaks are no longer cleared on uninstall
+- Header bottom gradient pseudo-element
+- Navigation top gradient pseudo-element
+- Remaining `will-change` declarations on navigation icons, switch thumbs, and snackbar
+- `-webkit-overflow-scrolling: touch` from the QDISC menu
+
+---
+
+## v1.2.2-Fless - 2026-10-11
 
 ### ✨Added
 
