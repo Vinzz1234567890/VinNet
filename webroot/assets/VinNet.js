@@ -1,6 +1,5 @@
 const Core = '/data/adb/VinNet';
-const LogPath = '/storage/emulated/0/Download/VinNet.log';
-const LogCache = new Map();
+const LogSeen = new Set();
 
 let CallbackCounter = 0;
 function exec(cmd) {
@@ -33,19 +32,38 @@ const Log = (Tag, Data) => {
     const Content = typeof Data === 'string'
         ? Data
         : JSON.stringify(Data, (K, V) => K === 'Timestamp' ? undefined : V);
-    if (!Content || LogCache.get(Tag) === Content) return;
-    LogCache.set(Tag, Content);
+    if (!Content) return;
+    const Key = `${Tag}\n${Content}`;
+    if (LogSeen.has(Key)) return;
+    LogSeen.add(Key);
     const Safe = Content.replace(/'/g, "'\\''");
     LogQueue = LogQueue.then(() => exec(
-        `R=$(grep -v "^\\[.*\\] ${Tag}:" "${LogPath}" 2>/dev/null); { [ -n "$R" ] && printf '%s\\n' "$R"; printf '[%s] %s: %s\\n' "$(date +%T)" "${Tag}" '${Safe}'; } > "${LogPath}"`
-    )).catch(() => { });
+        `printf '[%s] %s: %s\\n' "$(date '+%F %T')" "${Tag}" '${Safe}' >> /storage/emulated/0/Download/VinNet.log 2>/dev/null`
+    )).catch(() => { LogSeen.delete(Key); });
 };
 
+addEventListener('error', Event => {
+    const Target = Event.target;
+    const Source = Event.filename || (Target && Target.src) || 'unknown';
+    const Stack = Event.error && Event.error.stack ? `\n${Event.error.stack}` : '';
+    Log('Error:window', `${Event.message || 'resource error'} @ ${Source}:${Event.lineno || 0}:${Event.colno || 0}${Stack}`);
+});
+
+addEventListener('unhandledrejection', Event => {
+    const Reason = Event.reason;
+    Log('Error:promise', `${Reason && Reason.stack ? Reason.stack : Reason || 'unknown'}`);
+});
+
 async function FetchJSON(File) {
+    let Raw = '';
+    try { Raw = await exec(`cat ${Core}/${File} 2>/dev/null`); } catch { return null; }
+    if (!Raw) return null;
     try {
-        const Raw = await exec(`cat ${Core}/${File} 2>/dev/null`);
-        return Raw ? JSON.parse(Raw) : null;
-    } catch { return null; }
+        return JSON.parse(Raw);
+    } catch (Err) {
+        Log(`JSON:${File}`, `${Err || 'parse failed'} | ${Raw.slice(0, 200)}`);
+        return null;
+    }
 }
 
 function ParseKV(Raw, Lowercase) {
@@ -58,36 +76,13 @@ function ParseKV(Raw, Lowercase) {
 }
 
 let Root = '', RootReady = null;
-const Daemon = { KernelSU: 'ksud', APatch: 'apd', Magisk: 'magisk' };
 const RootCommand = 'command -v ksud >/dev/null 2>&1 && echo KernelSU || (command -v apd >/dev/null 2>&1 && echo APatch || (command -v magisk >/dev/null 2>&1 && echo Magisk || echo Unknown))';
 
 const DetectRoot = () => {
     if (!RootReady) RootReady = exec(RootCommand).then(Name => {
         Root = Root || Name || 'Unknown';
-    }, () => { });
+    }, Err => { Log('Root', `${RootCommand} | ${Err || 'failed'}`); });
     return RootReady;
-};
-
-let PropInvoker = null, PropReady = null;
-const DetectProp = () => {
-    if (PropReady) return PropReady;
-    PropReady = (async () => {
-        const Candidates = [].concat(Daemon[Root] ? `${Daemon[Root]} resetprop` : []);
-        try {
-            const Path = (await exec('command -v resetprop')).trim();
-            if (Path) Candidates.push(Path);
-        } catch (Err) { Log('PropProbe:command -v', `${Err || 'not found'}`); }
-        for (const Invoke of Candidates) {
-            try {
-                await exec(`${Invoke} ro.build.version.release`);
-                PropInvoker = Invoke;
-                Log('PropInvoker', Invoke);
-                return;
-            } catch (Err) { Log(`PropProbe:${Invoke}`, `${Err || 'unsupported'}`); }
-        }
-        Log('PropInvoker', 'unavailable');
-    })();
-    return PropReady;
 };
 
 const SnackElement = document.getElementById('Snack');
@@ -101,7 +96,10 @@ function Toast(Message) {
 }
 
 function OpenLink(URL) {
-    exec(`am start -a android.intent.action.VIEW -d "${URL}"`).catch(() => Toast('Unable to open link'));
+    exec(`am start -a android.intent.action.VIEW -d "${URL}"`).catch(Err => {
+        Log('Link', `${URL} | ${Err || 'failed'}`);
+        Toast('Unable to open link');
+    });
 }
 
 const ElementCache = new Map();
@@ -115,7 +113,8 @@ const JitterColor = v => v === 0 ? 'var(--Good)' : v <= 10 ? 'var(--Warn)' : 'va
 
 async function ExecFields(Entries) {
     const Results = await Promise.all(Entries.map(async ([ID, , CMD]) => {
-        try { return [ID, await exec(CMD) || '—']; } catch { return [ID, '—']; }
+        try { return [ID, await exec(CMD) || '—']; }
+        catch (Err) { Log(`Exec:${ID}`, `${CMD} | ${Err || 'failed'}`); return [ID, '—']; }
     }));
     requestAnimationFrame(() => {
         for (const [ID, Text] of Results) document.getElementById(ID).textContent = Text;
@@ -333,7 +332,6 @@ const Vendor = [
 async function LoadEnvironment() {
     const Cached = await FetchJSON('Environment.json');
     if (Cached) {
-        Log('Environment', Cached);
         Root = Cached.Root || 'Unknown';
         RootReady = Promise.resolve();
         requestAnimationFrame(() => {
@@ -342,9 +340,6 @@ async function LoadEnvironment() {
     } else {
         await ExecFields(Environment);
         await DetectRoot();
-        const LiveEnv = Object.fromEntries(Environment.map(([ID]) => [ID, document.getElementById(ID)?.textContent || '—']));
-        LiveEnv.Root = Root;
-        Log('Environment', LiveEnv);
     }
     requestAnimationFrame(() => { const E = document.getElementById('Root'); if (E) E.textContent = Root; });
     await ExecFields(Vendor);
@@ -367,13 +362,12 @@ async function LoadProcessID() {
     }
     if (Cached && Cached.PID != null) {
         ProcessID.textContent = Cached.PID;
-        Log('ProcessID', Cached);
     } else {
         try {
             const PID = await exec('pgrep -f "VinNet/service.sh" | head -n 1');
             ProcessID.textContent = PID || '—';
-            if (PID) Log('ProcessID', { PID });
-        } catch {
+        } catch (Err) {
+            Log('ProcessID', `pgrep | ${Err || 'failed'}`);
             ProcessID.textContent = '—';
         }
     }
@@ -399,11 +393,10 @@ function ApplyMonitor(Data) {
 }
 
 async function FetchMonitor() {
-    exec(`touch ${Core}/ProcessID.json`).catch(() => { });
+    exec(`touch ${Core}/ProcessID.json`).catch(Err => Log('ProcessID', `touch | ${Err || 'failed'}`));
     const Cached = await FetchJSON('Monitor.json');
     if (Cached && Cached.Latency != null) {
         ApplyMonitor(Cached);
-        Log('Monitor', Cached);
         return;
     }
     try {
@@ -416,25 +409,26 @@ async function FetchMonitor() {
             Jitter = Matches.length > 1 ? Math.round(Jitter / (Matches.length - 1)) : 0;
             const LiveMetrics = { Latency, Jitter };
             ApplyMonitor(LiveMetrics);
-            Log('Monitor', LiveMetrics);
             return;
         }
-    } catch { }
+        Log('MonitorFail', `no time samples | ${Output.slice(0, 200)}`);
+    } catch (Err) {
+        Log('MonitorFail', `ping | ${Err || 'failed'}`);
+    }
     ApplyMonitor({ Latency: '—', Jitter: '—' });
 }
 
 let LiveTickInterval = null;
 function StartLiveTicker() {
-    if (!LiveTickInterval) LiveTickInterval = setInterval(FetchMonitor, 4000);
+    if (!LiveTickInterval) LiveTickInterval = setInterval(
+        () => FetchMonitor().catch(Err => Log('MonitorFail', `tick | ${Err || 'failed'}`)),
+        4000
+    );
 }
 
 function StopLiveTicker() {
     if (LiveTickInterval) { clearInterval(LiveTickInterval); LiveTickInterval = null; }
 }
-
-const ResetProp = (...Args) => PropInvoker
-    ? `${PropInvoker} ${Args.join(' ')}`
-    : 'echo "resetprop unavailable on this device" >&2; exit 1';
 
 const Command = C => typeof C === 'function' ? C() : C;
 
@@ -573,7 +567,8 @@ ${Probes}
 tc qdisc del dev "$D" root 2>/dev/null || true`);
         const Accepted = new Set(Out.split('\n').map(S => S.trim()).filter(Boolean));
         return Keys.filter(K => K === 'pfifo_fast' || Accepted.has(K));
-    } catch {
+    } catch (Err) {
+        Log('Probe', `${Tweak.Label || 'select'} | ${Err || 'failed'}`);
         return Keys;
     }
 }
@@ -639,10 +634,10 @@ async function CheckTweaks() {
     }
     await Promise.all(Object.entries(Tweaks).map(async ([ID, Tweak]) => {
         if (!Tweak.CheckCommand) return;
+        const Cmd = Command(Tweak.CheckCommand);
         try {
-            const Out = await exec(Command(Tweak.CheckCommand));
-            if (!Out) { Unsupported.add(ID); Log(`Check:${ID}`, 'no output - unsupported on this device'); return; }
-            Log(`Check:${ID}`, Out);
+            const Out = await exec(Cmd);
+            if (!Out) { Unsupported.add(ID); Log(`Check:${ID}`, `no output | cmd=${Cmd}`); return; }
             if (Tweak.Type === 'select') {
                 LiveState.set(ID, ParseSelectOutput(ID, Tweak, Out));
             } else {
@@ -650,7 +645,7 @@ async function CheckTweaks() {
             }
         } catch (Err) {
             Unsupported.add(ID);
-            Log(`Check:${ID}`, `${Err || 'unknown error'}`);
+            Log(`Check:${ID}`, `cmd=${Cmd} | ${Err || 'unknown error'}`);
         }
     }));
     await Promise.all(Object.entries(Tweaks).map(async ([ID, Tweak]) => {
@@ -669,8 +664,9 @@ async function CheckTweaks() {
             return;
         }
         if (!Tweak.SupportCommand) return;
-        try { await exec(Command(Tweak.SupportCommand)); }
-        catch (Err) { Unsupported.add(ID); Log(`Support:${ID}`, `${Err || 'unsupported on this device'}`); }
+        const Cmd = Command(Tweak.SupportCommand);
+        try { await exec(Cmd); }
+        catch (Err) { Unsupported.add(ID); Log(`Support:${ID}`, `cmd=${Cmd} | ${Err || 'unsupported on this device'}`); }
     }));
     return { LiveState, Unsupported, SelectOptions };
 }
@@ -750,14 +746,7 @@ function RenderTweakCards(State) {
 }
 
 async function RenderTweaks() {
-    const StateTask = CheckTweaks();
-    const RootTask = (async () => {
-        await DetectRoot();
-        await DetectProp();
-    })();
-    const State = await StateTask;
-    await RootTask;
-    RenderTweakCards(State);
+    RenderTweakCards(await CheckTweaks());
 }
 
 async function ApplyTweak(ID, Payload, Target = 'all') {
@@ -786,7 +775,10 @@ async function ApplyTweak(ID, Payload, Target = 'all') {
                 UpdateSelectDisplay(Element, Tweak, DevMap[Current] || '-');
             }
         } catch (Err) {
-            Log('TweakFail', `${ID}: ${Err || 'unknown error'}`);
+            const Detail = IsSelect
+                ? ` value=${Payload} spec=${Tweak.Options[Payload] ? Tweak.Options[Payload].Spec : '-'} target=${Target}`
+                : ` state=${Payload ? 'ON' : 'OFF'}`;
+            Log('TweakFail', `${ID}${Detail} | ${Err || 'unknown error'}`);
             Toast('Unable to apply tweak');
             if (!IsSelect) Element.checked = !Payload;
         } finally {
@@ -809,10 +801,9 @@ async function LoadMetadata() {
                 const Prop = ParseKV(Raw, true);
                 Cached = { ID: Prop.id, Name: Prop.name, Version: Prop.version, VersionCode: Prop.versioncode, Author: Prop.author, Description: Prop.description };
             }
-        } catch { }
+        } catch (Err) { Log('Metadata', `module.prop | ${Err || 'failed'}`); }
     }
     if (!Cached) return;
-    Log('Metadata', Cached);
     requestAnimationFrame(() => {
         for (const [ID, Key] of Metadata) {
             const Element = document.getElementById(ID);
@@ -868,10 +859,12 @@ async function DecodeImage(ImageElement) {
         } else {
             await new Promise((resolve) => {
                 ImageElement.onload = () => { ImageElement.decode ? ImageElement.decode().then(resolve, resolve) : resolve(); };
-                ImageElement.onerror = resolve;
+                ImageElement.onerror = () => { Log('Image', `${ImageElement.src} | load failed`); resolve(); };
             });
         }
-    } catch { }
+    } catch (Err) {
+        Log('Image', `${ImageElement.currentSrc || ImageElement.src || 'unknown'} | ${Err || 'decode failed'}`);
+    }
 }
 
 function SetupEventListeners() {
@@ -952,8 +945,9 @@ function InitLayout() {
 }
 
 async function Load() {
-    FetchMonitor().catch(() => { });
-    await Promise.allSettled([
+    Log('Session', navigator.userAgent);
+    FetchMonitor().catch(Err => Log('MonitorFail', `fetch | ${Err || 'failed'}`));
+    const Results = await Promise.allSettled([
         LoadEnvironment(),
         LoadMetadata(),
         LoadProcessID(),
@@ -962,6 +956,11 @@ async function Load() {
         ...Array.from(document.querySelectorAll('.Banner'), DecodeImage),
         new Promise(r => setTimeout(r, 300)),
     ]);
+    for (const Result of Results) {
+        if (Result.status === 'rejected') {
+            Log('Load', `${Result.reason && Result.reason.stack ? Result.reason.stack : Result.reason || 'failed'}`);
+        }
+    }
 
     document.getElementById('WebUI').classList.add('Ready');
     UpdateNavigationIcons();
