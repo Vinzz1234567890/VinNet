@@ -235,7 +235,6 @@ img {
     height: 22px;
     fill: var(--on-surf-var);
     transition: fill 0.25s, transform 0.42s var(--spring);
-    will-change: transform;
 }
 
 .NavigationBarActive svg {
@@ -660,7 +659,6 @@ img {
     transform: translateY(-50%) translateX(0) scale(1);
     pointer-events: none;
     transition: transform 0.25s var(--spring), background-color 0.2s;
-    will-change: transform;
 }
 
 .Switch:has(input:disabled) .SwitchTrack {
@@ -757,7 +755,6 @@ img {
     pointer-events: none;
     z-index: 100;
     box-shadow: 0 4px 20px rgb(0 0 0 / 0.4);
-    will-change: opacity, transform;
 }
 
 .Snack.Show {
