@@ -138,15 +138,6 @@ img {
     contain: layout style;
 }
 
-.Header::after {
-    content: '';
-    position: absolute;
-    inset: auto 0 -8px;
-    height: 8px;
-    background: linear-gradient(to bottom, rgb(0 0 0 / 0.12), transparent);
-    pointer-events: none;
-}
-
 .HeaderText {
     width: 100%;
     transition: opacity 0.16s ease;
@@ -218,15 +209,6 @@ img {
     padding-bottom: env(safe-area-inset-bottom, 0);
     touch-action: none;
     contain: layout style;
-}
-
-.Navigation::before {
-    content: '';
-    position: absolute;
-    inset: -8px 0 auto;
-    height: 8px;
-    background: linear-gradient(to top, rgb(0 0 0 / 0.12), transparent);
-    pointer-events: none;
 }
 
 .Navigation::after {
@@ -574,7 +556,6 @@ img {
     max-height: 260px;
     overflow-y: auto;
     overscroll-behavior: contain;
-    -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
     padding: 6px;
     border: 1px solid var(--out-var);
