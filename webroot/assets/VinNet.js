@@ -1,5 +1,5 @@
 const Core = '/data/adb/VinNet';
-const LogSeen = new Set();
+const LogFile = '/storage/emulated/0/Download/VinNet.log';
 
 let CallbackCounter = 0;
 function exec(cmd) {
@@ -29,17 +29,16 @@ function exec(cmd) {
 let LogQueue = Promise.resolve();
 const Log = (Tag, Data) => {
     if (Data == null) return;
-    const Content = typeof Data === 'string'
+    const Content = (typeof Data === 'string'
         ? Data
-        : JSON.stringify(Data, (K, V) => K === 'Timestamp' ? undefined : V);
+        : JSON.stringify(Data, (K, V) => K === 'Timestamp' ? undefined : V))
+        .replace(/\r?\n/g, ' | ');
     if (!Content) return;
-    const Key = `${Tag}\n${Content}`;
-    if (LogSeen.has(Key)) return;
-    LogSeen.add(Key);
+    const TagSafe = Tag.replace(/'/g, "'\\''");
     const Safe = Content.replace(/'/g, "'\\''");
     LogQueue = LogQueue.then(() => exec(
-        `printf '[%s] %s: %s\\n' "$(date '+%F %T')" "${Tag}" '${Safe}' >> /storage/emulated/0/Download/VinNet.log 2>/dev/null`
-    )).catch(() => { LogSeen.delete(Key); });
+        `F='${LogFile}'; T="$F.tmp.$$"; { grep -vF '] ${TagSafe}: ${Safe}' "$F" 2>/dev/null; printf '[%s] %s: %s\\n' "$(date '+%F %T')" '${TagSafe}' '${Safe}'; } > "$T" 2>/dev/null && mv -f "$T" "$F" 2>/dev/null || rm -f "$T"`
+    )).catch(() => { });
 };
 
 addEventListener('error', Event => {
@@ -422,7 +421,7 @@ let LiveTickInterval = null;
 function StartLiveTicker() {
     if (!LiveTickInterval) LiveTickInterval = setInterval(
         () => FetchMonitor().catch(Err => Log('MonitorFail', `tick | ${Err || 'failed'}`)),
-        4000
+        5000
     );
 }
 
