@@ -55,14 +55,13 @@ Write() {
 }
 
 Diagnose() {
-    local ABI Arch="Unsupported" DmesgLines WifiLines Pending="$Core/.Diagnose.tmp" Stamp BinPath
-    ABI=$(resetprop ro.product.cpu.abi)
+    local Arch="Unsupported" DmesgLines WifiLines Pending="$Core/.Diagnose.tmp" Stamp BinPath
     case "$ABI" in arm64*) Arch="Supported (arm64)" ;; armeabi*) Arch="Supported (arm)" ;; esac
     Stamp=$(date '+%F %T')
 
     {
         echo "[$Stamp] Diagnose: ABI=$ABI Architecture=$Arch"
-        echo "[$Stamp] Diagnose: device=$(resetprop ro.product.brand) $(resetprop ro.product.model) android=$(resetprop ro.build.version.release) kernel=$(uname -r)"
+        printf '[%s] Diagnose: device=%s %s android=%s kernel=%s\n' "$Stamp" "$Brand" "$Model" "$Android" "$Kernel"
         echo "[$Stamp] Diagnose: module=$(sed -n 's/^version=//p' "$Identity" 2> /dev/null)"
         for Bin in ping awk tc resetprop; do
             BinPath=$(command -v "$Bin" 2> /dev/null)
@@ -141,8 +140,7 @@ Environment() {
     }
 
     Write "$Environment" "$(printf '{"Brand":"%s","Model":"%s","Android":"%s","Kernel":"%s","Architecture":"%s","Root":"%s"}\n' \
-        "$(resetprop ro.product.brand)" "$(resetprop ro.product.model)" "$(resetprop ro.build.version.release)" \
-        "$(uname -r)" "$(resetprop ro.product.cpu.abi)" "$Root")"
+        "$Brand" "$Model" "$Android" "$Kernel" "$ABI" "$Root")"
 }
 
 LastLatency="x" LastJitter="x" LastMonitorWrite=0 FailCount=0
@@ -199,6 +197,12 @@ WebUIActive() {
     [ -n "$MTime" ] || return 1
     [ $(($1 - MTime)) -le 12 ]
 }
+
+Brand=$(resetprop ro.product.brand)
+Model=$(resetprop ro.product.model)
+Android=$(resetprop ro.build.version.release)
+Kernel=$(uname -r)
+ABI=$(resetprop ro.product.cpu.abi)
 
 Diagnose
 
