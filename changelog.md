@@ -2,7 +2,82 @@
 
 ---
 
-## v1.2.1-JioGraze - 2026-09-30 - Latest
+## v1.2.2-Fless - 2026-10-11 - Latest
+
+### ✨Added
+
+- QDISC queue-discipline selector with 19 options, replacing the previous `fq_codel`/`pfifo_fast` toggle: `pfifo_fast`, `fq_codel`, `cake`, `fq`, `sfq`, `codel`, `pie`, `fq_pie`, `prio`, `pfifo`, `bfifo`, `tbf`, `red`, `htb`, `netem`, `drr`, `hhf`, `sfb`, and `choke`
+- QDISC interface chips for `All` and each detected interface with a recognized qdisc, using Wi-Fi, cellular, USB, Ethernet, and generic icons
+- Per-interface QDISC state tracking with a `Custom` label when selected interfaces use different disciplines
+- Runtime qdisc probing on `lo` that offers kernel-accepted disciplines when probing succeeds; `pfifo_fast` is always kept and the probe removes its test qdisc
+- `Not supported` warning and disabled controls for tweaks whose live check fails or returns no output
+- Indeterminate switch state for tweaks whose live state cannot be read
+- QDISC dropdown with opening animation, hidden current selection, internal scrolling, and outside-click closing
+- Session user-agent logging plus global handlers for uncaught errors and unhandled promise rejections in the Web UI
+- Wi-Fi state lines from `dumpsys wifi` in the diagnostic log
+- Device brand/model, Android version, kernel version, module version, and resolved tool paths in the diagnostic log
+
+### 🔄️Changed
+
+- Module version from `1.2.1-JioGraze` to `1.2.2-Fless`
+- Module version code from `20260930` to `20261011`
+- QDISC status check from a global `fq_codel` count to root/parent qdisc detection for each up, whitelisted interface
+- QDISC application from scanning every `/sys/class/net` entry with a deny pattern to explicit detected interfaces or one selected interface
+- `Network Avoid Bad Wi-Fi` and `Mobile Data Always ON` from separate tweaks into one combined tweak with shared commands and check
+- Tweak state rendering from live checks plus saved `Tweaks.json` fallback to live checks only
+- Service logging from rewriting the log to remove previous same-tag entries to append-only writes
+- Service log timestamps from time-only to full `YYYY-MM-DD HH:MM:SS`
+- Service log writes to ignore empty messages and unwritable log directories
+- Web UI logging from last-content-per-tag caching to a seen tag-and-content set, with plain-string support, empty-data skipping, retry after failed writes, and direct appends instead of temporary-file rewrites
+- Web UI routine success dumps for environment, metadata, process ID, monitor, tweaks, and individual checks removed; those paths now log only failures
+- Ping sampling from four hosts to `1.1.1.1` and `1.0.0.1`
+- Diagnostic block timestamps from one `date` call per line to one timestamp shared by the whole block
+- `WebUIActive()` to receive the current timestamp instead of invoking `date` again
+- Service cleanup to remove `.Diagnose.tmp` on exit
+- Uninstall `resetprop` deletion from `--delete` to `-d`, while still removing properties left by the former Wi-Fi Country Code and Force LTE CA tweaks
+- Web UI initialization into `InitLayout()`, `SetupEventListeners()`, `Load()`, and a single `Boot()` entry point
+- Page gestures into `SetupGestureListeners()` with dropdown-aware pointer and touch handling
+- CSS primary tint variables from `color-mix()` to explicit `rgb()` alpha values
+- Animation compositing hints on navigation icons and switch thumbs narrowed to `transform`
+- Banner crossfade animation to start only after `#WebUI.Ready`
+- Card containment from `layout style` to `style`
+- Head loading order: stylesheet before preloads, no Banner 2/3 preloads or GitHub avatar preconnect, and low fetch priority for the avatar image
+- Metadata, JSON parse, image decode, command, and link failures now produce log entries instead of being silent or toast-only
+
+### 📈Improved
+
+- QDISC compatibility and accuracy across devices with different interface layouts and kernel qdisc support
+- Tweak status accuracy and safety on devices where a live check is unavailable
+- Log reliability and diagnostic value across the service and Web UI
+- Web UI responsiveness through narrower compositing hints and delayed banner animation
+- Web UI gesture handling around the new dropdown controls
+- Web UI troubleshooting through uncaught-error, rejected-promise, and failed-operation logging
+- Uninstall consistency through the shorter `resetprop -d` deletion flag
+- Code maintainability through grouped initialization and removal of unused resetprop plumbing
+
+### 🔧Fixed
+
+- QDISC could be applied to interfaces that were down or outside the intended data-interface set
+- QDISC status could appear optimized from any `fq_codel` occurrence even when no eligible interface used it
+- Unsupported tweaks could remain interactive and still send their commands
+- A saved tweak state could be displayed as current when the live check failed
+- Opening the QDISC dropdown could trigger the page swipe gesture
+- Ping replies without timing data could be counted as successful samples; samples now require `time=`
+- Repeated Web UI log entries could reappear after another message used the same tag
+
+### 🔥Deleted
+
+- `Wi-Fi Country Code` tweak and its icon
+- `Force LTE CA` tweak and its icon
+- Separate `Mobile Data Always ON` tweak and icon
+- Web UI `Tweaks.json` reading, writing, and `TweakState` persistence
+- `DetectProp`, `PropInvoker`, `ResetProp`, and `Daemon` resetprop detection from the Web UI
+- `LogCache`, Web UI `LogPath`, and `NetDeny` constants
+- Invalid `user-drag` CSS property
+
+---
+
+## v1.2.1-JioGraze - 2026-09-30
 
 ### ✨Added
 
