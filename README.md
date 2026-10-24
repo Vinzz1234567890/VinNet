@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="webroot/assets/VinNetBanner1.webp" alt="VinNet banner: a blue-haired anime character surrounded by scattered papers" width="100%" />
+<img src="webroot/assets/VinNetBanner3.webp" alt="VinNet banner: a blue-haired anime character surrounded by scattered papers" width="100%" />
 
 <br />
 <br />
