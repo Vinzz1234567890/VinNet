@@ -8,19 +8,12 @@ LogPath="/storage/emulated/0/Download/VinNet.log"
 
 LastLog=""
 Log() {
-    local Tag="$1" Message="$2" Remaining
+    local Tag="$1" Message="$2"
     [ -n "$Message" ] || return 0
     [ "$Tag: $Message" = "$LastLog" ] && return 0
+    [ -w "${LogPath%/*}" ] || return 1
+    printf '[%s] %s: %s\n' "$(date '+%F %T')" "$Tag" "$Message" >> "$LogPath" 2> /dev/null || return 1
     LastLog="$Tag: $Message"
-    if [ -f "$LogPath" ]; then
-        Remaining=$(grep -v "^\[.*\] $Tag:" "$LogPath" 2> /dev/null)
-        {
-            [ -n "$Remaining" ] && printf '%s\n' "$Remaining"
-            echo "[$(date +%T)] $Tag: $Message"
-        } > "$LogPath" 2> /dev/null
-    elif [ -w "${LogPath%/*}" ]; then
-        echo "[$(date +%T)] $Tag: $Message" > "$LogPath" 2> /dev/null
-    fi
 }
 ProbeWrite() { : > "$1/.WriteProbe" 2> /dev/null && rm -f "$1/.WriteProbe"; }
 
@@ -60,10 +53,12 @@ Diagnose() {
     local ABI Arch="Unsupported" DmesgLines WifiLines Pending="$Core/.Diagnose.tmp" Stamp BinPath
     ABI=$(resetprop ro.product.cpu.abi)
     case "$ABI" in arm64*) Arch="Supported (arm64)" ;; armeabi*) Arch="Supported (arm)" ;; esac
-    Stamp=$(date +%T)
+    Stamp=$(date '+%F %T')
 
     {
         echo "[$Stamp] Diagnose: ABI=$ABI Architecture=$Arch"
+        echo "[$Stamp] Diagnose: device=$(resetprop ro.product.brand) $(resetprop ro.product.model) android=$(resetprop ro.build.version.release) kernel=$(uname -r)"
+        echo "[$Stamp] Diagnose: module=$(sed -n 's/^version=//p' "$Identity" 2> /dev/null)"
         for Bin in ping awk tc resetprop; do
             BinPath=$(command -v "$Bin" 2> /dev/null)
             if [ -n "$BinPath" ]; then
