@@ -9,7 +9,7 @@
 
 <p><b>Simple Implementation of Network Optimization</b></p>
 
-<p>A root-level network control room for Android — live tweak state, per-interface QDISC, and diagnostics that show what actually changed.</p>
+<p>Root module for network optimization.</p>
 
 <p>
   <a href="https://github.com/Vinzz1234567890/VinNet/releases/latest"><img src="https://img.shields.io/github/v/release/Vinzz1234567890/VinNet?style=for-the-badge&amp;label=release&amp;color=3E5C76&amp;labelColor=1C1B1F&amp;logo=github" alt="Latest VinNet release" /></a>
