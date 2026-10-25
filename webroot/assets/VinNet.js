@@ -426,6 +426,9 @@ const TuneNet = (Spec, Target = 'all', Ifaces = null) => {
     return `N=0\nfor D in ${Devs}; do\n  tc qdisc replace dev "$D" root ${Spec} 2>/dev/null && { echo "$D"; N=$((N+1)); }\ndone\n[ "$N" -gt 0 ] || { echo "no interface accepted ${Kind}" >&2; exit 1; }`;
 };
 
+const InterfaceDeny = 'lo|dummy*|tun*|tap*|ip6tnl*|sit*|ifb*|veth*|bond*|p2p*|r_rmnet*|rmnet_ctl|ap*|ncm*|rndis*|usb*|radio*|rmtfs*|swlan*|wlan0h*|wlan0bss*';
+const InterfaceAllow = 'wlan*|rmnet*|ccmni*|pdp*|ppp*|wwan*|v4-rmnet*|v6-rmnet*|clat*|eth*|en*';
+
 const Tweaks = {
     "IP Reach Disconnect": {
         Label: 'Disable IP Reach Disconnect', Icon: 'Monitor,IPReachDisconnect',
@@ -459,7 +462,7 @@ const Tweaks = {
             sfb: { Label: 'sfb', Spec: 'sfb' },
             choke: { Label: 'choke', Spec: 'choke limit 1000000 min 30000 max 90000 avpkt 1000 burst 55' },
         },
-        CheckCommand: `Found=0\nfor P in /sys/class/net/*; do\n  D=\${P##*/}\n  case "$D" in\n    lo|dummy*|tun*|tap*|ip6tnl*|sit*|ifb*|veth*|rmnet_mux*|rmnet_ctl|rmtfs*|radio*|wlan0h*|wlan0bss*) continue ;;\n    wlan[0-9]*|rmnet_data0|rmnet_data1|rmnet_ipa0|rmnet0|rmnet1|ccmni[0-9]*|rndis[0-9]*|usb[0-9]*|eth[0-9]*) ;;\n    *) continue ;;\n  esac\n  F=""\n  read -r F < "/sys/class/net/$D/flags" 2>/dev/null\n  [ -n "$F" ] && [ $((F & 1)) -eq 1 ] || continue\n  Found=1\n  tc qdisc show dev "$D" 2>/dev/null | awk -v D="$D" '{R=0; for(i=1;i<=NF;i++) if($i=="root") R=1; if (R) print D, $2; else if ($0 ~ / parent :/ && !seen) { seen=1; print D, $2 }}'\ndone\n[ "$Found" -eq 1 ] || echo "- -"`,
+        CheckCommand: `Found=0\nfor P in /sys/class/net/*; do\n  D=\${P##*/}\n  case "$D" in\n    ${InterfaceDeny}) continue ;;\n    ${InterfaceAllow}) ;;\n    *) continue ;;\n  esac\n  F=""\n  read -r F < "/sys/class/net/$D/flags" 2>/dev/null\n  [ -n "$F" ] && [ $((F & 1)) -eq 1 ] || continue\n  Found=1\n  tc qdisc show dev "$D" 2>/dev/null | awk -v D="$D" '{R=0; for(i=1;i<=NF;i++) if($i=="root") R=1; if (R) print D, $2; else if ($0 ~ / parent :/ && !seen) { seen=1; print D, $2 }}'\ndone\n[ "$Found" -eq 1 ] || echo "- -"`,
         Warn: 'Reset after reboot',
     },
     "Wi-Fi Force Low Latency Mode": {
@@ -497,10 +500,9 @@ let TweakQueue = Promise.resolve();
 const SelectDevMaps = new Map(), SelectIfaces = new Map();
 
 function ClassifyInterface(Name) {
-    if (Name.startsWith('wlan') || Name.startsWith('swlan')) return { Label: Name, Icon: 'wifi' };
-    if (Name.startsWith('rmnet') || Name.startsWith('ccmni') || Name.startsWith('pdp')) return { Label: Name, Icon: 'cellular' };
-    if (Name.startsWith('rndis') || Name.startsWith('usb')) return { Label: Name, Icon: 'usb' };
-    if (Name.startsWith('eth')) return { Label: Name, Icon: 'ethernet' };
+    if (Name.startsWith('wlan')) return { Label: Name, Icon: 'wifi' };
+    if (/^(rmnet|ccmni|pdp|ppp|wwan|v4-rmnet|v6-rmnet|clat)/.test(Name)) return { Label: Name, Icon: 'cellular' };
+    if (Name.startsWith('eth') || Name.startsWith('en')) return { Label: Name, Icon: 'ethernet' };
     return { Label: Name, Icon: 'network' };
 }
 
@@ -512,6 +514,7 @@ function RenderInterfaceChip(Target, Name, IconName) {
     let SvgHtml = '';
     if (IconName === 'wifi') SvgHtml = '<svg viewBox="0 0 24 24"><path d="M12 4C7.31 4 3.07 5.9 0 8.98L12 21 24 8.98C20.93 5.9 16.69 4 12 4z"/></svg>';
     else if (IconName === 'cellular') SvgHtml = '<svg viewBox="0 0 24 24"><path d="M2 22h20V2z"/></svg>';
+    else if (IconName === 'ethernet') SvgHtml = '<svg viewBox="0 0 24 24"><path d="M3 8h18v8H3zm3 2v4h2v-4zm4 0v4h2v-4zm4 0v4h2v-4z"/></svg>';
     else if (IconName === 'all') SvgHtml = '<svg viewBox="0 0 24 24"><path d="M4 6h16v2H4zm0 5h16v2H4zm0 5h16v2H4z"/></svg>';
     else SvgHtml = '<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/></svg>';
     Chip.innerHTML = `${SvgHtml}<span>${Name}</span>`;
