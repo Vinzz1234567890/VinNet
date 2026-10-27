@@ -360,21 +360,13 @@ function SetupVerticalBounce() {
             const MaxScroll = Math.max(0, PageEl.scrollHeight - PageEl.clientHeight);
 
             // While within normal scroll range, keep updating BoundaryY to track where overscroll starts
-            if (ScrollTop > 0 && ScrollTop < MaxScroll - 1) {
+            if (!BounceActive && ScrollTop > 1 && ScrollTop < MaxScroll - 1) {
                 BoundaryY = CurrentY;
-                if (BounceActive) {
-                    BounceActive = false;
-                    VerticalBouncing = false;
-                    BounceEdge = null;
-                    BounceOffset = 0;
-                    PageEl.classList.remove('VerticalDragging');
-                    PageEl.style.setProperty('--bounce-y', '0px');
-                }
                 return;
             }
 
             // At boundaries:
-            const AtTop = ScrollTop <= 0;
+            const AtTop = ScrollTop <= 1;
             const AtBottom = ScrollTop >= MaxScroll - 1;
 
             if (!BounceActive) {
@@ -403,12 +395,20 @@ function SetupVerticalBounce() {
                 PageEl.classList.add('VerticalDragging');
             }
 
+            if (E.cancelable) E.preventDefault();
+
+            if (BounceEdge === 'top') {
+                if (PageEl.scrollTop !== 0) PageEl.scrollTop = 0;
+            } else if (BounceEdge === 'bottom') {
+                if (PageEl.scrollTop < MaxScroll) PageEl.scrollTop = MaxScroll;
+            }
+
             // When BounceActive:
             const PullDistance = CurrentY - BoundaryY;
 
-            // If user pushes back into normal bounds
-            if ((BounceEdge === 'top' && (ScrollTop > 0 || PullDistance <= 0)) ||
-                (BounceEdge === 'bottom' && (ScrollTop < MaxScroll - 1 || PullDistance >= 0))) {
+            // Disengage ONLY when user physically pushes finger back past the boundary
+            if ((BounceEdge === 'top' && PullDistance <= 0) ||
+                (BounceEdge === 'bottom' && PullDistance >= 0)) {
                 BounceActive = false;
                 VerticalBouncing = false;
                 BounceEdge = null;
@@ -429,7 +429,7 @@ function SetupVerticalBounce() {
                     PageEl.style.setProperty('--bounce-y', `${BounceOffset}px`);
                 });
             }
-        }, { passive: true });
+        }, { passive: false });
 
         const ReleaseBounce = () => {
             if (BounceFrame) { cancelAnimationFrame(BounceFrame); BounceFrame = 0; }
