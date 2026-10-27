@@ -124,6 +124,7 @@ const CommitRatio = 0.22, CommitMaxPx = 96, CommitMinPx = 64, EdgeResistance = 3
 let CurrentPageID = PageList[0], CurrentPageIndex = 0;
 let DragOffset = 0, PendingOffset = 0, DragFrameID = 0, Dragging = false;
 let GestureAxis = null, GestureKind = null, GestureStartX = 0, GestureStartY = 0, GesturePointerID = null;
+let VerticalBouncing = false;
 
 let NavigationButtons = null, NavigationButtonMap = null, NavigationSVGS = null, NavigationSVGButtonMap = null;
 let HeaderTitle = null, HeaderDescription = null;
@@ -210,6 +211,7 @@ function Navigation(ID) {
 
 function ResetGesture() {
     Dragging = false;
+    VerticalBouncing = false;
     GestureAxis = null; GestureKind = null; GesturePointerID = null;
     DragOffset = 0; PendingOffset = 0;
     PagesElement.classList.remove('Dragging');
@@ -231,7 +233,15 @@ function MoveGesture(X, Y, Event, OnAxisLock) {
         const DeltaX = X - GestureStartX, DeltaY = Y - GestureStartY;
         const AbsX = Math.abs(DeltaX), AbsY = Math.abs(DeltaY);
         if (AbsX < 10 && AbsY < 10) return;
-        if (AbsY >= AbsX) { GestureAxis = 'y'; return; }
+        if (AbsY >= AbsX || VerticalBouncing) {
+            GestureAxis = 'y';
+            Dragging = false;
+            PagesElement.classList.remove('Dragging');
+            DragOffset = 0;
+            PendingOffset = 0;
+            RenderPages();
+            return;
+        }
         GestureAxis = 'x';
         GestureStartX = X;
         if (OnAxisLock) try { OnAxisLock(); } catch { }
@@ -300,6 +310,153 @@ function SetupGestureListeners() {
     document.getElementById('Navigation').addEventListener('click', E => {
         const Button = E.target.closest('.NavigationBar, .NavigationBarActive');
         if (Button?.dataset.page) Navigation(Button.dataset.page);
+    });
+}
+
+const BounceResistance = 3;
+
+function SetupVerticalBounce() {
+    const Pages = PagesElement.querySelectorAll('.Page');
+    Pages.forEach(PageEl => {
+        let TouchStartY = 0, TouchStartX = 0, BoundaryY = 0;
+        let BounceActive = false, BounceOffset = 0, BounceEdge = null, BounceFrame = 0;
+
+        PageEl.addEventListener('touchstart', E => {
+            if (E.touches.length !== 1) return;
+            if (BounceFrame) { cancelAnimationFrame(BounceFrame); BounceFrame = 0; }
+            PageEl.classList.remove('Bouncing', 'VerticalDragging');
+            PageEl.style.setProperty('--bounce-y', '0px');
+            BounceOffset = 0;
+            BounceEdge = null;
+            BounceActive = false;
+            VerticalBouncing = false;
+            TouchStartY = E.touches[0].clientY;
+            TouchStartX = E.touches[0].clientX;
+            BoundaryY = TouchStartY;
+        }, { passive: true });
+
+        PageEl.addEventListener('touchmove', E => {
+            if (E.touches.length !== 1) return;
+
+            // If horizontal pager gesture has claimed this touch, strictly forbid vertical bounce
+            if (GestureAxis === 'x') {
+                if (BounceActive || BounceOffset !== 0) {
+                    BounceActive = false;
+                    VerticalBouncing = false;
+                    BounceEdge = null;
+                    BounceOffset = 0;
+                    PageEl.classList.remove('VerticalDragging', 'Bouncing');
+                    PageEl.style.setProperty('--bounce-y', '0px');
+                }
+                return;
+            }
+
+            const CurrentY = E.touches[0].clientY;
+            const CurrentX = E.touches[0].clientX;
+            const AbsX = Math.abs(CurrentX - TouchStartX);
+            const AbsY = Math.abs(CurrentY - TouchStartY);
+
+            const ScrollTop = PageEl.scrollTop;
+            const MaxScroll = Math.max(0, PageEl.scrollHeight - PageEl.clientHeight);
+
+            // While within normal scroll range, keep updating BoundaryY to track where overscroll starts
+            if (ScrollTop > 0 && ScrollTop < MaxScroll - 1) {
+                BoundaryY = CurrentY;
+                if (BounceActive) {
+                    BounceActive = false;
+                    VerticalBouncing = false;
+                    BounceEdge = null;
+                    BounceOffset = 0;
+                    PageEl.classList.remove('VerticalDragging');
+                    PageEl.style.setProperty('--bounce-y', '0px');
+                }
+                return;
+            }
+
+            // At boundaries:
+            const AtTop = ScrollTop <= 0;
+            const AtBottom = ScrollTop >= MaxScroll - 1;
+
+            if (!BounceActive) {
+                // If movement is horizontal dominant, do not start vertical bounce
+                if (AbsX > AbsY || AbsY < 6) return;
+
+                const DeltaBoundary = CurrentY - BoundaryY;
+                if (AtTop && DeltaBoundary > 0) {
+                    BounceEdge = 'top';
+                } else if (AtBottom && DeltaBoundary < 0) {
+                    BounceEdge = 'bottom';
+                } else {
+                    return;
+                }
+
+                BounceActive = true;
+                VerticalBouncing = true;
+                GestureAxis = 'y';
+                Dragging = false;
+                PagesElement.classList.remove('Dragging');
+                DragOffset = 0;
+                PendingOffset = 0;
+                RenderPages();
+
+                PageEl.classList.remove('Bouncing');
+                PageEl.classList.add('VerticalDragging');
+            }
+
+            // When BounceActive:
+            const PullDistance = CurrentY - BoundaryY;
+
+            // If user pushes back into normal bounds
+            if ((BounceEdge === 'top' && (ScrollTop > 0 || PullDistance <= 0)) ||
+                (BounceEdge === 'bottom' && (ScrollTop < MaxScroll - 1 || PullDistance >= 0))) {
+                BounceActive = false;
+                VerticalBouncing = false;
+                BounceEdge = null;
+                BounceOffset = 0;
+                PageEl.classList.remove('VerticalDragging');
+                PageEl.style.setProperty('--bounce-y', '0px');
+                BoundaryY = CurrentY;
+                return;
+            }
+
+            const Scaled = (BounceEdge === 'top' ? Math.max(0, PullDistance) : Math.min(0, PullDistance)) / BounceResistance;
+            BounceOffset = Math.max(-96, Math.min(96, Scaled));
+
+            if (!BounceFrame) {
+                BounceFrame = requestAnimationFrame(() => {
+                    BounceFrame = 0;
+                    if (!BounceActive) return;
+                    PageEl.style.setProperty('--bounce-y', `${BounceOffset}px`);
+                });
+            }
+        }, { passive: true });
+
+        const ReleaseBounce = () => {
+            if (BounceFrame) { cancelAnimationFrame(BounceFrame); BounceFrame = 0; }
+            PageEl.classList.remove('VerticalDragging');
+            if (BounceOffset !== 0) {
+                PageEl.classList.add('Bouncing');
+                PageEl.style.setProperty('--bounce-y', '0px');
+                let Done = false;
+                const CleanUp = () => {
+                    if (Done) return;
+                    Done = true;
+                    PageEl.classList.remove('Bouncing');
+                    VerticalBouncing = false;
+                };
+                PageEl.addEventListener('transitionend', CleanUp, { once: true });
+                setTimeout(CleanUp, 400);
+            } else {
+                PageEl.classList.remove('Bouncing');
+                VerticalBouncing = false;
+            }
+            BounceActive = false;
+            BounceEdge = null;
+            BounceOffset = 0;
+        };
+
+        PageEl.addEventListener('touchend', ReleaseBounce, { passive: true });
+        PageEl.addEventListener('touchcancel', ReleaseBounce, { passive: true });
     });
 }
 
@@ -416,7 +573,7 @@ function StopLiveTicker() {
 }
 
 const TuneNet = (Spec, Target = 'all', Ifaces = null) => {
-    const Kind = Spec.split(' ')[0];
+    const Kind = Spec.replace(/^handle\s+\S+\s+/, '').split(' ')[0];
     if (Target && Target !== 'all') {
         return `tc qdisc replace dev "${Target}" root ${Spec} 2>/dev/null && echo "${Target}" || { echo "interface ${Target} rejected ${Kind}" >&2; exit 1; }`;
     }
@@ -443,7 +600,7 @@ const Tweaks = {
         Type: 'select', HasInterfaces: true,
         Options: {
             pfifo_fast: { Label: 'pfifo_fast', Spec: 'pfifo_fast' },
-            fq_codel: { Label: 'fq_codel', Spec: 'fq_codel quantum 300 noecn' },
+            fq_codel: { Label: 'fq_codel', Spec: 'fq_codel' },
             cake: { Label: 'cake', Spec: 'cake' },
             fq: { Label: 'fq', Spec: 'fq' },
             sfq: { Label: 'sfq', Spec: 'sfq' },
@@ -451,8 +608,8 @@ const Tweaks = {
             pie: { Label: 'pie', Spec: 'pie' },
             fq_pie: { Label: 'fq_pie', Spec: 'fq_pie' },
             prio: { Label: 'prio', Spec: 'prio' },
-            pfifo: { Label: 'pfifo', Spec: 'pfifo limit 1000' },
-            bfifo: { Label: 'bfifo', Spec: 'bfifo limit 1000000' },
+            pfifo: { Label: 'pfifo', Spec: 'pfifo' },
+            bfifo: { Label: 'bfifo', Spec: 'bfifo' },
             tbf: { Label: 'tbf', Spec: 'tbf rate 1000mbit burst 100k latency 50ms' },
             red: { Label: 'red', Spec: 'red limit 1000000 min 30000 max 90000 avpkt 1000 burst 55' },
             htb: { Label: 'htb', Spec: 'htb default 1' },
@@ -461,6 +618,11 @@ const Tweaks = {
             hhf: { Label: 'hhf', Spec: 'hhf' },
             sfb: { Label: 'sfb', Spec: 'sfb' },
             choke: { Label: 'choke', Spec: 'choke limit 1000000 min 30000 max 90000 avpkt 1000 burst 55' },
+            qfq: { Label: 'qfq', Spec: 'handle 1: qfq' },
+            cbq: { Label: 'cbq', Spec: 'handle 1: cbq bandwidth 1000mbit avpkt 1000' },
+            hfsc: { Label: 'hfsc', Spec: 'handle 1: hfsc default 1' },
+            ets: { Label: 'ets', Spec: 'handle 1: ets bands 3' },
+            mqprio: { Label: 'mqprio', Spec: 'handle 1: mqprio num_tc 1 map 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 queues 1@0' },
         },
         CheckCommand: `Found=0\nfor P in /sys/class/net/*; do\n  D=\${P##*/}\n  case "$D" in\n    ${InterfaceDeny}) continue ;;\n    ${InterfaceAllow}) ;;\n    *) continue ;;\n  esac\n  F=""\n  read -r F < "/sys/class/net/$D/flags" 2>/dev/null\n  [ -n "$F" ] && [ $((F & 1)) -eq 1 ] || continue\n  Found=1\n  tc qdisc show dev "$D" 2>/dev/null | awk -v D="$D" '{R=0; for(i=1;i<=NF;i++) if($i=="root") R=1; if (R) print D, $2; else if ($0 ~ / parent :/ && !seen) { seen=1; print D, $2 }}'\ndone\n[ "$Found" -eq 1 ] || echo "- -"`,
         Warn: 'Reset after reboot',
@@ -819,6 +981,7 @@ async function DecodeImage(ImageElement) {
 
 function SetupEventListeners() {
     SetupGestureListeners();
+    SetupVerticalBounce();
 
     document.addEventListener('change', Event => {
         if (Event.target.matches('#PageTweaks Input[type="checkbox"]')) {
