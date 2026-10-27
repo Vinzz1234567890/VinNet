@@ -292,26 +292,30 @@ img {
 }
 
 #WebUI.Ready .Banner {
-    animation: BannerCrossfade 15.9s infinite;
+    animation: BannerCrossfade 21.2s infinite;
 }
 
 #WebUI.Ready .Banner:nth-of-type(2) {
-    animation-delay: -10.6s;
+    animation-delay: -15.9s;
 }
 
 #WebUI.Ready .Banner:nth-of-type(3) {
+    animation-delay: -10.6s;
+}
+
+#WebUI.Ready .Banner:nth-of-type(4) {
     animation-delay: -5.3s;
 }
 
 @keyframes BannerCrossfade {
 
     0%,
-    31.4% {
+    23.5% {
         opacity: 1;
     }
 
-    33.3%,
-    98.1% {
+    25%,
+    98.5% {
         opacity: 0;
     }
 
