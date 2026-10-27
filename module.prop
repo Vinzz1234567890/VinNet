@@ -4,5 +4,5 @@ version=1.2.4-Gyze
 versionCode=20261025
 author=Vinzz
 description=Simple Implementation of Network Optimization
-webuiIcon=webroot/assets/VinNetBanner3.webp
+webuiIcon=webroot/assets/VinNetBanner4.webp
 updateJson=https://raw.githubusercontent.com/Vinzz1234567890/VinNet/refs/heads/main/update.json
