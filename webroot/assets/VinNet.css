@@ -169,7 +169,8 @@ img {
     position: absolute;
     inset: 0;
     --page-lane: 0%;
-    transform: translateX(calc(var(--page-base) + var(--page-drag) + var(--page-lane)));
+    --bounce-y: 0px;
+    transform: translateX(calc(var(--page-base) + var(--page-drag) + var(--page-lane))) translateY(var(--bounce-y));
     transition: transform 0.4s var(--ease-smooth);
     will-change: transform;
     overflow-y: auto;
@@ -194,8 +195,13 @@ img {
     --page-lane: 200%;
 }
 
-.Pages.Dragging .Page {
-    transition: none;
+.Pages.Dragging .Page,
+.Page.VerticalDragging {
+    transition: none !important;
+}
+
+.Page.Bouncing {
+    transition: transform 0.35s var(--ease-smooth);
 }
 
 .Navigation {
