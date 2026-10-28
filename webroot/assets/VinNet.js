@@ -1,4 +1,5 @@
 const Core = '/data/adb/VinNet';
+const Service = '/data/adb/modules/VinNet/service.sh';
 const LogFile = '/storage/emulated/0/Download/VinNet.log';
 
 let CallbackCounter = 0;
@@ -112,6 +113,7 @@ async function ExecFields(Entries) {
 const Page = {
     Dashboard: { Title: 'VinNet', Description: 'Simple Implementation of Network Optimization' },
     Tweaks: { Title: 'Tweaks', Description: 'Apply Network Optimization Tweaks' },
+    Settings: { Title: 'Settings', Description: 'Configure Module Behavior' },
     Info: { Title: 'Info', Description: 'Details about Module' },
 };
 
@@ -572,26 +574,11 @@ function StopLiveTicker() {
     if (LiveTickInterval) { clearInterval(LiveTickInterval); LiveTickInterval = null; }
 }
 
-const TuneNet = (Spec, Target = 'all', Ifaces = null) => {
-    const Kind = Spec.replace(/^handle\s+\S+\s+/, '').split(' ')[0];
-    if (Target && Target !== 'all') {
-        return `tc qdisc replace dev "${Target}" root ${Spec} 2>/dev/null && echo "${Target}" || { echo "interface ${Target} rejected ${Kind}" >&2; exit 1; }`;
-    }
-    const List = (Ifaces || []).filter(Boolean);
-    if (!List.length) return `echo "no interface available" >&2; exit 1`;
-    const Devs = List.map(Dev => `"${Dev}"`).join(' ');
-    return `N=0\nfor D in ${Devs}; do\n  tc qdisc replace dev "$D" root ${Spec} 2>/dev/null && { echo "$D"; N=$((N+1)); }\ndone\n[ "$N" -gt 0 ] || { echo "no interface accepted ${Kind}" >&2; exit 1; }`;
-};
-
-const InterfaceDeny = 'lo|dummy*|tun*|tap*|ip6tnl*|sit*|ifb*|veth*|bond*|p2p*|r_rmnet*|rmnet_ctl|ap*|ncm*|rndis*|usb*|radio*|rmtfs*|swlan*|wlan0h*|wlan0bss*';
-const InterfaceAllow = 'wlan*|rmnet*|ccmni*|pdp*|ppp*|wwan*|v4-rmnet*|v6-rmnet*|clat*|eth*|en*';
-
 const Tweaks = {
     "IP Reach Disconnect": {
         Label: 'Disable IP Reach Disconnect', Icon: 'Monitor,IPReachDisconnect',
         Description: 'Preventing Wi-Fi from suddenly disconnecting when network is unstable.',
-        ONCommand: 'cmd wifi set-ipreach-disconnect disabled', OFFCommand: 'cmd wifi set-ipreach-disconnect enabled',
-        CheckCommand: 'cmd wifi get-ipreach-disconnect', Expect: 'false', ONLabel: 'Disabled', OFFLabel: 'Enabled',
+        CheckCommand: `sh ${Service} check 'IP Reach Disconnect'`, Expect: 'false', ONLabel: 'Disabled', OFFLabel: 'Enabled',
         Warn: 'Reset after reboot',
     },
     "QDISC": {
@@ -599,64 +586,38 @@ const Tweaks = {
         Description: 'Split data traffic into multiple paths and prioritize small data packets so they aren\'t held up by large data packets.',
         Type: 'select', HasInterfaces: true,
         Options: {
-            pfifo_fast: { Label: 'pfifo_fast', Spec: 'pfifo_fast' },
-            fq_codel: { Label: 'fq_codel', Spec: 'fq_codel' },
-            cake: { Label: 'cake', Spec: 'cake' },
-            fq: { Label: 'fq', Spec: 'fq' },
-            sfq: { Label: 'sfq', Spec: 'sfq' },
-            codel: { Label: 'codel', Spec: 'codel' },
-            pie: { Label: 'pie', Spec: 'pie' },
-            fq_pie: { Label: 'fq_pie', Spec: 'fq_pie' },
-            prio: { Label: 'prio', Spec: 'prio' },
-            pfifo: { Label: 'pfifo', Spec: 'pfifo' },
-            bfifo: { Label: 'bfifo', Spec: 'bfifo' },
-            tbf: { Label: 'tbf', Spec: 'tbf rate 1000mbit burst 100k latency 50ms' },
-            red: { Label: 'red', Spec: 'red limit 1000000 min 30000 max 90000 avpkt 1000 burst 55' },
-            htb: { Label: 'htb', Spec: 'htb default 1' },
-            netem: { Label: 'netem', Spec: 'netem' },
-            drr: { Label: 'drr', Spec: 'drr' },
-            hhf: { Label: 'hhf', Spec: 'hhf' },
-            sfb: { Label: 'sfb', Spec: 'sfb' },
-            choke: { Label: 'choke', Spec: 'choke limit 1000000 min 30000 max 90000 avpkt 1000 burst 55' },
-            qfq: { Label: 'qfq', Spec: 'handle 1: qfq' },
-            cbq: { Label: 'cbq', Spec: 'handle 1: cbq bandwidth 1000mbit avpkt 1000' },
-            hfsc: { Label: 'hfsc', Spec: 'handle 1: hfsc default 1' },
-            ets: { Label: 'ets', Spec: 'handle 1: ets bands 3' },
-            mqprio: { Label: 'mqprio', Spec: 'handle 1: mqprio num_tc 1 map 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 queues 1@0' },
+            pfifo_fast: { Label: 'pfifo_fast' },
+            fq_codel: { Label: 'fq_codel' },
+            cake: { Label: 'cake' },
+            fq: { Label: 'fq' },
+            sfq: { Label: 'sfq' },
+            codel: { Label: 'codel' },
+            pie: { Label: 'pie' },
+            fq_pie: { Label: 'fq_pie' },
+            prio: { Label: 'prio' },
+            pfifo: { Label: 'pfifo' },
+            bfifo: { Label: 'bfifo' },
+            tbf: { Label: 'tbf' },
+            red: { Label: 'red' },
+            htb: { Label: 'htb' },
+            netem: { Label: 'netem' },
+            drr: { Label: 'drr' },
+            hhf: { Label: 'hhf' },
+            sfb: { Label: 'sfb' },
+            choke: { Label: 'choke' },
+            qfq: { Label: 'qfq' },
+            cbq: { Label: 'cbq' },
+            hfsc: { Label: 'hfsc' },
+            ets: { Label: 'ets' },
+            mqprio: { Label: 'mqprio' },
         },
-        CheckCommand: `Found=0\nfor P in /sys/class/net/*; do\n  D=\${P##*/}\n  case "$D" in\n    ${InterfaceDeny}) continue ;;\n    ${InterfaceAllow}) ;;\n    *) continue ;;\n  esac\n  F=""\n  read -r F < "/sys/class/net/$D/flags" 2>/dev/null\n  [ -n "$F" ] && [ $((F & 1)) -eq 1 ] || continue\n  Found=1\n  tc qdisc show dev "$D" 2>/dev/null | awk -v D="$D" '{R=0; for(i=1;i<=NF;i++) if($i=="root") R=1; if (R) print D, $2; else if ($0 ~ / parent :/ && !seen) { seen=1; print D, $2 }}'\ndone\n[ "$Found" -eq 1 ] || echo "- -"`,
+        CheckCommand: `sh ${Service} check QDISC`,
         Warn: 'Reset after reboot',
     },
     "Wi-Fi Force Low Latency Mode": {
         Label: 'Enable Wi-Fi Force Low Latency Mode', Icon: 'Wi-FiForceLowLatencyMode',
         Description: 'Force Android to enable built-in low-latency mode at system level, falling back to hi-perf mode on devices that lack it.',
-        ONCommand: 'cmd wifi force-low-latency-mode disabled 2>/dev/null; Out=$(cmd wifi force-low-latency-mode enabled 2>/dev/null); case "$Out" in *"Command execution failed"*) cmd wifi force-hi-perf-mode disabled 2>/dev/null; cmd wifi force-hi-perf-mode enabled 2>/dev/null;; esac',
-        OFFCommand: 'Out=$(cmd wifi force-low-latency-mode disabled 2>/dev/null); case "$Out" in *"Command execution failed"*) cmd wifi force-hi-perf-mode disabled;; esac',
-        CheckCommand: `dumpsys wifi 2>/dev/null | awk -v RS='Dump of ClientModeImpl' '
-NR == 1 { next }
-{
-  Seen = 1
-  quit = ($0 ~ /curState=<QUIT>/)
-  comp = ($0 ~ /Supplicant state: COMPLETED/)
-  mask = ""
-  n = split($0, L, "\\n")
-  for (i = 1; i <= n; i++) {
-    if (L[i] ~ /mPowerSaveDisableRequests/) {
-      sub(/^[[:space:]]+/, "", L[i])
-      split(L[i], F, /[[:space:]:=]+/)
-      if (F[2] != "") mask = F[2]
-    }
-  }
-  if (mask != "" && !quit) {
-    if (comp) { if (completed_mask == "") completed_mask = mask }
-    else if (live_mask == "") live_mask = mask
-  }
-}
-END {
-  if (completed_mask != "") print completed_mask % 4
-  else if (live_mask != "") print live_mask % 4
-  else if (Seen) print "0"
-}'`,
+        CheckCommand: `sh ${Service} check 'Wi-Fi Force Low Latency Mode'`,
         Expect: ['2', '3'], ONLabel: 'Enabled', OFFLabel: 'Disabled',
         Warn: 'Reset after interface changes',
     },
@@ -710,8 +671,7 @@ function RenderInterfaceChip(Target, Name, IconName) {
 async function ProbeSelect(Tweak) {
     const Keys = Object.keys(Tweak.Options);
     try {
-        const Probes = Keys.map(K => `tc qdisc replace dev "$D" root ${Tweak.Options[K].Spec} 2>/dev/null && echo "${K}"`).join('\n');
-        const Out = await exec(`command -v tc > /dev/null 2>&1 || exit 1\nD="lo"\n${Probes}\ntc qdisc del dev "$D" root 2>/dev/null || true`);
+        const Out = await exec(`sh ${Service} probe-qdisc`);
         const Accepted = new Set(Out.split('\n').map(S => S.trim()).filter(Boolean));
         return Keys.filter(K => K === 'pfifo_fast' || Accepted.has(K));
     } catch (Err) {
@@ -895,16 +855,20 @@ async function ApplyTweak(ID, Payload, Target = 'all') {
     if (IsSelect) Element.classList.add('TweakSelectDisabled'); else Element.disabled = true;
     TweakQueue = TweakQueue.then(async () => {
         try {
-            const Out = await exec(IsSelect ? TuneNet(Tweak.Options[Payload].Spec, Target, SelectIfaces.get(ID) || []) : (Payload ? Tweak.ONCommand : Tweak.OFFCommand));
+            const Command = Tweak.Warn
+                ? `sh ${Service} apply '${ID}' '${IsSelect ? Payload : (Payload ? 'ON' : 'OFF')}' '${Target}'`
+                : (Payload ? Tweak.ONCommand : Tweak.OFFCommand);
+            const Out = await exec(Command);
+            const SaveFailed = Out.split('\n').includes('SAVE_FAILED');
             if (IsSelect) {
-                const Accepted = Out.split('\n').map(S => S.trim()).filter(Boolean);
+                const Accepted = Out.split('\n').map(S => S.trim()).filter(S => S && S !== 'SAVE_FAILED');
                 if (Target !== 'all' && !Accepted.length) Accepted.push(Target);
                 const DevMap = SelectDevMaps.get(ID) || {};
                 for (const Dev of Accepted) DevMap[Dev] = Payload;
                 DevMap.all = ComputeAll(ID, DevMap);
             }
             const TargetLabel = Target === 'all' ? 'All' : Target;
-            Toast(`${Tweak.Label || ID}${IsSelect ? ` (${TargetLabel})` : ''} > ${IsSelect ? Tweak.Options[Payload].Label : (Payload ? Tweak.ONLabel : Tweak.OFFLabel)}`);
+            Toast(SaveFailed ? 'Applied, but unable to save state' : `${Tweak.Label || ID}${IsSelect ? ` (${TargetLabel})` : ''} > ${IsSelect ? Tweak.Options[Payload].Label : (Payload ? Tweak.ONLabel : Tweak.OFFLabel)}`);
             if (IsSelect) {
                 const Current = Element.dataset.target || 'all';
                 const DevMap = SelectDevMaps.get(ID) || {};
@@ -912,7 +876,7 @@ async function ApplyTweak(ID, Payload, Target = 'all') {
             }
         } catch (Err) {
             const Detail = IsSelect
-                ? ` value=${Payload} spec=${Tweak.Options[Payload] ? Tweak.Options[Payload].Spec : '-'} target=${Target}`
+                ? ` value=${Payload} target=${Target}`
                 : ` state=${Payload ? 'ON' : 'OFF'}`;
             Log('TweakFail', `${ID}${Detail} | ${Err || 'unknown error'}`);
             Toast('Unable to apply tweak');
@@ -921,6 +885,17 @@ async function ApplyTweak(ID, Payload, Target = 'all') {
             if (IsSelect) Element.classList.remove('TweakSelectDisabled'); else Element.disabled = false;
         }
     });
+}
+
+async function LoadSettings() {
+    const Input = document.getElementById('PersistentTweaks');
+    try {
+        Input.checked = await exec(`sh ${Service} persistent`) === 'ON';
+    } catch (Err) {
+        Input.indeterminate = true;
+        Input.disabled = true;
+        Log('Persistent', `${Err || 'unable to read setting'}`);
+    }
 }
 
 const Metadata = [
@@ -1008,6 +983,23 @@ function SetupEventListeners() {
     SetupVerticalBounce();
 
     document.addEventListener('change', Event => {
+        if (Event.target.id === 'PersistentTweaks') {
+            const Input = Event.target, Enabled = Input.checked;
+            Input.disabled = true;
+            TweakQueue = TweakQueue.then(async () => {
+                try {
+                    await exec(`sh ${Service} persistent ${Enabled ? 'ON' : 'OFF'}`);
+                    Toast(`Persistent Tweaks > ${Enabled ? 'Enabled' : 'Disabled'}`);
+                } catch (Err) {
+                    Input.checked = !Enabled;
+                    Log('Persistent', `${Err || 'failed'}`);
+                    Toast('Unable to save setting');
+                } finally {
+                    Input.disabled = false;
+                }
+            });
+            return;
+        }
         if (Event.target.matches('#PageTweaks Input[type="checkbox"]')) {
             ApplyTweak(Event.target.dataset.tweakId, Event.target.checked);
         }
@@ -1082,6 +1074,7 @@ async function Load() {
         LoadProcessID(),
         RenderLinks(),
         RenderTweaks(),
+        LoadSettings(),
         ...Array.from(document.querySelectorAll('.Banner'), DecodeImage),
         new Promise(r => setTimeout(r, 300)),
     ]);
