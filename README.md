@@ -46,7 +46,7 @@ VinNet is not a profile pack and it is not a fire-and-forget optimizer. It expos
 | :-- | :-- |
 | **Live, not remembered** | Every tweak is checked against the device on load. Unsupported controls are disabled; an unreadable state shows an indeterminate switch instead of a stale saved value. |
 | **Per-interface QDISC** | Pick one of 19 queue disciplines for all eligible interfaces or target a single interface. A `Custom` state appears when interfaces disagree. |
-| **Opt-in by design** | VinNet does not re-apply tweaks at boot. You choose what to change in the Web UI, and the service logs what it sees. |
+| **Opt-in by design** | Automatic restoration is off by default. Enable **Persistent Tweaks** to re-apply reset-prone tweaks once after boot and during Web UI checks. |
 
 ## Tweaks
 
@@ -62,7 +62,7 @@ Six focused controls. No bundled profiles, no automatic profile switching — ap
 | **Wi-Fi Scan Throttle** | Limits background Wi-Fi scanning to reduce jitter and save battery. | Persists |
 
 > [!NOTE]
-> The Web UI reads live state on every load. Unsupported tweaks are disabled, and unknown states show an indeterminate switch. There is no saved tweak-state file to mistake for the current value.
+> The Web UI reads live state on every load. Unsupported tweaks are disabled, and unknown states show an indeterminate switch. `Tweaks.json` stores only desired values for opt-in restoration, never the current value.
 
 ## Compatibility
 
@@ -128,7 +128,7 @@ flowchart TD
 | `system/vendor/etc/wifi/` | Bundled vendor configuration (`fog` only) |
 | `webroot/` | Web UI: HTML, CSS, JS, fonts, and banners |
 | `customize.sh` | Install report and vendor config selection |
-| `service.sh` | Boot service, diagnostics, and monitor loop |
+| `service.sh` | Boot service, tweak restore CLI, diagnostics, and monitor loop |
 | `uninstall.sh` | Runtime and property cleanup |
 | `module.prop` | Module identity and update manifest |
 | `update.json` | Update manifest for root managers |
@@ -144,9 +144,10 @@ flowchart TD
 | `Metadata.json` | Module identity and version. |
 | `Environment.json` | Brand, model, Android, kernel, ABI, and root manager. |
 | `Monitor.json` | Latest latency and jitter samples. |
+| `Tweaks.json` | Desired values for reset-prone tweaks and the opt-in Persistent Tweaks setting. |
 | `.Diagnose.tmp` | Buffered diagnostic block before it is flushed to the log. |
 
-No tweak-state file is written. The Web UI reads live values every time it loads, so a tweak that resets after reboot shows as reset.
+Saved values are used only for restoration after boot and during Web UI checks. Displayed tweak status always comes from live device reads.
 
 </details>
 
@@ -169,17 +170,6 @@ The service truncates the log at 128 KiB on startup.
 
 > [!TIP]
 > When reporting a bug, include your root manager and version, device/ROM/Android/kernel, the tweak name, and the relevant log excerpt. For QDISC, also include the interface name and chosen discipline.
-
-## Latest release
-
-**1.2.2-Fless** focuses on control and visibility:
-
-- QDISC is now a 19-discipline selector with per-interface chips and a `Custom` state.
-- Tweak status is live-checked; unsupported controls are disabled and unknown states are indeterminate.
-- Network Avoid Bad Wi-Fi and Mobile Data Always ON are combined into one toggle.
-- Diagnostics include device, kernel, module, and Wi-Fi context; logs use full timestamps and capture more failures.
-
-[Read the full changelog →](changelog.md)
 
 ## Safety
 
