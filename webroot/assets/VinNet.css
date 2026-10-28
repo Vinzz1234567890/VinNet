@@ -197,6 +197,10 @@ img {
     --page-lane: 200%;
 }
 
+.Page:nth-child(4) {
+    --page-lane: 300%;
+}
+
 .Pages.Dragging .Page,
 .Page.VerticalDragging {
     transition: none !important;
