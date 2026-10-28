@@ -630,9 +630,33 @@ const Tweaks = {
     "Wi-Fi Force Low Latency Mode": {
         Label: 'Enable Wi-Fi Force Low Latency Mode', Icon: 'Wi-FiForceLowLatencyMode',
         Description: 'Force Android to enable built-in low-latency mode at system level, falling back to hi-perf mode on devices that lack it.',
-        ONCommand: 'Out=$(cmd wifi force-low-latency-mode enabled 2>/dev/null); case "$Out" in *"Command execution failed"*) cmd wifi force-hi-perf-mode enabled;; esac',
+        ONCommand: 'cmd wifi force-low-latency-mode disabled 2>/dev/null; Out=$(cmd wifi force-low-latency-mode enabled 2>/dev/null); case "$Out" in *"Command execution failed"*) cmd wifi force-hi-perf-mode disabled 2>/dev/null; cmd wifi force-hi-perf-mode enabled 2>/dev/null;; esac',
         OFFCommand: 'Out=$(cmd wifi force-low-latency-mode disabled 2>/dev/null); case "$Out" in *"Command execution failed"*) cmd wifi force-hi-perf-mode disabled;; esac',
-        CheckCommand: "dumpsys wifi 2>/dev/null | awk '/Dump of ClientModeImpl/ { quit=0; comp=0; seen=1 } /curState=<QUIT>/ { quit=1 } /Supplicant state: COMPLETED/ { comp=1 } /mPowerSaveDisableRequests/ { if (comp) { cmask=$2; hasc=1 } else if (!quit && !live) { lmask=$2; live=1 } } END { if (hasc) print cmask % 4; else if (live) print lmask % 4; else if (seen) print \"0\" }'",
+        CheckCommand: `dumpsys wifi 2>/dev/null | awk -v RS='Dump of ClientModeImpl' '
+NR == 1 { next }
+{
+  Seen = 1
+  quit = ($0 ~ /curState=<QUIT>/)
+  comp = ($0 ~ /Supplicant state: COMPLETED/)
+  mask = ""
+  n = split($0, L, "\\n")
+  for (i = 1; i <= n; i++) {
+    if (L[i] ~ /mPowerSaveDisableRequests/) {
+      sub(/^[[:space:]]+/, "", L[i])
+      split(L[i], F, /[[:space:]:=]+/)
+      if (F[2] != "") mask = F[2]
+    }
+  }
+  if (mask != "" && !quit) {
+    if (comp) { if (completed_mask == "") completed_mask = mask }
+    else if (live_mask == "") live_mask = mask
+  }
+}
+END {
+  if (completed_mask != "") print completed_mask % 4
+  else if (live_mask != "") print live_mask % 4
+  else if (Seen) print "0"
+}'`,
         Expect: ['2', '3'], ONLabel: 'Enabled', OFFLabel: 'Disabled',
         Warn: 'Reset after interface changes',
     },
