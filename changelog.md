@@ -2,7 +2,65 @@
 
 ---
 
-## v1.2.3-Gatom - 2026-10-24 - Latest
+## v1.2.4-Gyze - 2026-10-25 - Latest
+
+### ✨Added
+
+- Settings page with a Persistent Tweaks toggle and a new navigation destination
+- `Tweaks.json` reintroduced as the service-owned store for the `Persistent` setting and desired values of `IP Reach Disconnect`, `Wi-Fi Force Low Latency Mode`, `QDISC:all`, and per-interface `QDISC:*` entries, with `QDISC:all` replacing per-interface entries; Persistent Tweaks is off by default
+- Boot-time and check-time restoration for those reset-prone tweaks when Persistent Tweaks is enabled
+- `service.sh` CLI subcommands for `persistent`, `apply`, `check`, `probe-qdisc`, and `restore`, with the Web UI delegating to the first four
+- QDISC options expanded from 19 to 24 with `qfq`, `cbq`, `hfsc`, `ets`, and `mqprio`
+- New `VinNetBanner4.webp` asset and module `banner` metadata
+- Safe-area support for notched devices through `viewport-fit=cover` and top/bottom insets in the header, navigation, and snackbar
+- Constrained vertical page bounce with boundary resistance and exclusion for QDISC menu touches
+- Ethernet interface icon for `eth*` and `en*` chips
+- Persistent Tweaks toggle that becomes indeterminate and disabled when the root bridge or saved setting is unavailable, and reverts when saving the setting fails
+- Specific "Applied, but unable to save state" feedback when a tweak applies but its desired value cannot be persisted
+
+### 🔄️Changed
+
+- Module version from `1.2.3-Gatom` to `1.2.4-Gyze`
+- Module version code from `20261024` to `20261025`
+- Web UI icon from `VinNetBanner3.webp` to `VinNetBanner4.webp`
+- Tweak apply and check routing for reset-prone tweaks through `service.sh`; settings-based tweaks remain direct
+- QDISC specifications centralized in `service.sh`; `fq_codel`, `pfifo`, and `bfifo` now use plain names without the previous `quantum`/`limit` parameters
+- QDISC probing, application, and status listing moved from the Web UI to `service.sh`
+- QDISC eligible interfaces expanded to `ppp*`, `wwan*`, `v4-rmnet*`, `v6-rmnet*`, `clat*`, `eth*`, and `en*`, with `bond*`, `p2p*`, `r_rmnet*`, `ap*`, `ncm*`, `rndis*`, `usb*`, `swlan*`, and related virtual/hotspot names excluded
+- Wi-Fi Force Low Latency apply now saves the desired state first and runs the apply loop in a detached background process
+- Service boot wait moved after the CLI dispatch so commands can run before Android finishes booting
+- Web UI navigation expanded from three to four pages; Tweaks uses a new icon and Settings uses the previous gear
+- Banner carousel changed from three to four images with a 21.2-second cycle and rebalanced delays
+- Other internal refactoring and cleanup
+
+### 📈Improved
+
+- Persistent Tweaks reliability by storing desired values only and restoring only the reset-prone tweaks the user opted into
+- Wi-Fi Force Low Latency reliability through mode cleanup, fallback handling, and completed-dump-aware live detection
+- QDISC coverage across cellular, PPP, WWAN, CLAT, and Ethernet interface layouts
+- Web UI responsiveness by detaching the low-latency apply loop from the synchronous root call
+- Installer diagnostics with explicit abort reasons instead of silent failures
+- Web UI use on notched devices through safe-area-aware layout and snackbar placement
+- Maintainability by moving tweak apply, check, and probe logic into the shared service CLI
+
+### 🔧Fixed
+
+- Wi-Fi Force Low Latency Mode could fail when a previous mode state was still active; apply now disables the target mode before enabling it and falls back to hi-perf
+- Wi-Fi Force Low Latency live detection could select the wrong `ClientModeImpl` dump; it now requires a completed, non-quit dump
+- Unknown root displayed as literal `Unknown` and unselected QDISC as `-`; both now use `—`
+- Installer could proceed with an unreadable device codename, a missing `fog` vendor config, or failed vendor cleanup; it now aborts with a specific message
+
+### 🔥Deleted
+
+- Web UI `TuneNet` helper
+- Inline Web UI apply and check commands for `IP Reach Disconnect`, `QDISC`, and `Wi-Fi Force Low Latency Mode`
+- QDISC `Spec` fields from Web UI options
+- `LATESTARTSERVICE=true` from `customize.sh`
+- USB interface classification from the Web UI
+
+---
+
+## v1.2.3-Gatom - 2026-10-24
 
 ### 🔄️Changed
 
