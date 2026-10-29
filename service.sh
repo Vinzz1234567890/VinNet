@@ -232,7 +232,6 @@ LiveTweak() {
             dumpsys wifi 2> /dev/null | awk -v RS='Dump of ClientModeImpl' '
                 NR == 1 { next }
                 {
-                    Seen = 1
                     quit = ($0 ~ /curState=<QUIT>/)
                     comp = ($0 ~ /Supplicant state: COMPLETED/)
                     mask = ""
@@ -244,15 +243,10 @@ LiveTweak() {
                             if (F[2] != "") mask = F[2]
                         }
                     }
-                    if (mask != "" && !quit) {
-                        if (comp) { if (completed_mask == "") completed_mask = mask }
-                        else if (live_mask == "") live_mask = mask
-                    }
+                    if (mask != "" && !quit && comp && completed_mask == "") completed_mask = mask
                 }
                 END {
                     if (completed_mask != "") print completed_mask % 4
-                    else if (live_mask != "") print live_mask % 4
-                    else if (Seen) print "0"
                 }
             '
             ;;
