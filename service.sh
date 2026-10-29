@@ -208,16 +208,46 @@ RunTweak() {
     esac
 }
 
+ApplyLowLatency() {
+    local Last="" Desired Err Output
+    while :; do
+        Desired=$(ReadTweak "Wi-Fi Force Low Latency Mode")
+        case "$Desired" in ON | OFF) ;; *) return ;; esac
+        [ "$Desired" = "$Last" ] && return
+        if Err=$(RunTweak "Wi-Fi Force Low Latency Mode" "$Desired" 2>&1); then
+            Output=$(LiveTweak "Wi-Fi Force Low Latency Mode")
+            if [ -n "$Output" ] && [ "$(TweakState "Wi-Fi Force Low Latency Mode" "$Output")" != "$Desired" ]; then
+                Log TweakFail "Wi-Fi Force Low Latency Mode : $Desired | live mask $Output"
+            fi
+        else
+            Log TweakFail "Wi-Fi Force Low Latency Mode : $Desired | ${Err:-apply failed}"
+        fi
+        Last="$Desired"
+    done
+}
+
 ApplyTweak() {
     local Output SaveFailed=0
-    RunTweak "$@" || return
-    if [ "$1" != "QDISC" ]; then
-        Output=$(LiveTweak "$1") || return
-        [ "$(TweakState "$1" "$Output")" = "$2" ] || return
-        SaveTweak "$1" "$2" || SaveFailed=1
-    else
-        SaveTweak "QDISC:${3:-all}" "$2" || SaveFailed=1
-    fi
+    case "$1:$2" in
+        "Wi-Fi Force Low Latency Mode:ON" | "Wi-Fi Force Low Latency Mode:OFF")
+            SaveTweak "$1" "$2" || SaveFailed=1
+            if [ -n "$VINNET_TEST_SYNC" ]; then
+                ApplyLowLatency
+            else
+                (ApplyLowLatency) < /dev/null > /dev/null 2>&1 &
+            fi
+            ;;
+        *)
+            RunTweak "$@" || return
+            if [ "$1" = "QDISC" ]; then
+                SaveTweak "QDISC:${3:-all}" "$2" || SaveFailed=1
+            else
+                Output=$(LiveTweak "$1") || return
+                [ "$(TweakState "$1" "$Output")" = "$2" ] || return
+                SaveTweak "$1" "$2" || SaveFailed=1
+            fi
+            ;;
+    esac
     if [ "$SaveFailed" -eq 1 ]; then
         Log TweakSave "$1 : state not persisted"
         printf 'SAVE_FAILED\n'
