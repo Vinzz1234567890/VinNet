@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="webroot/assets/VinNetBanner4.webp" alt="VinNet banner: a blue-haired anime character surrounded by scattered papers" width="100%" />
+<img src="webroot/assets/VinNetBanner4.webp" alt="VinNet banner: a blue-haired anime character framing the camera with both hands in a fisheye view" width="100%" />
 
 <br />
 <br />
@@ -9,27 +9,25 @@
 
 <p><b>Simple Implementation of Network Optimization</b></p>
 
-<p>Root module for network optimization.</p>
+<p>Root-level network control for Android — live tweak state, per-interface QDISC, and opt-in restoration.</p>
 
 <p>
-  <a href="https://github.com/Vinzz1234567890/VinNet/releases/latest"><img src="https://img.shields.io/github/v/release/Vinzz1234567890/VinNet?style=for-the-badge&amp;label=release&amp;color=3E5C76&amp;labelColor=1C1B1F&amp;logo=github" alt="Latest VinNet release" /></a>
+  <a href="https://github.com/Vinzz1234567890/VinNet/releases/latest"><img src="https://img.shields.io/badge/version-1.2.4--Gyze-3E5C76?style=for-the-badge&amp;labelColor=1C1B1F" alt="VinNet 1.2.4-Gyze" /></a>
   <a href="#compatibility"><img src="https://img.shields.io/badge/Magisk-supported-00695C?style=for-the-badge&amp;labelColor=1C1B1F" alt="Magisk supported" /></a>
   <a href="#compatibility"><img src="https://img.shields.io/badge/KernelSU-supported-0D47A1?style=for-the-badge&amp;labelColor=1C1B1F" alt="KernelSU supported" /></a>
   <a href="#compatibility"><img src="https://img.shields.io/badge/APatch-supported-B45309?style=for-the-badge&amp;labelColor=1C1B1F" alt="APatch supported" /></a>
 </p>
 
 <p>
-  <a href="#how-it-works"><img src="https://img.shields.io/badge/Web%20UI-included-0E7490?style=for-the-badge&amp;labelColor=1C1B1F" alt="Web UI included" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache--2.0-4B5563?style=for-the-badge&amp;labelColor=1C1B1F" alt="Apache 2.0 license" /></a>
   <a href="https://github.com/Vinzz1234567890/VinNet/releases"><img src="https://img.shields.io/github/downloads/Vinzz1234567890/VinNet/total?style=for-the-badge&amp;label=downloads&amp;color=3E5C76&amp;labelColor=1C1B1F&amp;logo=github" alt="Total VinNet downloads" /></a>
 </p>
 
 <p>
-  <a href="#why-vinnet">Why VinNet</a> ·
+  <a href="#overview">Overview</a> ·
   <a href="#tweaks">Tweaks</a> ·
   <a href="#compatibility">Compatibility</a> ·
   <a href="#install">Install</a> ·
-  <a href="#how-it-works">How it works</a> ·
   <a href="#diagnostics">Diagnostics</a> ·
   <a href="changelog.md">Changelog</a>
 </p>
@@ -38,31 +36,27 @@
 
 ---
 
-## Why VinNet
+## Overview
 
-VinNet is not a profile pack and it is not a fire-and-forget optimizer. It exposes a small set of network controls, reads their real state from the device, and tells you when it cannot.
+VinNet exposes a small set of network controls instead of applying a hidden profile. Every value is checked live, QDISC is configured per interface, and restoration is optional.
 
-| Principle | What it means |
-| :-- | :-- |
-| **Live, not remembered** | Every tweak is checked against the device on load. Unsupported controls are disabled; an unreadable state shows an indeterminate switch instead of a stale saved value. |
-| **Per-interface QDISC** | Pick one of 19 queue disciplines for all eligible interfaces or target a single interface. A `Custom` state appears when interfaces disagree. |
-| **Opt-in by design** | Automatic restoration is off by default. Enable **Persistent Tweaks** to re-apply reset-prone tweaks once after boot and during Web UI checks. |
+- **Live state** — unsupported controls are disabled; unknown states show an indeterminate switch.
+- **24 QDISC disciplines** — apply to all eligible interfaces or one interface at a time; `Custom` appears when interfaces differ.
+- **Opt-in restoration** — Persistent Tweaks re-applies reset-prone tweaks after boot and during Web UI checks.
 
 ## Tweaks
 
-Six focused controls. No bundled profiles, no automatic profile switching — apply only what your device supports.
-
 | Tweak | What it changes | Reset behavior |
 | :-- | :-- | :-- |
-| **IP Reach Disconnect** | Prevents Wi-Fi from suddenly disconnecting when the network becomes unstable. | After reboot |
-| **QDISC** | Choose one of 19 queue disciplines for all eligible interfaces or a single interface. A `Custom` state appears when interfaces disagree. | After reboot |
-| **Wi-Fi Force Low Latency Mode** | Forces Android's built-in low-latency mode, falling back to hi-perf mode on devices that lack it. | After interface changes |
-| **Network Avoid Bad Wi-Fi & Mobile Data Always ON** | Keeps Wi-Fi connected as signal quality degrades and stops background cellular data from disrupting transmission. Both settings are toggled together. | Persists |
-| **BLE Scan Always Enabled** | Reduces jitter and ping spikes when gaming over a 2.4 GHz Wi-Fi network. | Persists |
+| **IP Reach Disconnect** | Prevents Wi-Fi from dropping when the network becomes unstable. | After reboot |
+| **QDISC** | Choose one of 24 queue disciplines for all eligible interfaces or one interface; `Custom` appears when interfaces differ. | After reboot |
+| **Wi-Fi Force Low Latency Mode** | Forces Android's low-latency mode, with hi-perf fallback. | After interface changes |
+| **Network Avoid Bad Wi-Fi & Mobile Data Always ON** | Keeps Wi-Fi connected as signal degrades and stops background cellular data from disrupting transmission. | Persists |
+| **BLE Scan Always Enabled** | Reduces jitter and ping spikes on 2.4 GHz Wi-Fi. | Persists |
 | **Wi-Fi Scan Throttle** | Limits background Wi-Fi scanning to reduce jitter and save battery. | Persists |
 
 > [!NOTE]
-> The Web UI reads live state on every load. Unsupported tweaks are disabled, and unknown states show an indeterminate switch. `Tweaks.json` stores only desired values for opt-in restoration, never the current value.
+> Persistent Tweaks is off by default. When enabled in Settings, it restores `IP Reach Disconnect`, `QDISC`, and `Wi-Fi Force Low Latency Mode` after boot and during Web UI checks. `Tweaks.json` stores desired values only; displayed status always comes from live reads.
 
 ## Compatibility
 
@@ -70,25 +64,12 @@ VinNet uses the standard Magisk module format and Android shell tools. It ships 
 
 | Environment | Module support | Web UI |
 | :-- | :--: | :-- |
-| **Magisk** | Supported | Requires a Web UI-capable module host |
-| **KernelSU** | Supported | Available from the module screen |
-| **APatch** | Supported | Available from the module screen |
+| **Magisk** | Supported | Requires a Web UI-capable host |
+| **KernelSU** | Supported | Module screen |
+| **APatch** | Supported | Module screen |
 
-> [!NOTE]
-> The Web UI is served from `webroot/`. If your manager does not expose a module Web UI, use a Web UI-capable host or run the same commands through a root shell.
-
-<details>
-<summary><b>Community forks and device-specific vendor configuration</b></summary>
-
-<br />
-
-VinNet is built on the standard Magisk module format. Forks such as KernelSU Next, KowSU, Wild_KSU, RKSU, MamboSU, SukiSU-Ultra, ReSukiSU, and APatch/FolkPatch are expected to work when they support standard module scripts and `resetprop`. They are not individually tested by this repository.
-
-On `fog` devices, `customize.sh` installs the bundled vendor Wi-Fi configuration. On other devices, `system/vendor` is removed during installation, leaving stock vendor files untouched.
-
-APatch itself currently targets ARM64 devices. VinNet ships no native binaries, so this is an APatch platform requirement rather than a VinNet build variant.
-
-</details>
+- On `fog`, the installer adds vendor Wi-Fi config; other devices keep stock vendor files.
+- KernelSU/APatch forks on the standard module format should work but are not individually tested. APatch itself targets ARM64.
 
 ## Install
 
@@ -100,76 +81,29 @@ Requires a rooted Android device and a supported module manager.
 2. Open your root manager → **Modules** → **Install from storage**.
 3. Select the zip and flash it.
 4. Reboot.
-5. Open the module Web UI and apply only the tweaks you need. QDISC and some Wi-Fi tweaks reset after reboot or interface changes.
+5. Open the Web UI. Enable **Persistent Tweaks** in Settings if you want reset-prone tweaks restored after boot and during checks.
 
 > [!IMPORTANT]
 > Remove conflicting network-tuning modules first. Two modules writing the same `tc`, `settings`, or `resetprop` values will make live state misleading.
 
 ## How it works
 
-VinNet keeps the moving parts small: a boot service, a runtime state directory, and a Web UI that reads through the root manager.
-
 ```mermaid
-flowchart TD
-    A["Boot completed"] --> B["service.sh"]
-    B --> C["Diagnose and log"]
-    B --> D["Runtime state<br/>/data/adb/VinNet"]
-    B --> E["Monitor loop"]
-    E --> F["Monitor.json"]
-    D --> G["Web UI<br/>webroot/"]
-    F --> G
-    G --> H["Apply tweaks"]
-    H --> I["settings / tc / cmd wifi / resetprop"]
+flowchart LR
+    A["service.sh"] --> B["Restore + monitor"]
+    B --> C["/data/adb/VinNet"]
+    C --> D["Web UI"]
+    D --> E["Apply / check"]
 ```
 
-| Path | Purpose |
-| :-- | :-- |
-| `META-INF/` | Flashable module metadata |
-| `system/vendor/etc/wifi/` | Bundled vendor configuration (`fog` only) |
-| `webroot/` | Web UI: HTML, CSS, JS, fonts, and banners |
-| `customize.sh` | Install report and vendor config selection |
-| `service.sh` | Boot service, tweak restore CLI, diagnostics, and monitor loop |
-| `uninstall.sh` | Runtime and property cleanup |
-| `module.prop` | Module identity and update manifest |
-| `update.json` | Update manifest for root managers |
-
-<details>
-<summary><b>Runtime files written to <code>/data/adb/VinNet</code></b></summary>
-
-<br />
-
-| File | Purpose |
-| :-- | :-- |
-| `ProcessID.json` | Current service PID and timestamp; also touched by the Web UI to signal activity. |
-| `Metadata.json` | Module identity and version. |
-| `Environment.json` | Brand, model, Android, kernel, ABI, and root manager. |
-| `Monitor.json` | Latest latency and jitter samples. |
-| `Tweaks.json` | Desired values for reset-prone tweaks and the opt-in Persistent Tweaks setting. |
-| `.Diagnose.tmp` | Buffered diagnostic block before it is flushed to the log. |
-
-Saved values are used only for restoration after boot and during Web UI checks. Displayed tweak status always comes from live device reads.
-
-</details>
+`service.sh` waits for boot, restores Persistent Tweaks when enabled, writes runtime JSON to `/data/adb/VinNet`, and monitors latency while the Web UI is active. The Web UI delegates apply, check, and QDISC probe operations back to the same service script.
 
 ## Diagnostics
 
-VinNet writes one log:
-
-**`/storage/emulated/0/Download/VinNet.log`**
-
-It includes:
-
-- device brand/model, Android, kernel, and ABI
-- module version and resolved tool paths
-- `/data/adb/VinNet` writability plus relevant mount and dmesg lines
-- filtered `dumpsys wifi` state (`Wi-Fi is`, `ClientModeImpl`, `curState`, `Supplicant state`, `mPowerSaveDisableRequests`)
-- tweak check and apply failures
-- Web UI errors, rejected promises, and failed JSON, image, command, and link operations
-
-The service truncates the log at 128 KiB on startup.
+One log: **`/storage/emulated/0/Download/VinNet.log`**. It records device/kernel/ABI, module version, tool paths, core writability, filtered Wi-Fi state, and tweak or Web UI failures. The service truncates it at 128 KiB on startup.
 
 > [!TIP]
-> When reporting a bug, include your root manager and version, device/ROM/Android/kernel, the tweak name, and the relevant log excerpt. For QDISC, also include the interface name and chosen discipline.
+> When reporting a bug, include the log, root manager/version, device/ROM, and tweak name. For QDISC, include the interface and discipline.
 
 ## Safety
 
@@ -181,22 +115,6 @@ The service truncates the log at 128 KiB on startup.
 - **Repository:** [Vinzz1234567890/VinNet](https://github.com/Vinzz1234567890/VinNet)
 - **Telegram:** [Vinzz Repository](https://t.me/VinzzRepository)
 - **Feedback:** [@Vinzz1234567890](https://t.me/Vinzz1234567890)
-- **Issues:** [GitHub Issues](https://github.com/Vinzz1234567890/VinNet/issues)
-
-<details>
-<summary><b>Artwork</b></summary>
-
-<br />
-
-<table>
-  <tr>
-    <td><img src="webroot/assets/VinNetBanner1.webp" alt="VinNet banner one: a blue-haired anime character surrounded by scattered papers" width="100%" /></td>
-    <td><img src="webroot/assets/VinNetBanner2.webp" alt="VinNet banner two: a blue-haired anime character reaching toward the viewer at sunset over water" width="100%" /></td>
-    <td><img src="webroot/assets/VinNetBanner3.webp" alt="VinNet banner three: a close-up of a blue-haired anime character making a peace sign" width="100%" /></td>
-  </tr>
-</table>
-
-</details>
 
 ## License
 
