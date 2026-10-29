@@ -9,7 +9,7 @@
 
 <p><b>Simple Implementation of Network Optimization</b></p>
 
-<p>Root-level network control for Android — live tweak state, per-interface QDISC, and opt-in restoration.</p>
+<p>Root-level network control for Android.</p>
 
 <p>
   <a href="https://github.com/Vinzz1234567890/VinNet/releases/latest"><img src="https://img.shields.io/badge/version-1.2.4--Gyze-3E5C76?style=for-the-badge&amp;labelColor=1C1B1F" alt="VinNet 1.2.4-Gyze" /></a>
@@ -40,9 +40,9 @@
 
 VinNet exposes a small set of network controls instead of applying a hidden profile. Every value is checked live, QDISC is configured per interface, and restoration is optional.
 
-- **Live state** — unsupported controls are disabled; unknown states show an indeterminate switch.
-- **24 QDISC disciplines** — apply to all eligible interfaces or one interface at a time; `Custom` appears when interfaces differ.
-- **Opt-in restoration** — Persistent Tweaks re-applies reset-prone tweaks after boot and during Web UI checks.
+- **Live state**, unsupported controls are disabled; unknown states show an indeterminate switch.
+- **24 QDISC**, apply to all eligible interfaces or one interface at a time; `Custom` appears when interfaces differ.
+- **Opt-in restoration**, Persistent Tweaks re-applies reset-prone tweaks after boot and during Web UI checks.
 
 ## Tweaks
 
