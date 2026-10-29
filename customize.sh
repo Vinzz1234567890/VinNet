@@ -1,10 +1,13 @@
 #!/system/bin/sh
-LATESTARTSERVICE=true
+TargetDevice="fog"
 
-readonly TargetDevice="fog"
+Die() {
+    command -v abort > /dev/null 2>&1 && abort "$1"
+    echo "$1" >&2
+    exit 1
+}
 
-sleep 0.5
-[ -n "$MODPATH" ] || abort "MODPATH is Not Set"
+[ -n "$MODPATH" ] || Die "MODPATH is Not Set"
 
 Print() { ui_print "- $*"; }
 
@@ -18,12 +21,15 @@ ReportDevice() {
 }
 
 ConfigureVendor() {
-    if [ "$(resetprop ro.product.device)" = "$TargetDevice" ]; then
+    Device=$(resetprop ro.product.device 2> /dev/null)
+    [ -n "$Device" ] || Die "Unable to read device codename"
+    if [ "$Device" = "$TargetDevice" ]; then
+        [ -f "$MODPATH/system/vendor/etc/wifi/WCNSS_qcom_cfg.ini" ] || Die "Vendor Wi-Fi configuration is missing"
         Print "Device is $TargetDevice"
     else
         Print "Device isn't $TargetDevice"
         Print "Delete Vendor Configuration"
-        rm -rf "$MODPATH/system/vendor"
+        rm -rf "$MODPATH/system/vendor" || Die "Unable to delete vendor configuration"
     fi
 }
 
