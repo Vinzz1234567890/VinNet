@@ -324,6 +324,7 @@ function SetupVerticalBounce() {
         let BounceActive = false, BounceOffset = 0, BounceEdge = null, BounceFrame = 0;
 
         PageEl.addEventListener('touchstart', E => {
+            if (E.target.closest('.TweakSelectMenu')) return;
             if (E.touches.length !== 1) return;
             if (BounceFrame) { cancelAnimationFrame(BounceFrame); BounceFrame = 0; }
             PageEl.classList.remove('Bouncing', 'VerticalDragging');
@@ -338,6 +339,7 @@ function SetupVerticalBounce() {
         }, { passive: true });
 
         PageEl.addEventListener('touchmove', E => {
+            if (E.target.closest('.TweakSelectMenu')) return;
             if (E.touches.length !== 1) return;
 
             // If horizontal pager gesture has claimed this touch, strictly forbid vertical bounce
