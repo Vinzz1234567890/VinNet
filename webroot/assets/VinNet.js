@@ -486,7 +486,7 @@ async function LoadEnvironment() {
         await ExecFields(Environment);
         await DetectRoot();
     }
-    requestAnimationFrame(() => { const E = document.getElementById('Root'); if (E) E.textContent = Root; });
+    requestAnimationFrame(() => { const E = document.getElementById('Root'); if (E) E.textContent = Root && Root !== 'Unknown' ? Root : '—'; });
     await ExecFields(Vendor);
 }
 
@@ -828,7 +828,7 @@ function RenderTweakCards(State) {
                 Menu.appendChild(Item);
             }
 
-            UpdateSelectDisplay(Select, Tweak, DevMap.all || '-');
+            UpdateSelectDisplay(Select, Tweak, DevMap.all || '—');
             Select.classList.toggle('TweakSelectDisabled', Unsupported.has(ID));
             Container.appendChild(Card);
             continue;
@@ -872,7 +872,7 @@ async function ApplyTweak(ID, Payload, Target = 'all') {
             if (IsSelect) {
                 const Current = Element.dataset.target || 'all';
                 const DevMap = SelectDevMaps.get(ID) || {};
-                UpdateSelectDisplay(Element, Tweak, DevMap[Current] || '-');
+                UpdateSelectDisplay(Element, Tweak, DevMap[Current] || '—');
             }
         } catch (Err) {
             const Detail = IsSelect
@@ -890,7 +890,10 @@ async function ApplyTweak(ID, Payload, Target = 'all') {
 async function LoadSettings() {
     const Input = document.getElementById('PersistentTweaks');
     try {
-        Input.checked = await exec(`sh ${Service} persistent`) === 'ON';
+        if (typeof window.ksu?.exec !== 'function') throw new Error('Root bridge unavailable');
+        const State = await exec(`sh ${Service} persistent`);
+        if (State && State !== 'ON' && State !== 'OFF') throw new Error('Invalid persistent setting');
+        Input.checked = State === 'ON';
     } catch (Err) {
         Input.indeterminate = true;
         Input.disabled = true;
@@ -1017,7 +1020,7 @@ function SetupEventListeners() {
                 const TweakID = Select.dataset.tweakId, Tweak = Tweaks[TweakID];
                 if (Tweak) {
                     const DevMap = SelectDevMaps.get(TweakID) || {};
-                    UpdateSelectDisplay(Select, Tweak, DevMap[Target] || '-');
+                    UpdateSelectDisplay(Select, Tweak, DevMap[Target] || '—');
                 }
             }
             return;
