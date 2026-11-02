@@ -29,7 +29,9 @@ ConfigureVendor() {
     else
         Print "Device isn't $TargetDevice"
         Print "Delete Vendor Configuration"
-        rm -rf "$MODPATH/system/vendor" || Die "Unable to delete vendor configuration"
+        rm -rf "$MODPATH/system" || Die "Unable to delete vendor configuration"
+        Print "Skip System Mount"
+        touch "$MODPATH/skip_mount" || Die "Unable to set skip mount flag"
     fi
 }
 
