@@ -18,10 +18,10 @@ Log() {
     }
 }
 
-ProbeWrite() { : > "$1/.WriteProbe" 2> /dev/null && rm -f "$1/.WriteProbe"; }
+ProbeWrite() { ( : > "$1/.WriteProbe" ) 2> /dev/null && rm -f "$1/.WriteProbe"; }
 
 if [ -f "$LogPath" ] && [ "$(wc -c < "$LogPath" 2> /dev/null)" -gt 131072 ]; then
-    : > "$LogPath" 2> /dev/null
+    ( : > "$LogPath" ) 2> /dev/null
     Log LogRotate "previous log exceeded 128K, truncated"
 fi
 
@@ -50,6 +50,7 @@ Write() {
             Log CoreReadOnly "$Core unwritable, runtime state disabled this session"
             ;;
     esac
+    return 1
 }
 
 ReadTweak() {
@@ -128,34 +129,58 @@ Interfaces() {
             *) continue ;;
         esac
         F=""
-        read -r F < "$P/flags" 2> /dev/null
+        read -r F 2> /dev/null < "$P/flags"
         [ -n "$F" ] && [ $((F & 1)) -eq 1 ] || continue
         printf '%s\n' "$D"
     done
 }
 
 ApplyQDISC() {
-    local Key="$1" Target="${2:-all}" Spec D N=0
-    Spec=$(QDISCSpec "$Key") || return
+    local Key="$1" Target="${2:-all}" Spec D N=0 ErrorOutput
+    Spec=$(QDISCSpec "$Key") || { Log ApplyFail "QDISC : $Key is not a supported value"; return 1; }
     if [ "$Target" != "all" ]; then
-        tc qdisc replace dev "$Target" root $Spec 2> /dev/null || return
+        ErrorOutput=$(tc qdisc replace dev "$Target" root $Spec 2>&1) || {
+            Log ApplyFail "QDISC:$Target : $Key | ${ErrorOutput:-tc failed}"
+            return 1
+        }
         printf '%s\n' "$Target"
         return 0
     fi
     for D in $(Interfaces); do
-        if tc qdisc replace dev "$D" root $Spec 2> /dev/null; then
+        if ErrorOutput=$(tc qdisc replace dev "$D" root $Spec 2>&1); then
             printf '%s\n' "$D"
             N=$((N + 1))
+        else
+            Log ApplyFail "QDISC:$D : $Key | ${ErrorOutput:-tc failed}"
         fi
     done
+    [ "$N" -gt 0 ] || Log ApplyFail "QDISC:all : $Key | no eligible interface"
     [ "$N" -gt 0 ]
 }
 
 ListQDISC() {
-    local D Found=0
+    local D Output Kind Found=0
     for D in $(Interfaces); do
+        Output=$(tc qdisc show dev "$D" 2> /dev/null) || continue
+        [ -n "$Output" ] || continue
         Found=1
-        tc qdisc show dev "$D" 2> /dev/null | awk -v D="$D" '{ R = 0; for (i = 1; i <= NF; i++) if ($i == "root") R = 1; if (R) print D, $2; else if ($0 ~ / parent :/ && !seen) { seen = 1; print D, $2 } }'
+        Kind=$(printf '%s\n' "$Output" | awk '
+            {
+                Parent = 0; Root = 0
+                for (i = 1; i <= NF; i++) {
+                    if ($i == "parent") Parent = 1
+                    if ($i == "root") Root = 1
+                }
+                if (Parent && Child == "") Child = $2
+                if (Root && Container == "") Container = $2
+            }
+            END {
+                if (Child != "") print Child
+                else if (Container != "") print Container
+            }
+        ')
+        [ -n "$Kind" ] || continue
+        printf '%s %s\n' "$D" "$Kind"
     done
     [ "$Found" -eq 1 ] || printf '%s\n' '- -'
 }
@@ -171,10 +196,18 @@ ProbeQDISC() {
 }
 
 RunTweak() {
-    local Out HiOut Status HiStatus
+    local Out HiOut Status HiStatus Set
     case "$1:$2" in
-        "IP Reach Disconnect:ON") cmd wifi set-ipreach-disconnect disabled ;;
-        "IP Reach Disconnect:OFF") cmd wifi set-ipreach-disconnect enabled ;;
+        "IP Reach Disconnect:ON" | "IP Reach Disconnect:OFF")
+            Set=$([ "$2" = "ON" ] && echo disabled || echo enabled)
+            Out=$(cmd wifi set-ipreach-disconnect "$Set" 2>&1)
+            Status=$?
+            case "$Out" in *"Command execution failed"*) Status=1 ;; esac
+            if [ "$Status" -ne 0 ]; then
+                Log ApplyFail "$1 : $2 | ${Out:-cmd failed}"
+                return 1
+            fi
+            ;;
         "Wi-Fi Force Low Latency Mode:ON")
             cmd wifi force-low-latency-mode disabled 2> /dev/null
             Out=$(cmd wifi force-low-latency-mode enabled 2>&1)
@@ -227,10 +260,13 @@ ApplyLowLatency() {
 }
 
 ApplyTweak() {
-    local Output SaveFailed=0
+    local Output Live SaveFailed=0
     case "$1:$2" in
         "Wi-Fi Force Low Latency Mode:ON" | "Wi-Fi Force Low Latency Mode:OFF")
-            SaveTweak "$1" "$2" || SaveFailed=1
+            SaveTweak "$1" "$2" || {
+                Log TweakSave "$1 : $2 | apply skipped, intent not persisted"
+                return 1
+            }
             if [ -n "$VINNET_TEST_SYNC" ]; then
                 ApplyLowLatency
             else
@@ -242,14 +278,24 @@ ApplyTweak() {
             if [ "$1" = "QDISC" ]; then
                 SaveTweak "QDISC:${3:-all}" "$2" || SaveFailed=1
             else
-                Output=$(LiveTweak "$1") || return
-                [ "$(TweakState "$1" "$Output")" = "$2" ] || return
+                Output=$(LiveTweak "$1") || {
+                    Log VerifyFail "$1 : $2 | live state unreadable"
+                    return 1
+                }
+                Live=$(TweakState "$1" "$Output") || {
+                    Log VerifyFail "$1 : $2 | unexpected live value [$Output]"
+                    return 1
+                }
+                [ "$Live" = "$2" ] || {
+                    Log VerifyFail "$1 : $2 | system reports $Live"
+                    return 1
+                }
                 SaveTweak "$1" "$2" || SaveFailed=1
             fi
             ;;
     esac
     if [ "$SaveFailed" -eq 1 ]; then
-        Log TweakSave "$1 : state not persisted"
+        Log TweakSave "$1 : $2${3:+ | target $3} | applied, but state not persisted"
         printf 'SAVE_FAILED\n'
     fi
     return 0
@@ -303,7 +349,7 @@ CheckTweak() {
         case "$Desired" in
             ON | OFF)
                 if [ "$Live" != "$Desired" ]; then
-                    RunTweak "$ID" "$Desired" || return
+                    RunTweak "$ID" "$Desired" || Log RestoreFail "$ID : $Desired re-apply failed"
                     Output=$(LiveTweak "$ID") || return
                 fi
                 ;;
@@ -323,7 +369,7 @@ CheckQDISC() {
             [ -n "$Desired" ] || Desired=$(ReadTweak "QDISC:all")
             [ -n "$Desired" ] || continue
             if [ "$Current" != "$Desired" ]; then
-                RunTweak QDISC "$Desired" "$D" > /dev/null || return
+                RunTweak QDISC "$Desired" "$D" > /dev/null || Log RestoreFail "QDISC:$D : $Desired re-apply failed"
                 Changed=1
             fi
         done <<EOF
@@ -342,19 +388,19 @@ RestoreTweaks() {
     for Key in "IP Reach Disconnect" "Wi-Fi Force Low Latency Mode"; do
         Value=$(ReadTweak "$Key")
         case "$Value" in
-            ON | OFF) RunTweak "$Key" "$Value" || Log RestoreFail "$Key : apply failed" ;;
+            ON | OFF) RunTweak "$Key" "$Value" || Log RestoreFail "$Key : $Value | boot restore failed" ;;
         esac
     done
 
     Value=$(ReadTweak "QDISC:all")
-    [ -z "$Value" ] || RunTweak QDISC "$Value" all || Log RestoreFail "QDISC:all : apply failed"
+    [ -z "$Value" ] || RunTweak QDISC "$Value" all || Log RestoreFail "QDISC:all : $Value | boot restore failed"
     [ -f "$Tweaks" ] || return 0
     awk -F'"' '{ for (I = 2; I <= NF; I += 4) print $I "=" $(I + 2) }' "$Tweaks" 2> /dev/null | while IFS='=' read -r Key Value; do
         case "$Key" in
             QDISC:*)
                 Target=${Key#QDISC:}
                 [ "$Target" = "all" ] && continue
-                RunTweak QDISC "$Value" "$Target" || Log RestoreFail "$Key : apply failed"
+                RunTweak QDISC "$Value" "$Target" || Log RestoreFail "$Key : $Value | boot restore failed"
                 ;;
         esac
     done
@@ -530,7 +576,7 @@ ABI=$(resetprop ro.product.cpu.abi)
 Diagnose
 
 if [ -f "$ProcessID" ]; then
-    read -r Line < "$ProcessID" 2> /dev/null
+    read -r Line 2> /dev/null < "$ProcessID"
     OldPID="${Line#*\"PID\":}"
     OldPID="${OldPID%%[!0-9]*}"
     [ -n "$OldPID" ] && kill -0 "$OldPID" 2> /dev/null && exit 0
