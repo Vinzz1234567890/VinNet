@@ -13,15 +13,6 @@ function exec(cmd) {
             };
             try { ksu.exec(cmd, JSON.stringify({}), CallbackName); } catch (e) { delete window[CallbackName]; reject(String(e)); }
         } else {
-            const MOCK = {
-                'resetprop ro.product.brand': '—',
-                'resetprop ro.product.model': '—',
-                'resetprop ro.build.version.release': '—',
-                'uname -r': '—',
-                'resetprop ro.product.cpu.abi': '—',
-            };
-            if (MOCK[cmd] !== undefined) { resolve(MOCK[cmd]); return; }
-            if (cmd.toLowerCase().startsWith('ping')) { resolve('—'); return; }
             resolve('');
         }
     });
@@ -56,23 +47,6 @@ async function FetchJSON(File) {
     try { return JSON.parse(Raw); }
     catch (Err) { Log(`JSON:${File}`, `${Err || 'parse failed'} | ${Raw.slice(0, 200)}`); return null; }
 }
-
-function ParseKV(Raw, Lowercase) {
-    return Object.fromEntries(
-        Raw.split('\n')
-            .map(L => L.trim().split('='))
-            .filter(P => P.length >= 2)
-            .map(([K, ...V]) => [Lowercase ? K.trim().toLowerCase() : K.trim(), V.join('=').trim()])
-    );
-}
-
-let Root = '', RootReady = null;
-const RootCommand = 'command -v ksud >/dev/null 2>&1 && echo KernelSU || (command -v apd >/dev/null 2>&1 && echo APatch || (command -v magisk >/dev/null 2>&1 && echo Magisk || echo Unknown))';
-
-const DetectRoot = () => {
-    if (!RootReady) RootReady = exec(RootCommand).then(Name => { Root = Root || Name || 'Unknown'; }, Err => { Log('Root', `${RootCommand} | ${Err || 'failed'}`); });
-    return RootReady;
-};
 
 const SnackElement = document.getElementById('Snack');
 let SnackTimer;
@@ -465,11 +439,11 @@ function SetupVerticalBounce() {
 }
 
 const Environment = [
-    ['Brand', 'Brand', 'resetprop ro.product.brand'],
-    ['Model', 'Model', 'resetprop ro.product.model'],
-    ['Android', 'Android', 'resetprop ro.build.version.release'],
-    ['Kernel', 'Kernel', 'uname -r'],
-    ['Architecture', 'Architecture', 'resetprop ro.product.cpu.abi'],
+    ['Brand', 'Brand'],
+    ['Model', 'Model'],
+    ['Android', 'Android'],
+    ['Kernel', 'Kernel'],
+    ['Architecture', 'Architecture'],
 ];
 
 const Vendor = [
@@ -478,17 +452,12 @@ const Vendor = [
 
 async function LoadEnvironment() {
     const Cached = await FetchJSON('Environment.json');
-    if (Cached) {
-        Root = Cached.Root || 'Unknown';
-        RootReady = Promise.resolve();
-        requestAnimationFrame(() => {
-            for (const [ID, Key] of Environment) document.getElementById(ID).textContent = Cached[Key] || '—';
-        });
-    } else {
-        await ExecFields(Environment);
-        await DetectRoot();
-    }
-    requestAnimationFrame(() => { const E = document.getElementById('Root'); if (E) E.textContent = Root && Root !== 'Unknown' ? Root : '—'; });
+    requestAnimationFrame(() => {
+        for (const [ID, Key] of [...Environment, ['Root', 'Root']]) {
+            const Value = (Cached && Cached[Key]) || '—';
+            document.getElementById(ID).textContent = ID === 'Root' && Value === 'Unknown' ? '—' : Value;
+        }
+    });
     await ExecFields(Vendor);
 }
 
@@ -507,20 +476,11 @@ async function LoadProcessID() {
         }
         ProcessID = Overlay.querySelector('#ProcessID');
     }
-    if (Cached && Cached.PID != null) {
-        ProcessID.textContent = Cached.PID;
-    } else {
-        try {
-            const PID = await exec('pgrep -f "VinNet/service.sh" | head -n 1');
-            ProcessID.textContent = PID || '—';
-        } catch (Err) {
-            Log('ProcessID', `pgrep | ${Err || 'failed'}`);
-            ProcessID.textContent = '—';
-        }
-    }
+    ProcessID.textContent = Cached && Cached.PID != null ? Cached.PID : '—';
 }
 
 let LastMonitor = { Latency: null, Jitter: null };
+let MonitorUnusable = false;
 
 function SetMonitorValue(ID, Value, Color) {
     const Element = GetElement(ID);
@@ -542,24 +502,17 @@ function ApplyMonitor(Data) {
 async function FetchMonitor() {
     exec(`touch ${Core}/ProcessID.json`).catch(Err => Log('ProcessID', `touch | ${Err || 'failed'}`));
     const Cached = await FetchJSON('Monitor.json');
-    if (Cached && Cached.Latency != null) {
+    const Age = Cached && Cached.Timestamp ? Date.now() / 1000 - Cached.Timestamp : null;
+    if (Cached && Cached.Latency != null && Cached.Latency !== '—' && Age != null && Age >= 0 && Age <= 30) {
+        MonitorUnusable = false;
         ApplyMonitor(Cached);
         return;
     }
-    try {
-        const Output = await exec('ping -c 2 -w 2 8.8.8.8 2>/dev/null || ping -c 2 -w 2 1.1.1.1 2>/dev/null');
-        const Matches = [...Output.matchAll(/time=([\d.]+)\s*ms/gi)].map(M => parseFloat(M[1]));
-        if (Matches.length >= 1) {
-            const Latency = Math.round(Matches.reduce((A, B) => A + B, 0) / Matches.length);
-            let Jitter = 0;
-            for (let I = 1; I < Matches.length; I++) Jitter += Math.abs(Matches[I] - Matches[I - 1]);
-            Jitter = Matches.length > 1 ? Math.round(Jitter / (Matches.length - 1)) : 0;
-            ApplyMonitor({ Latency, Jitter });
-            return;
-        }
-        Log('MonitorFail', `no time samples | ${Output.slice(0, 200)}`);
-    } catch (Err) {
-        Log('MonitorFail', `ping | ${Err || 'failed'}`);
+    if (!MonitorUnusable) {
+        MonitorUnusable = true;
+        Log('MonitorFail', Cached
+            ? `Monitor.json unusable | latency=${Cached.Latency} age=${Age == null ? 'unknown' : `${Math.round(Age)}s`}`
+            : 'Monitor.json missing');
     }
     ApplyMonitor({ Latency: '—', Jitter: '—' });
 }
@@ -909,25 +862,17 @@ const Metadata = [
 ];
 
 async function LoadMetadata() {
-    let Cached = await FetchJSON('Metadata.json');
-    if (!Cached) {
-        try {
-            const Raw = await exec('cat /data/adb/modules/VinNet/module.prop 2>/dev/null');
-            if (Raw) {
-                const Prop = ParseKV(Raw, true);
-                Cached = { ID: Prop.id, Name: Prop.name, Version: Prop.version, VersionCode: Prop.versioncode, Author: Prop.author, Description: Prop.description };
-            }
-        } catch (Err) { Log('Metadata', `module.prop | ${Err || 'failed'}`); }
-    }
-    if (!Cached) return;
+    const Cached = await FetchJSON('Metadata.json');
     requestAnimationFrame(() => {
         for (const [ID, Key] of Metadata) {
             const Element = document.getElementById(ID);
-            if (Element && Cached[Key]) Element.textContent = Cached[Key];
+            if (Element) Element.textContent = (Cached && Cached[Key]) || '—';
         }
         const VersionElement = document.getElementById('MetadataVersion');
-        if (VersionElement && Cached.Version) {
-            VersionElement.textContent = Cached.VersionCode ? `${Cached.Version} (${Cached.VersionCode})` : Cached.Version;
+        if (VersionElement) {
+            VersionElement.textContent = Cached && Cached.Version
+                ? (Cached.VersionCode ? `${Cached.Version} (${Cached.VersionCode})` : Cached.Version)
+                : '—';
         }
     });
 }
