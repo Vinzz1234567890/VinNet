@@ -135,52 +135,111 @@ Interfaces() {
     done
 }
 
+QDISCLeaf() {
+    case "$1" in
+        pfifo_fast | fq_codel | cake | fq | sfq | codel | pie | fq_pie | prio | pfifo | bfifo | tbf | red | netem | hhf | sfb | choke) return 0 ;;
+    esac
+    return 1
+}
+
+EgressLines() {
+    awk '
+        {
+            Kind = $2; Where = ""
+            for (I = 3; I <= NF; I++) {
+                if ($I == "parent") { Where = $(I + 1); break }
+                if ($I == "root") { Where = "root"; break }
+            }
+        }
+        Where == "root" { print Kind, "root"; next }
+        Where == "" { next }
+        Kind == "clsact" || Kind == "ingress" { next }
+        Where ~ /^ffff:/ { next }
+        Where !~ /^[0-9A-Fa-f]+:/ { print Kind, "lossy"; next }
+        { print Kind, Where }
+    '
+}
+
+ApplyInterface() {
+    local D="$1" Key="$2" Spec="$3" Kind Handle Output Lines Kids RootKind Lossy Changed=0 ErrorOutput
+    if ! Output=$(tc qdisc show dev "$D" 2> /dev/null); then
+        Log ApplyFail "QDISC:$D : $Key | structure unreadable"
+        return 1
+    fi
+    Lines=$(printf '%s\n' "$Output" | EgressLines)
+    Kids=$(printf '%s\n' "$Lines" | awk '$2 != "root" && $2 != "lossy"')
+    RootKind=$(printf '%s\n' "$Lines" | awk '$2 == "root" { print $1; exit }')
+    printf '%s\n' "$Lines" | grep -q ' lossy$' && Lossy=1
+    if QDISCLeaf "$Key" && { [ -n "$Kids" ] || [ -n "$Lossy" ]; }; then
+        if [ -z "$Kids" ] && [ "$RootKind" = "mq" ]; then
+            ErrorOutput=$(tc qdisc replace dev "$D" root $RootKind 2>&1)
+            if [ $? -eq 0 ]; then
+                Output=$(tc qdisc show dev "$D" 2> /dev/null)
+                Lines=$(printf '%s\n' "$Output" | EgressLines)
+                Kids=$(printf '%s\n' "$Lines" | awk '$2 != "root" && $2 != "lossy"')
+            else
+                Log ApplyFail "QDISC:$D : $Key | $RootKind rebuild failed | ${ErrorOutput:-tc failed}"
+            fi
+        fi
+        if [ -z "$Kids" ]; then
+            Log ApplyFail "QDISC:$D : $Key | queues unaddressable | root $RootKind"
+            return 1
+        fi
+        while read -r Kind Handle; do
+            [ -n "$Handle" ] || continue
+            if ErrorOutput=$(tc qdisc replace dev "$D" parent "$Handle" $Spec 2>&1); then
+                Changed=1
+            else
+                Log ApplyFail "QDISC:$D : $Key | parent $Handle | ${ErrorOutput:-tc failed}"
+            fi
+        done <<EOF
+$Kids
+EOF
+        [ "$Changed" -eq 1 ] && return 0
+        return 1
+    fi
+    ErrorOutput=$(tc qdisc replace dev "$D" root $Spec 2>&1) || {
+        Log ApplyFail "QDISC:$D : $Key | ${ErrorOutput:-tc failed}"
+        return 1
+    }
+    return 0
+}
+
 ApplyQDISC() {
-    local Key="$1" Target="${2:-all}" Spec D N=0 ErrorOutput
+    local Key="$1" Target="${2:-all}" Spec D N=0 Seen=0
     Spec=$(QDISCSpec "$Key") || { Log ApplyFail "QDISC : $Key is not a supported value"; return 1; }
     if [ "$Target" != "all" ]; then
-        ErrorOutput=$(tc qdisc replace dev "$Target" root $Spec 2>&1) || {
-            Log ApplyFail "QDISC:$Target : $Key | ${ErrorOutput:-tc failed}"
-            return 1
-        }
+        ApplyInterface "$Target" "$Key" "$Spec" || return
         printf '%s\n' "$Target"
         return 0
     fi
     for D in $(Interfaces); do
-        if ErrorOutput=$(tc qdisc replace dev "$D" root $Spec 2>&1); then
+        Seen=$((Seen + 1))
+        if ApplyInterface "$D" "$Key" "$Spec"; then
             printf '%s\n' "$D"
             N=$((N + 1))
-        else
-            Log ApplyFail "QDISC:$D : $Key | ${ErrorOutput:-tc failed}"
         fi
     done
-    [ "$N" -gt 0 ] || Log ApplyFail "QDISC:all : $Key | no eligible interface"
+    [ "$N" -gt 0 ] || [ "$Seen" -gt 0 ] || Log ApplyFail "QDISC:all : $Key | no eligible interface"
     [ "$N" -gt 0 ]
 }
 
 ListQDISC() {
-    local D Output Kind Found=0
+    local D Output Lines Kids Kind Found=0
     for D in $(Interfaces); do
-        Output=$(tc qdisc show dev "$D" 2> /dev/null) || continue
-        [ -n "$Output" ] || continue
         Found=1
-        Kind=$(printf '%s\n' "$Output" | awk '
-            {
-                Parent = 0; Root = 0
-                for (i = 1; i <= NF; i++) {
-                    if ($i == "parent") Parent = 1
-                    if ($i == "root") Root = 1
-                }
-                if (Parent && Child == "") Child = $2
-                if (Root && Container == "") Container = $2
-            }
-            END {
-                if (Child != "") print Child
-                else if (Container != "") print Container
-            }
-        ')
-        [ -n "$Kind" ] || continue
-        printf '%s %s\n' "$D" "$Kind"
+        if Output=$(tc qdisc show dev "$D" 2> /dev/null); then
+            Lines=$(printf '%s\n' "$Output" | EgressLines)
+            Kids=$(printf '%s\n' "$Lines" | awk '$2 != "root"')
+            if [ -n "$Kids" ]; then
+                Kind=$(printf '%s\n' "$Kids" | awk '{ if (First == "") First = $1; if ($1 != First) Diff = 1 } END { print (Diff ? "custom" : First) }')
+            else
+                Kind=$(printf '%s\n' "$Lines" | awk '$2 == "root" { print $1; exit }')
+            fi
+            printf '%s %s\n' "$D" "${Kind:-none}"
+        else
+            printf '%s %s\n' "$D" unknown
+        fi
     done
     [ "$Found" -eq 1 ] || printf '%s\n' '- -'
 }
