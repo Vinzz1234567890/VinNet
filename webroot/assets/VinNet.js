@@ -670,17 +670,17 @@ function SyncSelectMenu(Select) {
 
 function ComputeAll(ID, DevMap) {
     const Ifaces = SelectIfaces.get(ID);
-    const Names = Ifaces && Ifaces.length ? Ifaces : Object.keys(DevMap).filter(Key => Key !== 'all');
-    const Values = Names.map(Name => DevMap[Name] || '');
+    const Names = (Ifaces && Ifaces.length ? Ifaces : Object.keys(DevMap).filter(Key => Key !== 'all')).filter(Name => DevMap[Name]);
+    const Values = Names.map(Name => DevMap[Name]);
     if (!Values.length) return '';
     return Values.every(Value => Value === Values[0]) ? Values[0] : 'custom';
 }
 
-function ParseSelectOutput(ID, Tweak, Out) {
+function ParseSelectOutput(ID, Out) {
     const DevMap = {};
     for (const Line of Out.split('\n').map(L => L.trim()).filter(Boolean)) {
         const [Dev, Q] = Line.split(/\s+/);
-        if (Dev && Q && Tweak.Options[Q] && !DevMap[Dev]) DevMap[Dev] = Q;
+        if (Dev && Q && Dev !== '-' && !DevMap[Dev]) DevMap[Dev] = Q;
     }
     DevMap.all = ComputeAll(ID, DevMap);
     return DevMap;
@@ -697,7 +697,7 @@ async function CheckTweaks() {
         try {
             const Out = await exec(Cmd);
             if (!Out) { Unsupported.add(ID); Log(`Check:${ID}`, `no output | cmd=${Cmd}`); return; }
-            if (Tweak.Type === 'select') LiveState.set(ID, ParseSelectOutput(ID, Tweak, Out));
+            if (Tweak.Type === 'select') LiveState.set(ID, ParseSelectOutput(ID, Out));
             else LiveState.set(ID, [].concat(Tweak.Expect).some(E => Out.includes(E)));
         } catch (Err) {
             Unsupported.add(ID);
