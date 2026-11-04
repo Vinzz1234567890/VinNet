@@ -98,11 +98,6 @@ QDISCSpec() {
         codel) printf 'codel\n' ;;
         pie) printf 'pie\n' ;;
         fq_pie) printf 'fq_pie\n' ;;
-        prio) printf 'prio\n' ;;
-        pfifo) printf 'pfifo\n' ;;
-        bfifo) printf 'bfifo\n' ;;
-        tbf) printf 'tbf rate 1000mbit burst 100k latency 50ms\n' ;;
-        red) printf 'red limit 1000000 min 30000 max 90000 avpkt 1000 burst 55\n' ;;
         htb) printf 'htb default 1\n' ;;
         netem) printf 'netem\n' ;;
         drr) printf 'drr\n' ;;
@@ -137,7 +132,7 @@ Interfaces() {
 
 QDISCLeaf() {
     case "$1" in
-        pfifo_fast | fq_codel | cake | fq | sfq | codel | pie | fq_pie | prio | pfifo | bfifo | tbf | red | netem | hhf | sfb | choke) return 0 ;;
+        pfifo_fast | fq_codel | cake | fq | sfq | codel | pie | fq_pie | netem | hhf | sfb | choke) return 0 ;;
     esac
     return 1
 }
@@ -247,7 +242,7 @@ ListQDISC() {
 ProbeQDISC() {
     command -v tc > /dev/null 2>&1 || return 1
     local Key Spec
-    for Key in pfifo_fast fq_codel cake fq sfq codel pie fq_pie prio pfifo bfifo tbf red htb netem drr hhf sfb choke qfq cbq hfsc ets mqprio; do
+    for Key in pfifo_fast fq_codel cake fq sfq codel pie fq_pie htb netem drr hhf sfb choke qfq cbq hfsc ets mqprio; do
         Spec=$(QDISCSpec "$Key") || continue
         tc qdisc replace dev lo root $Spec 2> /dev/null && printf '%s\n' "$Key"
     done
