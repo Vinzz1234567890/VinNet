@@ -100,8 +100,6 @@ QDISCSpec() {
         fq_pie) printf 'fq_pie\n' ;;
         hhf) printf 'hhf\n' ;;
         sfb) printf 'sfb\n' ;;
-        ets) printf 'handle 1: ets bands 3\n' ;;
-        mqprio) printf 'handle 1: mqprio num_tc 1 map 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 queues 1@0\n' ;;
         *) return 1 ;;
     esac
 }
@@ -235,7 +233,7 @@ ListQDISC() {
 ProbeQDISC() {
     command -v tc > /dev/null 2>&1 || return 1
     local Key Spec
-    for Key in pfifo_fast fq_codel cake fq sfq codel pie fq_pie hhf sfb ets mqprio; do
+    for Key in pfifo_fast fq_codel cake fq sfq codel pie fq_pie hhf sfb; do
         Spec=$(QDISCSpec "$Key") || continue
         tc qdisc replace dev lo root $Spec 2> /dev/null && printf '%s\n' "$Key"
     done
