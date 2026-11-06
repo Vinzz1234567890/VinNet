@@ -551,8 +551,6 @@ const Tweaks = {
             fq_pie: { Label: 'fq_pie' },
             hhf: { Label: 'hhf' },
             sfb: { Label: 'sfb' },
-            ets: { Label: 'ets' },
-            mqprio: { Label: 'mqprio' },
         },
         CheckCommand: `sh ${Service} check QDISC`,
         Warn: 'Reset after reboot',
