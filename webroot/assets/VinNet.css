@@ -171,8 +171,7 @@ img {
     position: absolute;
     inset: 0;
     --page-lane: 0%;
-    --bounce-y: 0px;
-    transform: translateX(calc(var(--page-base) + var(--page-drag) + var(--page-lane))) translateY(var(--bounce-y));
+    transform: translateX(calc(var(--page-base) + var(--page-drag) + var(--page-lane)));
     transition: transform 0.4s var(--ease-smooth);
     will-change: transform;
     overflow-y: auto;
@@ -201,13 +200,8 @@ img {
     --page-lane: 300%;
 }
 
-.Pages.Dragging .Page,
-.Page.VerticalDragging {
+.Pages.Dragging .Page {
     transition: none !important;
-}
-
-.Page.Bouncing {
-    transition: transform 0.35s var(--ease-smooth);
 }
 
 .Navigation {
@@ -555,6 +549,18 @@ img {
 
 .TweakSelect.TweakSelectOpen .TweakSelectChevron {
     transform: rotate(180deg);
+}
+
+.TweakSelect.TweakSelectStatic .TweakSelectChevron {
+    visibility: hidden;
+}
+
+.TweakSelect.TweakSelectStatic .TweakSelectField {
+    cursor: default;
+}
+
+.TweakSelect.TweakSelectStatic .TweakSelectField:active {
+    border-color: var(--out-var);
 }
 
 .TweakSelectMenu {
