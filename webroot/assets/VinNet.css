@@ -782,7 +782,10 @@ img {
     font-weight: 500;
     padding: 12px 20px;
     border-radius: 14px;
-    white-space: nowrap;
+    width: max-content;
+    max-width: calc(100vw - 32px);
+    white-space: normal;
+    text-align: center;
     opacity: 0;
     transition: opacity 0.2s, transform 0.2s;
     pointer-events: none;
