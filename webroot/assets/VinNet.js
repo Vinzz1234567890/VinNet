@@ -100,7 +100,6 @@ const CommitRatio = 0.22, CommitMaxPx = 96, CommitMinPx = 64, EdgeResistance = 3
 let CurrentPageID = PageList[0], CurrentPageIndex = 0;
 let DragOffset = 0, PendingOffset = 0, DragFrameID = 0, Dragging = false;
 let GestureAxis = null, GestureKind = null, GestureStartX = 0, GestureStartY = 0, GesturePointerID = null;
-let VerticalBouncing = false;
 
 let NavigationButtons = null, NavigationButtonMap = null, NavigationSVGS = null, NavigationSVGButtonMap = null;
 let HeaderTitle = null, HeaderDescription = null;
@@ -187,7 +186,6 @@ function Navigation(ID) {
 
 function ResetGesture() {
     Dragging = false;
-    VerticalBouncing = false;
     GestureAxis = null; GestureKind = null; GesturePointerID = null;
     DragOffset = 0; PendingOffset = 0;
     PagesElement.classList.remove('Dragging');
@@ -209,7 +207,7 @@ function MoveGesture(X, Y, Event, OnAxisLock) {
         const DeltaX = X - GestureStartX, DeltaY = Y - GestureStartY;
         const AbsX = Math.abs(DeltaX), AbsY = Math.abs(DeltaY);
         if (AbsX < 10 && AbsY < 10) return;
-        if (AbsY >= AbsX || VerticalBouncing) {
+        if (AbsY >= AbsX) {
             GestureAxis = 'y';
             Dragging = false;
             PagesElement.classList.remove('Dragging');
@@ -289,155 +287,6 @@ function SetupGestureListeners() {
     });
 }
 
-const BounceResistance = 3;
-
-function SetupVerticalBounce() {
-    const Pages = PagesElement.querySelectorAll('.Page');
-    Pages.forEach(PageEl => {
-        let TouchStartY = 0, TouchStartX = 0, BoundaryY = 0;
-        let BounceActive = false, BounceOffset = 0, BounceEdge = null, BounceFrame = 0;
-
-        PageEl.addEventListener('touchstart', E => {
-            if (E.target.closest('.TweakSelectMenu')) return;
-            if (E.touches.length !== 1) return;
-            if (BounceFrame) { cancelAnimationFrame(BounceFrame); BounceFrame = 0; }
-            PageEl.classList.remove('Bouncing', 'VerticalDragging');
-            PageEl.style.setProperty('--bounce-y', '0px');
-            BounceOffset = 0;
-            BounceEdge = null;
-            BounceActive = false;
-            VerticalBouncing = false;
-            TouchStartY = E.touches[0].clientY;
-            TouchStartX = E.touches[0].clientX;
-            BoundaryY = TouchStartY;
-        }, { passive: true });
-
-        PageEl.addEventListener('touchmove', E => {
-            if (E.target.closest('.TweakSelectMenu')) return;
-            if (E.touches.length !== 1) return;
-
-            // If horizontal pager gesture has claimed this touch, strictly forbid vertical bounce
-            if (GestureAxis === 'x') {
-                if (BounceActive || BounceOffset !== 0) {
-                    BounceActive = false;
-                    VerticalBouncing = false;
-                    BounceEdge = null;
-                    BounceOffset = 0;
-                    PageEl.classList.remove('VerticalDragging', 'Bouncing');
-                    PageEl.style.setProperty('--bounce-y', '0px');
-                }
-                return;
-            }
-
-            const CurrentY = E.touches[0].clientY;
-            const CurrentX = E.touches[0].clientX;
-            const AbsX = Math.abs(CurrentX - TouchStartX);
-            const AbsY = Math.abs(CurrentY - TouchStartY);
-
-            const ScrollTop = PageEl.scrollTop;
-            const MaxScroll = Math.max(0, PageEl.scrollHeight - PageEl.clientHeight);
-
-            // While within normal scroll range, keep updating BoundaryY to track where overscroll starts
-            if (!BounceActive && ScrollTop > 1 && ScrollTop < MaxScroll - 1) {
-                BoundaryY = CurrentY;
-                return;
-            }
-
-            // At boundaries:
-            const AtTop = ScrollTop <= 1;
-            const AtBottom = ScrollTop >= MaxScroll - 1;
-
-            if (!BounceActive) {
-                // If movement is horizontal dominant, do not start vertical bounce
-                if (AbsX > AbsY || AbsY < 6) return;
-
-                const DeltaBoundary = CurrentY - BoundaryY;
-                if (AtTop && DeltaBoundary > 0) {
-                    BounceEdge = 'top';
-                } else if (AtBottom && DeltaBoundary < 0) {
-                    BounceEdge = 'bottom';
-                } else {
-                    return;
-                }
-
-                BounceActive = true;
-                VerticalBouncing = true;
-                GestureAxis = 'y';
-                Dragging = false;
-                PagesElement.classList.remove('Dragging');
-                DragOffset = 0;
-                PendingOffset = 0;
-                RenderPages();
-
-                PageEl.classList.remove('Bouncing');
-                PageEl.classList.add('VerticalDragging');
-            }
-
-            if (E.cancelable) E.preventDefault();
-
-            if (BounceEdge === 'top') {
-                if (PageEl.scrollTop !== 0) PageEl.scrollTop = 0;
-            } else if (BounceEdge === 'bottom') {
-                if (PageEl.scrollTop < MaxScroll) PageEl.scrollTop = MaxScroll;
-            }
-
-            // When BounceActive:
-            const PullDistance = CurrentY - BoundaryY;
-
-            // Disengage ONLY when user physically pushes finger back past the boundary
-            if ((BounceEdge === 'top' && PullDistance <= 0) ||
-                (BounceEdge === 'bottom' && PullDistance >= 0)) {
-                BounceActive = false;
-                VerticalBouncing = false;
-                BounceEdge = null;
-                BounceOffset = 0;
-                PageEl.classList.remove('VerticalDragging');
-                PageEl.style.setProperty('--bounce-y', '0px');
-                BoundaryY = CurrentY;
-                return;
-            }
-
-            const Scaled = (BounceEdge === 'top' ? Math.max(0, PullDistance) : Math.min(0, PullDistance)) / BounceResistance;
-            BounceOffset = Math.max(-96, Math.min(96, Scaled));
-
-            if (!BounceFrame) {
-                BounceFrame = requestAnimationFrame(() => {
-                    BounceFrame = 0;
-                    if (!BounceActive) return;
-                    PageEl.style.setProperty('--bounce-y', `${BounceOffset}px`);
-                });
-            }
-        }, { passive: false });
-
-        const ReleaseBounce = () => {
-            if (BounceFrame) { cancelAnimationFrame(BounceFrame); BounceFrame = 0; }
-            PageEl.classList.remove('VerticalDragging');
-            if (BounceOffset !== 0) {
-                PageEl.classList.add('Bouncing');
-                PageEl.style.setProperty('--bounce-y', '0px');
-                let Done = false;
-                const CleanUp = () => {
-                    if (Done) return;
-                    Done = true;
-                    PageEl.classList.remove('Bouncing');
-                    VerticalBouncing = false;
-                };
-                PageEl.addEventListener('transitionend', CleanUp, { once: true });
-                setTimeout(CleanUp, 400);
-            } else {
-                PageEl.classList.remove('Bouncing');
-                VerticalBouncing = false;
-            }
-            BounceActive = false;
-            BounceEdge = null;
-            BounceOffset = 0;
-        };
-
-        PageEl.addEventListener('touchend', ReleaseBounce, { passive: true });
-        PageEl.addEventListener('touchcancel', ReleaseBounce, { passive: true });
-    });
-}
-
 const Environment = [
     ['Brand', 'Brand'],
     ['Model', 'Model'],
@@ -447,7 +296,7 @@ const Environment = [
 ];
 
 const Vendor = [
-    ['Vendor', 'Vendor', '[ "$(resetprop ro.product.device)" = "fog" ] && { grep -q "VinNet" /vendor/etc/wifi/WCNSS_qcom_cfg.ini 2>/dev/null && grep -q "p2p_disabled=1" /vendor/etc/wifi/wpa_supplicant_overlay.conf 2>/dev/null && grep -q "ap_scan=1" /vendor/etc/wifi/wpa_supplicant.conf 2>/dev/null && echo Mounted || echo Unmounted; } || echo "Not supported"'],
+    ['Vendor', 'Vendor', '[ "$(resetprop ro.product.device)" = "fog" ] && { grep -q "VinNet" /vendor/etc/wifi/WCNSS_qcom_cfg.ini 2>/dev/null && grep -q "p2p_disabled=1" /vendor/etc/wifi/wpa_supplicant_overlay.conf 2>/dev/null && grep -q "ap_scan=1" /vendor/etc/wifi/wpa_supplicant.conf 2>/dev/null && echo Mounted || echo Unmounted; } || echo "Unsupported"'],
 ];
 
 async function LoadEnvironment() {
@@ -585,7 +434,7 @@ const Tweaks = {
 };
 
 let TweakQueue = Promise.resolve();
-const SelectDevMaps = new Map(), SelectIfaces = new Map();
+const SelectDevMaps = new Map(), SelectIfaces = new Map(), SelectChoices = new Map();
 
 function ClassifyInterface(Name) {
     if (Name.startsWith('wlan')) return { Label: Name, Icon: 'wifi' };
@@ -623,6 +472,8 @@ async function ProbeSelect(Tweak) {
 
 function UpdateSelectDisplay(Select, Tweak, Value) {
     Select.dataset.current = Value;
+    const Choices = SelectChoices.get(Select.dataset.tweakId) || [];
+    Select.classList.toggle('TweakSelectStatic', Choices.filter(Key => Key !== Value).length === 0);
     const Label = Value === 'custom' ? 'Custom' : (Tweak.Options[Value] ? Tweak.Options[Value].Label : Value);
     Select.querySelector('.TweakSelectValue').textContent = Label;
     for (const Item of Select.querySelectorAll('.TweakSelectItem')) {
@@ -672,8 +523,38 @@ function ParseSelectOutput(ID, Out) {
     return DevMap;
 }
 
+let PersistentOn = false;
+let PersistentReady = null;
+
+const ReadPersistent = () => {
+    if (!PersistentReady) {
+        PersistentReady = exec(`sh ${Service} persistent`).then(State => {
+            if (State && State !== 'ON' && State !== 'OFF') throw new Error('Invalid persistent setting');
+            PersistentOn = State === 'ON';
+        }).catch(Err => {
+            PersistentReady = null;
+            throw Err;
+        });
+    }
+    return PersistentReady;
+};
+
+function WarnFor(ID, UnsupportedNow) {
+    if (UnsupportedNow) return 'Unsupported';
+    return PersistentOn ? '' : (Tweaks[ID] && Tweaks[ID].Warn) || '';
+}
+
+function RefreshWarnings() {
+    for (const Warn of document.querySelectorAll('.TweakWarn')) {
+        const Text = WarnFor(Warn.dataset.tweak, Warn.classList.contains('TweakUnsupported'));
+        Warn.hidden = !Text;
+        Warn.textContent = Text;
+    }
+}
+
 async function CheckTweaks() {
     const LiveState = new Map(), Unsupported = new Set(), SelectOptions = new Map(), SupportTasks = new Map();
+    await ReadPersistent().catch(() => { });
     for (const [ID, Tweak] of Object.entries(Tweaks)) {
         if (Tweak.Type === 'select') SupportTasks.set(ID, ProbeSelect(Tweak));
     }
@@ -724,10 +605,12 @@ function RenderTweakCards(State) {
         Card.querySelector('.TweakIcon use').setAttribute('href', '#' + Tweak.Icon);
         Card.querySelector('.TweakName').textContent = Tweak.Label || ID;
         Card.querySelector('.TweakDescription').textContent = Tweak.Description;
-        const WarnText = Unsupported.has(ID) ? 'Not supported' : Tweak.Warn;
-        if (WarnText) {
+        const WarnText = WarnFor(ID, Unsupported.has(ID));
+        if (WarnText || Tweak.Warn) {
             const Warn = document.createElement('div');
             Warn.className = Unsupported.has(ID) ? 'TweakWarn TweakUnsupported' : 'TweakWarn';
+            Warn.dataset.tweak = ID;
+            Warn.hidden = !WarnText;
             Warn.textContent = WarnText;
             Card.querySelector('.TweakBody').appendChild(Warn);
         }
@@ -769,6 +652,7 @@ function RenderTweakCards(State) {
                 Menu.appendChild(Item);
             }
 
+            SelectChoices.set(ID, SelectOptions.get(ID) || []);
             UpdateSelectDisplay(Select, Tweak, DevMap.all || '—');
             Select.classList.toggle('TweakSelectDisabled', Unsupported.has(ID));
             Container.appendChild(Card);
@@ -793,7 +677,22 @@ async function ApplyTweak(ID, Payload, Target = 'all') {
     if (!Tweak) return;
     const Element = document.getElementById('Tweak-' + ID);
     const IsSelect = Tweak.Type === 'select';
-    if (IsSelect) Element.classList.add('TweakSelectDisabled'); else Element.disabled = true;
+    let PrevDevMap = null;
+    if (IsSelect) {
+        const DevMap = SelectDevMaps.get(ID) || {};
+        PrevDevMap = { ...DevMap };
+        const Ifaces = SelectIfaces.get(ID) || Object.keys(DevMap).filter(Key => Key !== 'all');
+        if (Target === 'all') {
+            for (const Dev of Ifaces) DevMap[Dev] = Payload;
+            DevMap.all = Payload;
+        } else {
+            DevMap[Target] = Payload;
+            DevMap.all = ComputeAll(ID, DevMap);
+        }
+        UpdateSelectDisplay(Element, Tweak, DevMap[Target] || Payload);
+    } else {
+        Element.disabled = true;
+    }
     TweakQueue = TweakQueue.then(async () => {
         try {
             const Command = Tweak.Warn
@@ -801,29 +700,24 @@ async function ApplyTweak(ID, Payload, Target = 'all') {
                 : (Payload ? Tweak.ONCommand : Tweak.OFFCommand);
             const Out = await exec(Command);
             const SaveFailed = Out.split('\n').includes('SAVE_FAILED');
-            if (IsSelect) {
-                const Accepted = Out.split('\n').map(S => S.trim()).filter(S => S && S !== 'SAVE_FAILED');
-                if (Target !== 'all' && !Accepted.length) Accepted.push(Target);
-                const DevMap = SelectDevMaps.get(ID) || {};
-                for (const Dev of Accepted) DevMap[Dev] = Payload;
-                DevMap.all = ComputeAll(ID, DevMap);
-            }
             const TargetLabel = Target === 'all' ? 'All' : Target;
             Toast(SaveFailed ? 'Applied, but unable to save state' : `${Tweak.Label || ID}${IsSelect ? ` (${TargetLabel})` : ''} > ${IsSelect ? Tweak.Options[Payload].Label : (Payload ? Tweak.ONLabel : Tweak.OFFLabel)}`);
-            if (IsSelect) {
-                const Current = Element.dataset.target || 'all';
-                const DevMap = SelectDevMaps.get(ID) || {};
-                UpdateSelectDisplay(Element, Tweak, DevMap[Current] || '—');
-            }
         } catch (Err) {
             const Detail = IsSelect
                 ? ` value=${Payload} target=${Target}`
                 : ` state=${Payload ? 'ON' : 'OFF'}`;
             Log('TweakFail', `${ID}${Detail} | ${Err || 'unknown error'}`);
             Toast('Unable to apply tweak');
-            if (!IsSelect) Element.checked = !Payload;
+            if (IsSelect) {
+                if (PrevDevMap) {
+                    SelectDevMaps.set(ID, PrevDevMap);
+                    UpdateSelectDisplay(Element, Tweak, PrevDevMap[Target] || '—');
+                }
+            } else {
+                Element.checked = !Payload;
+            }
         } finally {
-            if (IsSelect) Element.classList.remove('TweakSelectDisabled'); else Element.disabled = false;
+            if (!IsSelect) Element.disabled = false;
         }
     });
 }
@@ -832,9 +726,8 @@ async function LoadSettings() {
     const Input = document.getElementById('PersistentTweaks');
     try {
         if (typeof window.ksu?.exec !== 'function') throw new Error('Root bridge unavailable');
-        const State = await exec(`sh ${Service} persistent`);
-        if (State && State !== 'ON' && State !== 'OFF') throw new Error('Invalid persistent setting');
-        Input.checked = State === 'ON';
+        await ReadPersistent();
+        Input.checked = PersistentOn;
     } catch (Err) {
         Input.indeterminate = true;
         Input.disabled = true;
@@ -916,7 +809,6 @@ async function DecodeImage(ImageElement) {
 
 function SetupEventListeners() {
     SetupGestureListeners();
-    SetupVerticalBounce();
 
     document.addEventListener('change', Event => {
         if (Event.target.id === 'PersistentTweaks') {
@@ -925,6 +817,9 @@ function SetupEventListeners() {
             TweakQueue = TweakQueue.then(async () => {
                 try {
                     await exec(`sh ${Service} persistent ${Enabled ? 'ON' : 'OFF'}`);
+                    PersistentOn = Enabled;
+                    PersistentReady = Promise.resolve();
+                    RefreshWarnings();
                     Toast(`Persistent Tweaks > ${Enabled ? 'Enabled' : 'Disabled'}`);
                 } catch (Err) {
                     Input.checked = !Enabled;
