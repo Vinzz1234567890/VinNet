@@ -8,7 +8,7 @@ Log() {
     [ -n "$Message" ] || return 0
     Message=$(printf '%s' "$Message" | tr '\n' ' ')
     [ -w "${LogPath%/*}" ] || return 1
-    Temp="$LogPath.tmp.$$"
+    Temp="$LogPath.tmp.$$.$(date +%s%N 2>/dev/null || echo $RANDOM)"
     {
         grep -vF "] $Tag: $Message" "$LogPath" 2> /dev/null
         printf '[%s] %s: %s\n' "$(date '+%F %T')" "$Tag" "$Message"
@@ -110,8 +110,11 @@ Interfaces() {
         [ -e "$P" ] || continue
         D=${P##*/}
         case "$D" in
-            lo | dummy* | tun* | tap* | ip6tnl* | sit* | ifb* | veth* | bond* | p2p* | r_rmnet* | rmnet_ctl | ap* | ncm* | rndis* | usb* | radio* | rmtfs* | swlan* | wlan0h* | wlan0bss*) continue ;;
-            wlan* | rmnet* | ccmni* | pdp* | ppp* | wwan* | v4-rmnet* | v6-rmnet* | clat* | eth* | en*) ;;
+            lo | dummy* | tun* | tap* | sit* | ip6tnl* | veth* | bond* | bridge* | vxlan* | geneve* | gre* | gretap* | erspan* | ipsec* | xfrm* | wg* | ifb*) continue ;;
+            v4-* | v6-* | clat* | 464*) continue ;;
+            p2p* | ap* | swlan* | wlan0h* | wlan0bss* | aware* | nan* | ccmni-lan* | ccmni_lan*) continue ;;
+            r_rmnet* | rmnet_ctl | ncm* | rndis* | usb* | radio* | rmtfs*) continue ;;
+            wlan* | rmnet* | ccmni* | seth_lte* | sipa* | pdp* | gprs | ppp* | wwan* | eth* | enp* | ens* | eno*) ;;
             *) continue ;;
         esac
         F=""
@@ -192,7 +195,7 @@ EOF
 }
 
 ApplyQDISC() {
-    local Key="$1" Target="${2:-all}" Spec D N=0 Seen=0
+    local Key="$1" Target="${2:-all}" Spec D Seen=0
     Spec=$(QDISCSpec "$Key") || { Log ApplyFail "QDISC : $Key is not a supported value"; return 1; }
     if [ "$Target" != "all" ]; then
         ApplyInterface "$Target" "$Key" "$Spec" || return
@@ -201,32 +204,34 @@ ApplyQDISC() {
     fi
     for D in $(Interfaces); do
         Seen=$((Seen + 1))
-        if ApplyInterface "$D" "$Key" "$Spec"; then
-            printf '%s\n' "$D"
-            N=$((N + 1))
-        fi
+        ApplyInterface "$D" "$Key" "$Spec" &
     done
-    [ "$N" -gt 0 ] || [ "$Seen" -gt 0 ] || Log ApplyFail "QDISC:all : $Key | no eligible interface"
-    [ "$N" -gt 0 ]
+    wait
+    [ "$Seen" -gt 0 ] || Log ApplyFail "QDISC:all : $Key | no eligible interface"
+    [ "$Seen" -gt 0 ]
 }
 
 ListQDISC() {
-    local D Output Lines Kids Kind Found=0
+    local D Found=0
     for D in $(Interfaces); do
         Found=1
-        if Output=$(tc qdisc show dev "$D" 2> /dev/null); then
-            Lines=$(printf '%s\n' "$Output" | EgressLines)
-            Kids=$(printf '%s\n' "$Lines" | awk '$2 != "root"')
-            if [ -n "$Kids" ]; then
-                Kind=$(printf '%s\n' "$Kids" | awk '{ if (First == "") First = $1; if ($1 != First) Diff = 1 } END { print (Diff ? "custom" : First) }')
+        (
+            local Output Lines Kids Kind
+            if Output=$(tc qdisc show dev "$D" 2> /dev/null); then
+                Lines=$(printf '%s\n' "$Output" | EgressLines)
+                Kids=$(printf '%s\n' "$Lines" | awk '$2 != "root"')
+                if [ -n "$Kids" ]; then
+                    Kind=$(printf '%s\n' "$Kids" | awk '{ if (First == "") First = $1; if ($1 != First) Diff = 1 } END { print (Diff ? "custom" : First) }')
+                else
+                    Kind=$(printf '%s\n' "$Lines" | awk '$2 == "root" { print $1; exit }')
+                fi
+                printf '%s %s\n' "$D" "${Kind:-none}"
             else
-                Kind=$(printf '%s\n' "$Lines" | awk '$2 == "root" { print $1; exit }')
+                printf '%s %s\n' "$D" unknown
             fi
-            printf '%s %s\n' "$D" "${Kind:-none}"
-        else
-            printf '%s %s\n' "$D" unknown
-        fi
+        ) &
     done
+    wait
     [ "$Found" -eq 1 ] || printf '%s\n' '- -'
 }
 
@@ -319,10 +324,15 @@ ApplyTweak() {
             fi
             ;;
         *)
-            RunTweak "$@" || return
             if [ "$1" = "QDISC" ]; then
                 SaveTweak "QDISC:${3:-all}" "$2" || SaveFailed=1
+                if [ -n "$VINNET_TEST_SYNC" ]; then
+                    RunTweak "$@"
+                else
+                    (RunTweak "$@") < /dev/null > /dev/null 2>&1 &
+                fi
             else
+                RunTweak "$@" || return
                 Output=$(LiveTweak "$1") || {
                     Log VerifyFail "$1 : $2 | live state unreadable"
                     return 1
