@@ -24,7 +24,8 @@ ConfigureVendor() {
     Device=$(resetprop ro.product.device 2> /dev/null)
     [ -n "$Device" ] || Die "Unable to read device codename"
     if [ "$Device" = "$TargetDevice" ]; then
-        [ -f "$MODPATH/system/vendor/etc/wifi/WCNSS_qcom_cfg.ini" ] || Die "Vendor Wi-Fi configuration is missing"
+        Config="$MODPATH/system/vendor/etc/wifi/WCNSS_qcom_cfg.ini"
+        [ -f "$Config" ] && [ -s "$Config" ] || Die "Vendor Wi-Fi configuration is missing or empty"
         Print "Device is $TargetDevice"
     else
         Print "Device isn't $TargetDevice"
