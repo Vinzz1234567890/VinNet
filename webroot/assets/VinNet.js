@@ -33,7 +33,7 @@ addEventListener('error', Event => {
     const Target = Event.target, Source = Event.filename || Target?.src || 'unknown';
     const Stack = Event.error?.stack ? `\n${Event.error.stack}` : '';
     Log('Error:window', `${Event.message || 'resource error'} @ ${Source}:${Event.lineno || 0}:${Event.colno || 0}${Stack}`);
-});
+}, true);
 
 addEventListener('unhandledrejection', Event => {
     const Reason = Event.reason;
@@ -161,6 +161,7 @@ function SetActivePage(ID) {
         const IsActive = B.dataset.page === ID;
         B.classList.toggle('NavigationBarActive', IsActive);
         B.classList.toggle('NavigationBar', !IsActive);
+        if (IsActive) B.setAttribute('aria-current', 'page'); else B.removeAttribute('aria-current');
     });
     UpdateNavigationIcons();
     UpdateHeader(Page[ID]);
@@ -284,6 +285,12 @@ function SetupGestureListeners() {
     document.getElementById('Navigation').addEventListener('click', E => {
         const Button = E.target.closest('.NavigationBar, .NavigationBarActive');
         if (Button?.dataset.page) Navigation(Button.dataset.page);
+    });
+
+    document.getElementById('Navigation').addEventListener('keydown', E => {
+        if (E.key !== 'Enter' && E.key !== ' ') return;
+        const Button = E.target.closest('.NavigationBar, .NavigationBarActive');
+        if (Button?.dataset.page) { E.preventDefault(); Navigation(Button.dataset.page); }
     });
 }
 
@@ -463,10 +470,11 @@ async function ProbeSelect(Tweak) {
     try {
         const Out = await exec(`sh ${Service} probe-qdisc`);
         const Accepted = new Set(Out.split('\n').map(S => S.trim()).filter(Boolean));
+        if (!Accepted.size) return [];
         return Keys.filter(K => K === 'pfifo_fast' || Accepted.has(K));
     } catch (Err) {
         Log('Probe', `${Tweak.Label || 'select'} | ${Err || 'failed'}`);
-        return Keys;
+        return [];
     }
 }
 
@@ -479,12 +487,14 @@ function UpdateSelectDisplay(Select, Tweak, Value) {
     for (const Item of Select.querySelectorAll('.TweakSelectItem')) {
         Item.classList.toggle('TweakSelectCurrent', Item.dataset.value === Value);
     }
+    SyncSelectMenu(Select);
 }
 
 function CloseSelectMenus() {
     for (const Select of document.querySelectorAll('.TweakSelect.TweakSelectOpen')) {
         Select.classList.remove('TweakSelectOpen');
         Select.querySelector('.TweakSelectMenu').hidden = true;
+        Select.querySelector('.TweakSelectField').setAttribute('aria-expanded', 'false');
     }
 }
 
@@ -519,6 +529,7 @@ function ParseSelectOutput(ID, Out) {
         const [Dev, Q] = Line.split(/\s+/);
         if (Dev && Q && Dev !== '-' && !DevMap[Dev]) DevMap[Dev] = Q;
     }
+    SelectIfaces.set(ID, Object.keys(DevMap));
     DevMap.all = ComputeAll(ID, DevMap);
     return DevMap;
 }
@@ -575,11 +586,10 @@ async function CheckTweaks() {
         if (Unsupported.has(ID)) return;
         if (Tweak.Type === 'select') {
             try {
-                SelectOptions.set(ID, await SupportTasks.get(ID));
-                if (Tweak.HasInterfaces) {
-                    const DevMap = LiveState.get(ID) || {};
-                    SelectIfaces.set(ID, Object.keys(DevMap).filter(Key => Key !== 'all'));
-                }
+                const Choices = await SupportTasks.get(ID);
+                if (!Choices.length) throw new Error('no supported value');
+                if (Tweak.HasInterfaces && !(SelectIfaces.get(ID) || []).length) throw new Error('no eligible interface');
+                SelectOptions.set(ID, Choices);
             } catch (Err) {
                 Unsupported.add(ID);
                 Log(`Support:${ID}`, `${Err || 'unsupported on this device'}`);
@@ -655,6 +665,7 @@ function RenderTweakCards(State) {
             SelectChoices.set(ID, SelectOptions.get(ID) || []);
             UpdateSelectDisplay(Select, Tweak, DevMap.all || '—');
             Select.classList.toggle('TweakSelectDisabled', Unsupported.has(ID));
+            Select.querySelector('.TweakSelectField').disabled = Unsupported.has(ID);
             Container.appendChild(Card);
             continue;
         }
@@ -678,6 +689,7 @@ async function ApplyTweak(ID, Payload, Target = 'all') {
     if (!Tweak) return;
     const Element = document.getElementById('Tweak-' + ID);
     const IsSelect = Tweak.Type === 'select';
+    const Control = IsSelect ? Element.querySelector('.TweakSelectField') : Element;
     let PrevDevMap = null;
     if (IsSelect) {
         const DevMap = SelectDevMaps.get(ID) || {};
@@ -691,14 +703,13 @@ async function ApplyTweak(ID, Payload, Target = 'all') {
             DevMap.all = ComputeAll(ID, DevMap);
         }
         UpdateSelectDisplay(Element, Tweak, DevMap[Target] || Payload);
-    } else {
-        Element.disabled = true;
     }
+    Control.disabled = true;
     TweakQueue = TweakQueue.then(async () => {
         try {
-            const Command = Tweak.Warn
-                ? `sh ${Service} apply '${ID}' '${IsSelect ? Payload : (Payload ? 'ON' : 'OFF')}' '${Target}'`
-                : (Payload ? Tweak.ONCommand : Tweak.OFFCommand);
+            const Command = Tweak.ONCommand
+                ? (Payload ? Tweak.ONCommand : Tweak.OFFCommand)
+                : `sh ${Service} apply '${ID}' '${IsSelect ? Payload : (Payload ? 'ON' : 'OFF')}' '${Target}'`;
             const Out = await exec(Command);
             const SaveFailed = Out.split('\n').includes('SAVE_FAILED');
             const TargetLabel = Target === 'all' ? 'All' : Target;
@@ -718,20 +729,26 @@ async function ApplyTweak(ID, Payload, Target = 'all') {
                 Element.checked = !Payload;
             }
         } finally {
-            if (!IsSelect) Element.disabled = false;
+            Control.disabled = false;
+            if (IsSelect) Control.focus();
         }
-    });
+    }).catch(() => { });
 }
 
 async function LoadSettings() {
     const Input = document.getElementById('PersistentTweaks');
-    try {
-        if (typeof window.ksu?.exec !== 'function') throw new Error('Root bridge unavailable');
-        await ReadPersistent();
-        Input.checked = PersistentOn;
-    } catch (Err) {
+    if (typeof window.ksu?.exec !== 'function') {
         Input.indeterminate = true;
         Input.disabled = true;
+        Log('Persistent', 'Root bridge unavailable');
+        return;
+    }
+    try {
+        await ReadPersistent();
+        Input.checked = PersistentOn;
+        Input.indeterminate = false;
+    } catch (Err) {
+        Input.indeterminate = true;
         Log('Persistent', `${Err || 'unable to read setting'}`);
     }
 }
@@ -829,7 +846,7 @@ function SetupEventListeners() {
                 } finally {
                     Input.disabled = false;
                 }
-            });
+            }).catch(() => { });
             return;
         }
         if (Event.target.matches('#PageTweaks Input[type="checkbox"]')) {
@@ -862,6 +879,7 @@ function SetupEventListeners() {
             if (WillOpen && SyncSelectMenu(Select)) {
                 Select.classList.add('TweakSelectOpen');
                 Select.querySelector('.TweakSelectMenu').hidden = false;
+                Field.setAttribute('aria-expanded', 'true');
             }
             return;
         }
@@ -897,8 +915,24 @@ function InitLayout() {
     SyncPageAttributes();
 }
 
+let Revealed = false;
+function Reveal() {
+    if (Revealed) return;
+    Revealed = true;
+    document.getElementById('WebUI').classList.add('Ready');
+    UpdateNavigationIcons();
+    const LoadingScreen = document.getElementById('LoadingScreen');
+    if (LoadingScreen) {
+        LoadingScreen.addEventListener('transitionend', () => LoadingScreen.remove(), { once: true });
+        setTimeout(() => LoadingScreen.remove(), 400);
+        LoadingScreen.classList.add('Hide');
+    }
+    StartLiveTicker();
+}
+
 async function Load() {
     Log('Session', navigator.userAgent);
+    setTimeout(() => { if (!Revealed) Log('Load', 'watchdog: data still pending after 8s'); Reveal(); }, 8000);
     FetchMonitor().catch(Err => Log('MonitorFail', `fetch | ${Err || 'failed'}`));
     const Results = await Promise.allSettled([
         LoadEnvironment(),
@@ -915,15 +949,7 @@ async function Load() {
             Log('Load', `${Result.reason?.stack || Result.reason || 'failed'}`);
         }
     }
-
-    document.getElementById('WebUI').classList.add('Ready');
-    UpdateNavigationIcons();
-    const LoadingScreen = document.getElementById('LoadingScreen');
-    if (LoadingScreen) {
-        LoadingScreen.addEventListener('transitionend', () => LoadingScreen.remove(), { once: true });
-        LoadingScreen.classList.add('Hide');
-    }
-    StartLiveTicker();
+    Reveal();
 }
 
 function Boot() {
