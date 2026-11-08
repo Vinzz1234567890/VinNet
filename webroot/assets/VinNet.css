@@ -45,6 +45,11 @@
     outline: none;
 }
 
+:focus-visible {
+    outline: 2px solid var(--pri);
+    outline-offset: 2px;
+}
+
 html,
 body {
     height: 100%;
@@ -289,6 +294,10 @@ img {
     animation: none;
 }
 
+.Banner:first-of-type {
+    opacity: 1;
+}
+
 #WebUI.Ready .Banner {
     animation: BannerCrossfade 21.2s infinite;
 }
@@ -400,6 +409,8 @@ img {
     font-weight: 600;
     color: var(--on-surf);
     text-align: right;
+    min-width: 0;
+    overflow-wrap: anywhere;
 }
 
 #Latency,
@@ -681,6 +692,11 @@ img {
 .Switch:has(input:disabled) .SwitchTrack {
     opacity: 0.5;
     cursor: default;
+}
+
+.Switch input:focus-visible~.SwitchTrack {
+    outline: 2px solid var(--pri);
+    outline-offset: 2px;
 }
 
 .Switch input:checked~.SwitchTrack {
