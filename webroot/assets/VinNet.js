@@ -659,6 +659,7 @@ function RenderTweakCards(State) {
             continue;
         }
         Input.id = 'Tweak-' + ID;
+        Input.setAttribute('aria-label', Tweak.Label || ID);
         const Known = LiveState.has(ID);
         Input.checked = Known ? LiveState.get(ID) : false;
         Input.indeterminate = !Known;
