@@ -195,7 +195,7 @@ EOF
 }
 
 ApplyQDISC() {
-    local Key="$1" Target="${2:-all}" Spec D Seen=0
+    local Key="$1" Target="${2:-all}" Spec D Seen=0 Changed=0
     Spec=$(QDISCSpec "$Key") || { Log ApplyFail "QDISC : $Key is not a supported value"; return 1; }
     if [ "$Target" != "all" ]; then
         ApplyInterface "$Target" "$Key" "$Spec" || return
@@ -204,11 +204,10 @@ ApplyQDISC() {
     fi
     for D in $(Interfaces); do
         Seen=$((Seen + 1))
-        ApplyInterface "$D" "$Key" "$Spec" &
+        ApplyInterface "$D" "$Key" "$Spec" && Changed=1
     done
-    wait
     [ "$Seen" -gt 0 ] || Log ApplyFail "QDISC:all : $Key | no eligible interface"
-    [ "$Seen" -gt 0 ]
+    [ "$Changed" -eq 1 ]
 }
 
 ListQDISC() {
