@@ -374,11 +374,15 @@ async function FetchMonitor() {
 }
 
 let LiveTickInterval = null;
+function LiveTick() {
+    FetchMonitor().catch(Err => Log('MonitorFail', `tick | ${Err || 'failed'}`));
+    if (SelectDirty) {
+        const ID = SelectDirty; SelectDirty = null;
+        RefreshSelect(ID).catch(Err => Log(`Refresh:${ID}`, `${Err || 're-read failed'}`));
+    }
+}
 function StartLiveTicker() {
-    if (!LiveTickInterval) LiveTickInterval = setInterval(
-        () => FetchMonitor().catch(Err => Log('MonitorFail', `tick | ${Err || 'failed'}`)),
-        5000
-    );
+    if (!LiveTickInterval) LiveTickInterval = setInterval(LiveTick, 5000);
 }
 
 function StopLiveTicker() {
@@ -442,6 +446,7 @@ const Tweaks = {
 
 let TweakQueue = Promise.resolve();
 const SelectDevMaps = new Map(), SelectIfaces = new Map(), SelectChoices = new Map();
+let SelectDirty = null;
 
 function ClassifyInterface(Name) {
     if (Name.startsWith('wlan')) return { Label: Name, Icon: 'wifi' };
@@ -532,6 +537,14 @@ function ParseSelectOutput(ID, Out) {
     SelectIfaces.set(ID, Object.keys(DevMap));
     DevMap.all = ComputeAll(ID, DevMap);
     return DevMap;
+}
+
+async function RefreshSelect(ID) {
+    const Tweak = Tweaks[ID];
+    const DevMap = ParseSelectOutput(ID, await exec(Tweak.CheckCommand));
+    SelectDevMaps.set(ID, DevMap);
+    const Element = document.getElementById('Tweak-' + ID);
+    if (Element) UpdateSelectDisplay(Element, Tweak, DevMap[Element.dataset.target || 'all'] || '—');
 }
 
 let PersistentOn = false;
@@ -712,6 +725,7 @@ async function ApplyTweak(ID, Payload, Target = 'all') {
                 : `sh ${Service} apply '${ID}' '${IsSelect ? Payload : (Payload ? 'ON' : 'OFF')}' '${Target}'`;
             const Out = await exec(Command);
             const SaveFailed = Out.split('\n').includes('SAVE_FAILED');
+            if (IsSelect) SelectDirty = ID;
             const TargetLabel = Target === 'all' ? 'All' : Target;
             Toast(SaveFailed ? 'Applied, but unable to save state' : `${Tweak.Label || ID}${IsSelect ? ` (${TargetLabel})` : ''} > ${IsSelect ? Tweak.Options[Payload].Label : (Payload ? Tweak.ONLabel : Tweak.OFFLabel)}`);
         } catch (Err) {
