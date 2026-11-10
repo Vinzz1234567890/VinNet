@@ -933,6 +933,8 @@ let Revealed = false;
 function Reveal() {
     if (Revealed) return;
     Revealed = true;
+    window.__VinNetReady = true;
+    if (window.__VinNetBoot) clearTimeout(window.__VinNetBoot);
     document.getElementById('WebUI').classList.add('Ready');
     UpdateNavigationIcons();
     const LoadingScreen = document.getElementById('LoadingScreen');
