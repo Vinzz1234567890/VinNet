@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="webroot/assets/VinNetBanner4.webp" alt="VinNet banner: a blue-haired anime character framing the camera with both hands in a fisheye view" width="100%" />
+<img src="webroot/assets/VinNetBanner4.webp" alt="VinNet banner" width="100%" />
 
 <br />
 <br />
@@ -9,10 +9,10 @@
 
 <p><b>Simple Implementation of Network Optimization</b></p>
 
-<p>Root-level network control for Android.</p>
+<p>Root-level network control for Android, with a Web UI.</p>
 
 <p>
-  <a href="https://github.com/Vinzz1234567890/VinNet/releases/latest"><img src="https://img.shields.io/badge/version-1.2.4--Gyze-3E5C76?style=for-the-badge&amp;labelColor=1C1B1F" alt="VinNet 1.2.4-Gyze" /></a>
+  <a href="https://github.com/Vinzz1234567890/VinNet/releases/latest"><img src="https://img.shields.io/badge/version-1.2.5--Iris-3E5C76?style=for-the-badge&amp;labelColor=1C1B1F" alt="VinNet 1.2.5-Iris" /></a>
   <a href="#compatibility"><img src="https://img.shields.io/badge/Magisk-supported-00695C?style=for-the-badge&amp;labelColor=1C1B1F" alt="Magisk supported" /></a>
   <a href="#compatibility"><img src="https://img.shields.io/badge/KernelSU-supported-0D47A1?style=for-the-badge&amp;labelColor=1C1B1F" alt="KernelSU supported" /></a>
   <a href="#compatibility"><img src="https://img.shields.io/badge/APatch-supported-B45309?style=for-the-badge&amp;labelColor=1C1B1F" alt="APatch supported" /></a>
@@ -38,18 +38,18 @@
 
 ## Overview
 
-VinNet exposes a small set of network controls instead of applying a hidden profile. Every value is checked live, QDISC is configured per interface, and restoration is optional.
+VinNet exposes a small set of network controls instead of applying a hidden profile. Every value is checked live, QDISC is configured per interface, and restoration is opt-in.
 
-- **Live state**, unsupported controls are disabled; unknown states show an indeterminate switch.
-- **24 QDISC**, apply to all eligible interfaces or one interface at a time; `Custom` appears when interfaces differ.
-- **Opt-in restoration**, Persistent Tweaks re-applies reset-prone tweaks after boot and during Web UI checks.
+- **Live state** — unsupported controls are disabled; unknown states show an indeterminate switch.
+- **10 QDISC disciplines** — apply to all eligible interfaces or one interface at a time; `Custom` appears when interfaces differ.
+- **Opt-in restoration** — Persistent Tweaks re-applies reset-prone tweaks after boot and during Web UI checks.
 
 ## Tweaks
 
 | Tweak | What it changes | Reset behavior |
 | :-- | :-- | :-- |
 | **IP Reach Disconnect** | Prevents Wi-Fi from dropping when the network becomes unstable. | After reboot |
-| **QDISC** | Choose one of 24 queue disciplines for all eligible interfaces or one interface; `Custom` appears when interfaces differ. | After reboot |
+| **QDISC** | Choose one of 10 queue disciplines for all eligible interfaces or one interface; applied per queue on multi-queue interfaces. | After reboot |
 | **Wi-Fi Force Low Latency Mode** | Forces Android's low-latency mode, with hi-perf fallback. | After interface changes |
 | **Network Avoid Bad Wi-Fi & Mobile Data Always ON** | Keeps Wi-Fi connected as signal degrades and stops background cellular data from disrupting transmission. | Persists |
 | **BLE Scan Always Enabled** | Reduces jitter and ping spikes on 2.4 GHz Wi-Fi. | Persists |
@@ -60,7 +60,7 @@ VinNet exposes a small set of network controls instead of applying a hidden prof
 
 ## Compatibility
 
-VinNet uses the standard Magisk module format and Android shell tools. It ships no native binaries, so there is no ABI-specific build.
+VinNet uses the standard Magisk module format and Android shell tools, and ships no native binaries — there is no ABI-specific build.
 
 | Environment | Module support | Web UI |
 | :-- | :--: | :-- |
@@ -68,7 +68,7 @@ VinNet uses the standard Magisk module format and Android shell tools. It ships 
 | **KernelSU** | Supported | Module screen |
 | **APatch** | Supported | Module screen |
 
-- On `fog`, the installer adds vendor Wi-Fi config; other devices keep stock vendor files.
+- On `fog`, the installer keeps the bundled `WCNSS_qcom_cfg.ini` vendor configuration. Other devices mount nothing (`skip_mount`) and keep stock vendor files.
 - KernelSU/APatch forks on the standard module format should work but are not individually tested. APatch itself targets ARM64.
 
 ## Install
@@ -88,19 +88,11 @@ Requires a rooted Android device and a supported module manager.
 
 ## How it works
 
-```mermaid
-flowchart LR
-    A["service.sh"] --> B["Restore + monitor"]
-    B --> C["/data/adb/VinNet"]
-    C --> D["Web UI"]
-    D --> E["Apply / check"]
-```
-
-`service.sh` waits for boot, restores Persistent Tweaks when enabled, writes runtime JSON to `/data/adb/VinNet`, and monitors latency while the Web UI is active. The Web UI delegates apply, check, and QDISC probe operations back to the same service script.
+`service.sh` waits for boot, restores Persistent Tweaks when enabled, resolves the `tc` binary, writes runtime JSON to `/data/adb/VinNet`, and monitors latency while the Web UI is active. The Web UI delegates apply, check, and QDISC probing back to the same service script.
 
 ## Diagnostics
 
-One log: **`/storage/emulated/0/Download/VinNet.log`**. It records device/kernel/ABI, module version, tool paths, core writability, filtered Wi-Fi state, and tweak or Web UI failures. The service truncates it at 128 KiB on startup.
+One log: **`/storage/emulated/0/Download/VinNet.log`** — device/kernel/ABI, module version, tool paths, core writability, filtered Wi-Fi state, and tweak or Web UI failures. The service truncates it at 128 KiB on startup.
 
 > [!TIP]
 > When reporting a bug, include the log, root manager/version, device/ROM, and tweak name. For QDISC, include the interface and discipline.
