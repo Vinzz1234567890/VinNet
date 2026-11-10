@@ -2,7 +2,92 @@
 
 ---
 
-## v1.2.4-Gyze - 2026-10-25 - Latest
+## v1.2.5-Iris - 2026-11-02 - Latest
+
+### ✨Added
+
+- `tc` binary resolution (`ResolveTC`) at service start and re-resolved in the monitor loop: prefers `command -v tc`, then probes `/sbin/tc`, `/product/bin/tc`, `/system_ext/bin/tc`, `/system/bin/tc`, `/system/xbin/tc`, `/odm/bin/tc`, and `/vendor/bin/tc`, requiring a working `tc -V`; every QDISC path now invokes the resolved binary
+- Deferred boot-time restoration: when no usable `tc` exists at boot, `RestoreTweaks` is postponed and retried from the service loop until `tc` becomes available, instead of failing silently
+- Per-queue QDISC application (`ApplyInterface`): leaf disciplines are now installed on each child qdisc handle when the interface has addressable children or an unparseable/lossy parent; `mq` roots without children are rebuilt first to re-create per-queue children; unreadable structures and unaddressable queues are logged and treated as failures; per-handle failures are logged individually
+- `EgressLines` parser for `tc qdisc show` classifying qdiscs as root, child, or lossy/unparseable parents, skipping `clsact`/`ingress` and `ffff:` entries
+- `QDISCLeaf` helper enumerating the supported leaf disciplines
+- `mkdir`-based locking for service log writes (`$LogPath.lock`) and for QDISC application (`$Core/.qdisc.lock`), with stale-lock recovery after a 10-second wait
+- Web UI boot watchdog: an inline script reveals the interface and hides the loading screen after 8 seconds when data loading stalls; `VinNet.js` logs `watchdog: data still pending after 8s` and reveals the UI anyway
+- Web UI accessibility suite: keyboard activation of the bottom navigation (Enter/Space), `role="button"` and `tabindex="0"` on navigation items, `aria-current="page"` on the active item, `:focus-visible` outlines, `role="status"` and `aria-live="polite"` on the snackbar, `aria-hidden="true"` on decorative icons, `aria-haspopup="listbox"` and `aria-expanded` on the select field, `aria-label` on tweak switches, semantic `<h1>` header title, and a `noscript` message on the loading screen
+- Optimistic QDISC select updates: interface state updates immediately on apply, reverts to the previous per-interface mapping on failure, and the open menu re-syncs after display updates; the live per-interface state is re-read every 5 seconds through the live ticker (`SelectDirty`/`RefreshSelect`)
+- `TweakSelectStatic` display state for the QDISC dropdown when no option besides the current value remains; the chevron is hidden and the field becomes non-interactive
+- `Unsupported` verdict for the Vendor status on non-`fog` devices
+- Preconnect hint for `avatars.githubusercontent.com` (GitHub avatar) in the Web UI head
+
+### 🔄️Changed
+
+- QDISC options from 24 to 10: `prio`, `pfifo`, `bfifo`, `tbf`, `red`, `htb`, `netem`, `drr`, `choke`, `qfq`, `cbq`, `hfsc`, `ets`, and `mqprio` removed; `pfifo_fast`, `fq_codel`, `cake`, `fq`, `sfq`, `codel`, `pie`, `fq_pie`, `hhf`, and `sfb` remain; the service specifications, the `lo` probe list, and the Web UI option list all use the same reduced set
+- QDISC interface eligibility: `seth_lte*`, `sipa*`, `enp*`, `ens*`, `eno*`, and exact `gprs` added to the eligible list; CLAT/464XLAT (`v4-*`, `v6-*`, `clat*`, `464*`) and Wi-Fi Aware/NAN (`aware*`, `nan*`, `ccmni-lan*`, `ccmni_lan*`) prefixes are now excluded; virtual/tunnel/VPN interfaces (`bridge*`, `vxlan*`, `geneve*`, `gre*`, `gretap*`, `erspan*`, `ipsec*`, `xfrm*`, `wg*`) are excluded
+- `ApplyQDISC` now reports unsupported values and missing eligible interfaces through `ApplyFail`, tracks per-interface changes, and only reports success when at least one interface changed
+- `ListQDISC` probes interfaces in parallel, reports `custom` when child disciplines differ, `none` when no usable line parses, `unknown` when `tc` fails, and `- -` only when no eligible interface exists
+- QDISC `lo` probing uses the resolved `tc` binary and only offers disciplines the kernel accepted; an empty probe result disables the QDISC tweak instead of offering every option
+- Tweak application is persist-then-apply across the board: Wi-Fi Force Low Latency Mode and QDISC now skip the apply entirely with a `TweakSave` log when the desired state cannot be persisted (previously they applied anyway); QDISC apply is detached to a background process and serialized through `$Core/.qdisc.lock`; `SAVE_FAILED` log entries now include the desired value and target interface
+- Verification failures for settings-based tweaks (IP Reach Disconnect) now log `VerifyFail` with the reason and return non-zero, instead of returning silently
+- Web UI apply command selection is keyed off `Tweak.ONCommand` instead of the presence of a warning text
+- Persistent setting reads are unified behind a cached `ReadPersistent()`; the Settings toggle shares the cache, a successful toggle updates it and refreshes tweak warnings immediately, and warnings for reset-prone tweaks are hidden while Persistent Tweaks is enabled; the Settings toggle stays enabled after a read failure and shows only the indeterminate state
+- Web UI environment and metadata loading no longer execute `resetprop`/`uname` and no longer parse `module.prop`; Brand, Model, Android, Kernel, Architecture, Root, and the metadata rows render solely from `Environment.json`/`Metadata.json` with `—` placeholders
+- `Monitor.json` is accepted only when it carries a `Timestamp` aged between 0 and 30 seconds and a usable Latency value; older or missing data shows `—` and logs once per unusable streak
+- Boot-time restore logging now includes the desired value; check-time and boot-time restore skip interfaces whose current discipline reads `none` or `unknown`
+- Tweak queue and persistent toggle promise chains now terminate with a no-op catch, avoiding unhandled promise rejections
+- `uninstall.sh` tracks each removal command's failure and exits non-zero when any fail
+- Non-`fog` installs now delete the whole bundled `system` tree and create a `skip_mount` flag with a `Skip System Mount` notice; the `fog` vendor Wi-Fi configuration must now exist and be non-empty (`-f` and `-s`), with an updated missing-or-empty abort message
+- Log writes use `$LogPath.lock` with a random-suffixed temp file; boot-time log truncation and write probes run in subshells so redirection failures are quiet; `Cleanup` also removes stale `$LogPath.tmp.*`
+- Loading screen text is now `Loading…`; header title is an `<h1>`; banner images are decorative (`alt=""`); chip avatar failure hides the avatar instead of removing it; `ProcessID` shows `—` when unavailable instead of probing with `pgrep`
+- Web UI window error handler now listens in the capture phase so resource errors (images, scripts) are recorded
+- Snackbar wraps to multiple lines within the viewport instead of a single nowrap line; index row values wrap with `overflow-wrap: anywhere`
+- Loading screen removal now uses a 400 ms fallback timeout in addition to `transitionend`
+
+### 📈Improved
+
+- QDISC safety and compatibility on multi-queue and hierarchical layouts: leaf disciplines are installed under existing parents instead of replacing the root, preserving parent qdiscs and filters
+- Log integrity under concurrent service and Web UI writers through mkdir-based mutual exclusion
+- Tweak application reliability: the desired state is persisted before applying, and the apply is skipped with an explanatory log when persistence fails; verification failures surface explicit reasons instead of silent ambiguity
+- Web UI availability: the 8-second watchdog guarantees a visible interface even when instrumentation stalls; the QDISC select reflects live per-interface state within one 5-second tick after an apply
+- Dashboard freshness: stale network statistics are never presented as current
+- Install safety on non-target devices: the module mounts nothing (`skip_mount`) instead of shipping a partial vendor overlay that could shadow stock configuration
+- Web UI accessibility and narrow-screen rendering across notched and small devices
+- Uninstall diagnosability: a failing removal command is now reflected in the exit code
+
+### 🔧Fixed
+
+- `Write()` returned success when persisting runtime state failed because of a missing trailing `return 1`; callers now see the failure
+- Hierarchical/multi-queue qdisc setups could be destroyed by a root `tc qdisc replace`; leaf disciplines are now applied per child handle, with an `mq` rebuild fallback and per-handle error logging
+- QDISC apply could interleave between boot restore and the Web UI (or two applies), racing `tc` invocations; applications are now serialized through `$Core/.qdisc.lock`
+- A failed `lo` probe offered every QDISC option, enabling selection of disciplines the kernel does not support; an empty probe result now marks the QDISC tweak as unsupported
+- QDISC was offered on devices with no eligible interface and failed only at apply time; it is now marked unsupported at render time with a log entry
+- The QDISC `All` summary could flip to `Custom` because of interfaces with no live value; valueless entries are excluded from the comparison
+- Kernel-reported disciplines not present in the option list (e.g., `custom`) were dropped when parsing `check` output, leaving interfaces untracked; they are now retained
+- IP Reach Disconnect failures were silent (exit code and `Command execution failed` output unchecked); they are now logged and reported
+- Boot-time restore could run before `tc` was usable and silently do nothing; it is now deferred and retried, and failures are logged with the desired value
+- Check-time restore re-applied tweaks on interfaces whose qdisc reads `none`/`unknown`; those are now skipped
+- Check-time restore outcomes were silent when the live state still differed after a re-apply; the mismatch is now logged as `system still reports …`
+- Web UI window `error` handler missed resource load failures (non-bubbling); it now captures in the capture phase
+- Stale `Monitor.json` from an earlier session was presented as live network statistics; entries older than 30 seconds are now ignored and shown as `—`
+- `.TweakChips` ignored its `hidden` attribute because its `display: flex` rule took precedence; the `[hidden]` rule now wins
+- The first banner could stay invisible until the crossfade animation started; it now starts at full opacity
+- FlushDiagnose's `.Diagnose.tmp` filter used GNU-only `\s` in `grep -E`; replaced with POSIX character classes
+- Invalid raw `&` in the `NetworkAvoidBadWi-Fi&MobileDataAlwaysON` symbol id is now escaped as `&amp;`
+
+### 🔥Deleted
+
+- Vertical bounce (overscroll boundary resistance): `SetupVerticalBounce`, `BounceResistance`, `VerticalBouncing`, `.Page.VerticalDragging`, `.Page.Bouncing`, and the `--bounce-y` transform component
+- QDISC disciplines `prio`, `pfifo`, `bfifo`, `tbf`, `red`, `htb`, `netem`, `drr`, `choke`, `qfq`, `cbq`, `hfsc`, `ets`, and `mqprio` (service specifications, `lo` probe list, and Web UI options)
+- Bundled `wpa_supplicant.conf` and `wpa_supplicant_overlay.conf` vendor Wi-Fi configurations; only `WCNSS_qcom_cfg.ini` remains
+- Web UI `DetectRoot`/`RootCommand` root detection and the `ParseKV` helper; root is read from `Environment.json` only
+- Web UI `resetprop`/`uname` command fallbacks for the Brand, Model, Android, Kernel, and Architecture rows
+- Web UI direct ping fallback in `FetchMonitor`; network values come exclusively from `Monitor.json`
+- Web UI `pgrep` fallback for the ProcessID row; `—` is shown when `ProcessID.json` is unavailable
+- `module.prop` parsing fallback in `LoadMetadata`; `—` placeholders are shown when metadata is unavailable
+- Non-KernelSU `MOCK` command responses in the Web UI (commands now resolve to empty output instead)
+
+---
+
+## v1.2.4-Gyze - 2026-10-25
 
 ### ✨Added
 
