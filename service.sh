@@ -42,6 +42,16 @@ Tweaks="$Core/Tweaks.json"
 Identity="$ModuleDirectory/module.prop"
 CoreWritable=1
 
+ResolveTC() {
+    local T
+    TC=$(command -v tc)
+    for T in /sbin/tc /product/bin/tc /system_ext/bin/tc /system/bin/tc /system/xbin/tc /odm/bin/tc /vendor/bin/tc; do
+        [ -x "$T" ] && "$T" -V > /dev/null 2>&1 && TC="$T" && break
+    done
+}
+ResolveTC
+BootRestored=0
+
 Write() {
     [ "$CoreWritable" -eq 0 ] && return 1
     local Destination="$1" ErrorOutput
@@ -158,7 +168,7 @@ EgressLines() {
 
 ApplyInterface() {
     local D="$1" Key="$2" Spec="$3" Kind Handle Output Lines Kids RootKind Lossy Changed=0 ErrorOutput
-    if ! Output=$(tc qdisc show dev "$D" 2> /dev/null); then
+    if ! Output=$("$TC" qdisc show dev "$D" 2> /dev/null); then
         Log ApplyFail "QDISC:$D : $Key | structure unreadable"
         return 1
     fi
@@ -168,9 +178,9 @@ ApplyInterface() {
     printf '%s\n' "$Lines" | grep -q ' lossy$' && Lossy=1
     if QDISCLeaf "$Key" && { [ -n "$Kids" ] || [ -n "$Lossy" ]; }; then
         if [ -z "$Kids" ] && [ "$RootKind" = "mq" ]; then
-            ErrorOutput=$(tc qdisc replace dev "$D" root $RootKind 2>&1)
+            ErrorOutput=$("$TC" qdisc replace dev "$D" root $RootKind 2>&1)
             if [ $? -eq 0 ]; then
-                Output=$(tc qdisc show dev "$D" 2> /dev/null)
+                Output=$("$TC" qdisc show dev "$D" 2> /dev/null)
                 Lines=$(printf '%s\n' "$Output" | EgressLines)
                 Kids=$(printf '%s\n' "$Lines" | awk '$2 != "root" && $2 != "lossy"')
             else
@@ -183,7 +193,7 @@ ApplyInterface() {
         fi
         while read -r Kind Handle; do
             [ -n "$Handle" ] || continue
-            if ErrorOutput=$(tc qdisc replace dev "$D" parent "$Handle" $Spec 2>&1); then
+            if ErrorOutput=$("$TC" qdisc replace dev "$D" parent "$Handle" $Spec 2>&1); then
                 Changed=1
             else
                 Log ApplyFail "QDISC:$D : $Key | parent $Handle | ${ErrorOutput:-tc failed}"
@@ -194,7 +204,7 @@ EOF
         [ "$Changed" -eq 1 ] && return 0
         return 1
     fi
-    ErrorOutput=$(tc qdisc replace dev "$D" root $Spec 2>&1) || {
+    ErrorOutput=$("$TC" qdisc replace dev "$D" root $Spec 2>&1) || {
         Log ApplyFail "QDISC:$D : $Key | ${ErrorOutput:-tc failed}"
         return 1
     }
@@ -223,7 +233,7 @@ ListQDISC() {
         Found=1
         (
             local Output Lines Kids Kind
-            if Output=$(tc qdisc show dev "$D" 2> /dev/null); then
+            if Output=$("$TC" qdisc show dev "$D" 2> /dev/null); then
                 Lines=$(printf '%s\n' "$Output" | EgressLines)
                 Kids=$(printf '%s\n' "$Lines" | awk '$2 != "root"')
                 if [ -n "$Kids" ]; then
@@ -242,13 +252,13 @@ ListQDISC() {
 }
 
 ProbeQDISC() {
-    command -v tc > /dev/null 2>&1 || return 1
+    command -v "$TC" > /dev/null 2>&1 || return 1
     local Key Spec
     for Key in pfifo_fast fq_codel cake fq sfq codel pie fq_pie hhf sfb; do
         Spec=$(QDISCSpec "$Key") || continue
-        tc qdisc replace dev lo root $Spec 2> /dev/null && printf '%s\n' "$Key"
+        "$TC" qdisc replace dev lo root $Spec 2> /dev/null && printf '%s\n' "$Key"
     done
-    tc qdisc del dev lo root 2> /dev/null || true
+    "$TC" qdisc del dev lo root 2> /dev/null || true
 }
 
 RunTweak() {
@@ -661,7 +671,10 @@ fi
 ProcessID
 trap Cleanup TERM EXIT INT
 
-RestoreTweaks
+if "$TC" -V > /dev/null 2>&1; then
+    RestoreTweaks
+    BootRestored=1
+fi
 Metadata
 Environment
 
@@ -672,6 +685,13 @@ while true; do
     [ -s "$ProcessID" ] || ProcessID
     [ -f "$Metadata" ] || Metadata
     [ -f "$Environment" ] || Environment
+    if [ "$BootRestored" -eq 0 ]; then
+        ResolveTC
+        if "$TC" -V > /dev/null 2>&1; then
+            RestoreTweaks
+            BootRestored=1
+        fi
+    fi
     if WebUIActive "$Now"; then
         Monitor "$Now"
     fi
