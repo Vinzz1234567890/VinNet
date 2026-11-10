@@ -478,6 +478,10 @@ img {
     color: var(--Bad);
 }
 
+.TweakChips[hidden] {
+    display: none;
+}
+
 .TweakChips {
     display: flex;
     flex-wrap: wrap;
