@@ -366,9 +366,7 @@ async function FetchMonitor() {
     }
     if (!MonitorUnusable) {
         MonitorUnusable = true;
-        Log('MonitorFail', Cached
-            ? `Monitor.json unusable | latency=${Cached.Latency} age=${Age == null ? 'unknown' : `${Math.round(Age)}s`}`
-            : 'Monitor.json missing');
+        Log('MonitorFail', Cached ? 'Monitor.json unusable' : 'Monitor.json missing');
     }
     ApplyMonitor({ Latency: '—', Jitter: '—' });
 }
