@@ -4,18 +4,25 @@ Core="/data/adb/VinNet"
 LogPath="/storage/emulated/0/Download/VinNet.log"
 
 Log() {
-    local Tag="$1" Message="$2" Temp
+    local Tag="$1" Message="$2" Temp Lock="$LogPath.lock" Waited=0
     [ -n "$Message" ] || return 0
     Message=$(printf '%s' "$Message" | tr '\n' ' ')
     [ -w "${LogPath%/*}" ] || return 1
-    Temp="$LogPath.tmp.$$.$(date +%s%N 2>/dev/null || echo $RANDOM)"
+    while ! mkdir "$Lock" 2> /dev/null; do
+        Waited=$((Waited + 1))
+        if [ "$Waited" -gt 100 ]; then rm -rf "$Lock"; mkdir "$Lock" 2> /dev/null; break; fi
+        sleep 0.1
+    done
+    Temp="$LogPath.tmp.$$.$RANDOM"
     {
         grep -vF "] $Tag: $Message" "$LogPath" 2> /dev/null
         printf '[%s] %s: %s\n' "$(date '+%F %T')" "$Tag" "$Message"
     } > "$Temp" 2> /dev/null && mv -f "$Temp" "$LogPath" 2> /dev/null || {
         rm -f "$Temp"
+        rm -rf "$Lock"
         return 1
     }
+    rm -rf "$Lock"
 }
 
 ProbeWrite() { ( : > "$1/.WriteProbe" ) 2> /dev/null && rm -f "$1/.WriteProbe"; }
@@ -245,7 +252,7 @@ ProbeQDISC() {
 }
 
 RunTweak() {
-    local Out HiOut Status HiStatus Set
+    local Out HiOut Status HiStatus Set W
     case "$1:$2" in
         "IP Reach Disconnect:ON" | "IP Reach Disconnect:OFF")
             Set=$([ "$2" = "ON" ] && echo disabled || echo enabled)
@@ -285,7 +292,18 @@ RunTweak() {
                 return 1
             fi
             ;;
-        "QDISC:"*) ApplyQDISC "$2" "${3:-all}" ;;
+        "QDISC:"*)
+            W=0
+            while ! mkdir "$Core/.qdisc.lock" 2> /dev/null; do
+                W=$((W + 1))
+                if [ "$W" -gt 100 ]; then rm -rf "$Core/.qdisc.lock"; mkdir "$Core/.qdisc.lock" 2> /dev/null; break; fi
+                sleep 0.1
+            done
+            ApplyQDISC "$2" "${3:-all}"
+            W=$?
+            rm -rf "$Core/.qdisc.lock"
+            return "$W"
+            ;;
         *) return 1 ;;
     esac
 }
@@ -324,7 +342,10 @@ ApplyTweak() {
             ;;
         *)
             if [ "$1" = "QDISC" ]; then
-                SaveTweak "QDISC:${3:-all}" "$2" || SaveFailed=1
+                SaveTweak "QDISC:${3:-all}" "$2" || {
+                    Log TweakSave "QDISC:${3:-all} : $2 | apply skipped, intent not persisted"
+                    return 1
+                }
                 if [ -n "$VINNET_TEST_SYNC" ]; then
                     RunTweak "$@"
                 else
@@ -405,6 +426,7 @@ CheckTweak() {
                 if [ "$Live" != "$Desired" ]; then
                     RunTweak "$ID" "$Desired" || Log RestoreFail "$ID : $Desired re-apply failed"
                     Output=$(LiveTweak "$ID") || return
+                    [ "$(TweakState "$ID" "$Output")" = "$Desired" ] || Log RestoreFail "$ID : $Desired | system still reports $(TweakState "$ID" "$Output")"
                 fi
                 ;;
         esac
@@ -422,6 +444,7 @@ CheckQDISC() {
             Desired=$(ReadTweak "QDISC:$D")
             [ -n "$Desired" ] || Desired=$(ReadTweak "QDISC:all")
             [ -n "$Desired" ] || continue
+            case "$Current" in none | unknown) continue ;; esac
             if [ "$Current" != "$Desired" ]; then
                 RunTweak QDISC "$Desired" "$D" > /dev/null || Log RestoreFail "QDISC:$D : $Desired re-apply failed"
                 Changed=1
@@ -493,7 +516,7 @@ FlushDiagnose() {
     [ -f "$Pending" ] || return 0
     [ -w "${LogPath%/*}" ] || return 1
 
-    [ -f "$LogPath" ] && ExistingLines=$(grep -v "Diagnose:" "$LogPath" 2> /dev/null | grep -vE '^\s*\[\s*[0-9]+\.[0-9]+\]')
+    [ -f "$LogPath" ] && ExistingLines=$(grep -v "Diagnose:" "$LogPath" 2> /dev/null | grep -vE '^[[:space:]]*\[[[:space:]]*[0-9]+\.[0-9]+\]')
 
     {
         cat "$Pending"
@@ -504,7 +527,7 @@ FlushDiagnose() {
 ProcessID() { Write "$ProcessID" "$(printf '{"PID":%s,"Timestamp":%s}\n' "$$" "$(date +%s)")"; }
 
 Cleanup() {
-    rm -f "$ProcessID" "$Core"/*.tmp.$$ "$Core/.Diagnose.tmp" 2> /dev/null
+    rm -f "$ProcessID" "$Core"/*.tmp.$$ "$Core/.Diagnose.tmp" "$LogPath".tmp.* 2> /dev/null
     exit 0
 }
 
