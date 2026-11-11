@@ -496,6 +496,7 @@ function UpdateSelectDisplay(Select, Tweak, Value) {
 function CloseSelectMenus() {
     for (const Select of document.querySelectorAll('.TweakSelect.TweakSelectOpen')) {
         Select.classList.remove('TweakSelectOpen');
+        Select.classList.remove('TweakSelectUp');
         Select.querySelector('.TweakSelectMenu').hidden = true;
         Select.querySelector('.TweakSelectField').setAttribute('aria-expanded', 'false');
     }
@@ -890,8 +891,14 @@ function SetupEventListeners() {
             CloseSelectMenus();
             if (WillOpen && SyncSelectMenu(Select)) {
                 Select.classList.add('TweakSelectOpen');
-                Select.querySelector('.TweakSelectMenu').hidden = false;
+                const Menu = Select.querySelector('.TweakSelectMenu');
+                Menu.hidden = false;
                 Field.setAttribute('aria-expanded', 'true');
+                const FieldRect = Field.getBoundingClientRect();
+                const NavH = document.getElementById('Navigation').offsetHeight;
+                const SpaceBelow = innerHeight - FieldRect.bottom - NavH - 8;
+                const SpaceAbove = FieldRect.top - 8;
+                Select.classList.toggle('TweakSelectUp', Menu.offsetHeight > SpaceBelow && SpaceAbove > SpaceBelow);
             }
             return;
         }
