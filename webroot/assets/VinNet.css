@@ -67,6 +67,13 @@ img {
     pointer-events: none;
 }
 
+button,
+input,
+select,
+textarea {
+    font-family: inherit;
+}
+
 #WebUI {
     display: flex;
     flex-direction: column;
@@ -220,15 +227,6 @@ img {
     contain: layout style;
 }
 
-.Navigation::after {
-    content: '';
-    position: absolute;
-    inset: auto 0 -2px;
-    height: 2px;
-    background: var(--surf-lo);
-    pointer-events: none;
-}
-
 .NavigationBar,
 .NavigationBarActive {
     flex: 1;
@@ -239,7 +237,8 @@ img {
     gap: 4px;
 }
 
-:is(.NavigationBar, .NavigationBarActive) svg {
+.NavigationBar svg,
+.NavigationBarActive svg {
     width: 22px;
     height: 22px;
     fill: var(--on-surf-var);
@@ -266,12 +265,18 @@ img {
     opacity: 1;
 }
 
-:is(.NavigationBar, .NavigationBarActive, .ir-link, .chip) {
+.NavigationBar,
+.NavigationBarActive,
+.ir-link,
+.chip {
     cursor: pointer;
     transition: transform 0.15s ease;
 }
 
-:is(.NavigationBar, .NavigationBarActive, .ir-link, .chip):active {
+.NavigationBar:active,
+.NavigationBarActive:active,
+.ir-link:active,
+.chip:active {
     transform: scale(0.94);
 }
 
@@ -608,6 +613,20 @@ img {
     }
 }
 
+.TweakSelect.TweakSelectUp .TweakSelectMenu {
+    top: auto;
+    bottom: calc(100% + 6px);
+    transform-origin: bottom;
+    animation-name: TweakSelectInUp;
+}
+
+@keyframes TweakSelectInUp {
+    from {
+        opacity: 0;
+        transform: scaleY(0.92) translateY(4px);
+    }
+}
+
 .TweakSelectItem {
     display: flex;
     align-items: center;
@@ -690,7 +709,7 @@ img {
     background: var(--outline);
     transform: translateY(-50%) translateX(0) scale(1);
     pointer-events: none;
-    transition: transform 0.25s var(--spring), background-color 0.2s;
+    transition: transform 0.25s var(--spring), background-color 0.2s, left 0.25s var(--spring), width 0.2s, height 0.2s, border-radius 0.2s;
 }
 
 .Switch:has(input:disabled) .SwitchTrack {
