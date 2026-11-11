@@ -1,7 +1,7 @@
 id=VinNet
 name=VinNet
-version=1.2.5-Iris
-versionCode=20261102
+version=1.2.6-Grega
+versionCode=20261111
 author=Vinzz
 description=Simple Implementation of Network Optimization
 webuiIcon=webroot/assets/VinNetBanner4.webp
