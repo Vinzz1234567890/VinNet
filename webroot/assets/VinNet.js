@@ -102,7 +102,7 @@ let DragOffset = 0, PendingOffset = 0, DragFrameID = 0, Dragging = false;
 let GestureAxis = null, GestureKind = null, GestureStartX = 0, GestureStartY = 0, GesturePointerID = null;
 
 let NavigationButtons = null, NavigationButtonMap = null, NavigationSVGS = null, NavigationSVGButtonMap = null;
-let HeaderTitle = null, HeaderDescription = null;
+let HeaderTitle = null, HeaderDescription = null, HeaderTimer = 0;
 
 function RenderPages() {
     PagesElement.style.setProperty('--page-base', `${CurrentPageIndex * -100}%`);
@@ -140,7 +140,8 @@ function UpdateHeader(Meta) {
         return;
     }
     HeaderText.style.opacity = '0';
-    setTimeout(() => {
+    clearTimeout(HeaderTimer);
+    HeaderTimer = setTimeout(() => {
         HeaderTitle.textContent = Meta.Title;
         HeaderDescription.textContent = Meta.Description;
         HeaderText.style.opacity = '1';
@@ -464,7 +465,10 @@ function RenderInterfaceChip(Target, Name, IconName) {
     else if (IconName === 'ethernet') SvgHtml = '<svg viewBox="0 0 24 24"><path d="M3 8h18v8H3zm3 2v4h2v-4zm4 0v4h2v-4zm4 0v4h2v-4z"/></svg>';
     else if (IconName === 'all') SvgHtml = '<svg viewBox="0 0 24 24"><path d="M4 6h16v2H4zm0 5h16v2H4zm0 5h16v2H4z"/></svg>';
     else SvgHtml = '<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/></svg>';
-    Chip.innerHTML = `${SvgHtml}<span>${Name}</span>`;
+    Chip.innerHTML = SvgHtml;
+    const Label = document.createElement('span');
+    Label.textContent = Name;
+    Chip.appendChild(Label);
     return Chip;
 }
 
@@ -588,7 +592,7 @@ async function CheckTweaks() {
             const Out = await exec(Cmd);
             if (!Out) { Unsupported.add(ID); Log(`Check:${ID}`, `no output | cmd=${Cmd}`); return; }
             if (Tweak.Type === 'select') LiveState.set(ID, ParseSelectOutput(ID, Out));
-            else LiveState.set(ID, [].concat(Tweak.Expect).some(E => Out.includes(E)));
+            else LiveState.set(ID, [].concat(Tweak.Expect).some(E => Out.trim().split(/\s+/).includes(E)));
         } catch (Err) {
             Unsupported.add(ID);
             Log(`Check:${ID}`, `cmd=${Cmd} | ${Err || 'unknown error'}`);
@@ -734,6 +738,7 @@ async function ApplyTweak(ID, Payload, Target = 'all') {
             Log('TweakFail', `${ID}${Detail} | ${Err || 'unknown error'}`);
             Toast('Unable to apply tweak');
             if (IsSelect) {
+                SelectDirty = ID;
                 if (PrevDevMap) {
                     SelectDevMaps.set(ID, PrevDevMap);
                     UpdateSelectDisplay(Element, Tweak, PrevDevMap[Target] || '—');
