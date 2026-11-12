@@ -105,18 +105,40 @@ SaveTweak() {
     Write "$Tweaks" "$Content"
 }
 
+TxQueueLen() {
+    local L=""
+    [ -n "$1" ] && read -r L 2> /dev/null < "/sys/class/net/$1/tx_queue_len"
+    printf '%s\n' "$L"
+}
+
 QDISCSpec() {
     case "$1" in
         pfifo_fast) printf 'pfifo_fast\n' ;;
-        fq_codel) printf 'fq_codel\n' ;;
-        cake) printf 'cake\n' ;;
-        fq) printf 'fq\n' ;;
-        sfq) printf 'sfq\n' ;;
+        fq_codel) printf 'fq_codel limit 1024 quantum 314\n' ;;
+        cake)
+            local Up
+            Up=$(ReadTweak UpMbit)
+            case "$Up" in
+                '' | *[!0-9]*) printf 'cake besteffort\n' ;;
+                *) printf 'cake bandwidth %skbit besteffort\n' "$((Up * 900))" ;;
+            esac
+            ;;
+        fq) printf 'fq limit 1000 flow_limit 50\n' ;;
+        sfq) printf 'sfq divisor 4096 headdrop\n' ;;
         codel) printf 'codel\n' ;;
-        pie) printf 'pie\n' ;;
-        fq_pie) printf 'fq_pie\n' ;;
-        hhf) printf 'hhf\n' ;;
-        sfb) printf 'sfb\n' ;;
+        pie) printf 'pie bytemode\n' ;;
+        fq_pie) printf 'fq_pie limit 1024 quantum 314b\n' ;;
+        hhf) printf 'hhf admit_bytes 32768 non_hh_weight 4\n' ;;
+        sfb)
+            local L
+            L=$(TxQueueLen "$2")
+            if [ -n "$L" ]; then
+                L=$((L / 5))
+                printf 'sfb limit %s penalty_rate 500 penalty_burst 100\n' "$L"
+            else
+                printf 'sfb penalty_rate 500 penalty_burst 100\n'
+            fi
+            ;;
         *) return 1 ;;
     esac
 }
@@ -213,14 +235,16 @@ EOF
 
 ApplyQDISC() {
     local Key="$1" Target="${2:-all}" Spec D Seen=0 Changed=0
-    Spec=$(QDISCSpec "$Key") || { Log ApplyFail "QDISC : $Key is not a supported value"; return 1; }
+    QDISCSpec "$Key" > /dev/null || { Log ApplyFail "QDISC : $Key is not a supported value"; return 1; }
     if [ "$Target" != "all" ]; then
+        Spec=$(QDISCSpec "$Key" "$Target")
         ApplyInterface "$Target" "$Key" "$Spec" || return
         printf '%s\n' "$Target"
         return 0
     fi
     for D in $(Interfaces); do
         Seen=$((Seen + 1))
+        Spec=$(QDISCSpec "$Key" "$D")
         ApplyInterface "$D" "$Key" "$Spec" && Changed=1
     done
     [ "$Seen" -gt 0 ] || Log ApplyFail "QDISC:all : $Key | no eligible interface"
@@ -659,6 +683,13 @@ case "${1:-}" in
         ;;
     restore)
         RestoreTweaks
+        exit
+        ;;
+    uplink)
+        case "${2:-}" in
+            '' | *[!0-9]*) exit 1 ;;
+            *) SaveTweak UpMbit "$2" ;;
+        esac
         exit
         ;;
 esac
