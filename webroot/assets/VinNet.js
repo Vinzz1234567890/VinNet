@@ -753,6 +753,27 @@ async function ApplyTweak(ID, Payload, Target = 'all') {
     }).catch(() => { });
 }
 
+async function MeasureUplink() {
+    const Bytes = 2000000;
+    const Payload = new Uint8Array(Bytes);
+    let Total = 0, Count = 0;
+    for (let I = 0; I < 2; I++) {
+        const Start = performance.now();
+        const Resp = await fetch('https://speed.cloudflare.com/__up', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/octet-stream' },
+            body: Payload
+        });
+        if (!Resp.ok) throw new Error('HTTP ' + Resp.status);
+        const Elapsed = (performance.now() - Start) / 1000;
+        if (Elapsed > 0) { Total += (Bytes * 8) / (Elapsed * 1e6); Count++; }
+    }
+    if (!Count) throw new Error('invalid timing');
+    const Mbps = Math.max(1, Math.round(Total / Count));
+    await exec(`sh ${Service} uplink ${Mbps}`);
+    return Mbps;
+}
+
 async function LoadSettings() {
     const Input = document.getElementById('PersistentTweaks');
     if (typeof window.ksu?.exec !== 'function') {
@@ -872,7 +893,7 @@ function SetupEventListeners() {
         }
     });
 
-    document.addEventListener('click', Event => {
+    document.addEventListener('click', async Event => {
         const Chip = Event.target.closest('.TweakChip');
         if (Chip) {
             const ChipsContainer = Chip.closest('.TweakChips'), Card = Chip.closest('.Card');
@@ -912,7 +933,19 @@ function SetupEventListeners() {
             const Select = Item.closest('.TweakSelect');
             CloseSelectMenus();
             const Target = Select.dataset.target || 'all';
-            if (Item.dataset.value !== Select.dataset.current) ApplyTweak(Select.dataset.tweakId, Item.dataset.value, Target);
+            const Value = Item.dataset.value;
+            if (Value !== Select.dataset.current) {
+                if (Value === 'cake') {
+                    Toast('Measuring uplink…');
+                    try {
+                        await MeasureUplink();
+                    } catch (Err) {
+                        Log('Uplink', `${Err || 'measure failed'}`);
+                        Toast('Uplink measurement failed');
+                    }
+                }
+                ApplyTweak(Select.dataset.tweakId, Value, Target);
+            }
             return;
         }
         CloseSelectMenus();
