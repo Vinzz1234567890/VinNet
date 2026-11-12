@@ -522,22 +522,34 @@ Diagnose() {
 }
 
 FlushDiagnose() {
-    local Pending="$Core/.Diagnose.tmp" ExistingLines=""
+    local Pending="$Core/.Diagnose.tmp" ExistingLines="" Lock="$LogPath.lock" Waited=0
     [ -f "$Pending" ] || return 0
     [ -w "${LogPath%/*}" ] || return 1
-
+    while ! mkdir "$Lock" 2> /dev/null; do
+        Waited=$((Waited + 1))
+        if [ "$Waited" -gt 100 ]; then rm -rf "$Lock"; mkdir "$Lock" 2> /dev/null; break; fi
+        sleep 0.1
+    done
     [ -f "$LogPath" ] && ExistingLines=$(grep -v "Diagnose:" "$LogPath" 2> /dev/null | grep -vE '^[[:space:]]*\[[[:space:]]*[0-9]+\.[0-9]+\]')
 
     {
         cat "$Pending"
         [ -z "$ExistingLines" ] || printf '%s\n' "$ExistingLines"
     } > "$LogPath" 2> /dev/null && rm -f "$Pending"
+    rm -rf "$Lock"
 }
 
 ProcessID() { Write "$ProcessID" "$(printf '{"PID":%s,"Timestamp":%s}\n' "$$" "$(date +%s)")"; }
 
 Cleanup() {
+    local T P
     rm -f "$ProcessID" "$Core"/*.tmp.$$ "$Core/.Diagnose.tmp" "$LogPath".tmp.* 2> /dev/null
+    for T in "$Core"/*.tmp.*; do
+        [ -e "$T" ] || continue
+        P=${T##*.tmp.}
+        case "$P" in *[!0-9]* | "") continue ;; esac
+        kill -0 "$P" 2> /dev/null || rm -f "$T" 2> /dev/null
+    done
     exit 0
 }
 
