@@ -390,13 +390,13 @@ function StopLiveTicker() {
 
 const Tweaks = {
     "IP Reach Disconnect": {
-        Label: 'Disable IP Reach Disconnect', Icon: 'Monitor,IPReachDisconnect',
+        Label: 'Disable IP Reach Disconnect', Icon: 'Monitor,IPReachDisconnect', Category: 'Gaming',
         Description: 'Preventing Wi-Fi from suddenly disconnecting when network is unstable.',
         CheckCommand: `sh ${Service} check 'IP Reach Disconnect'`, Expect: 'false', ONLabel: 'Disabled', OFFLabel: 'Enabled',
         Warn: 'Reset after reboot',
     },
     "QDISC": {
-        Label: 'Optimize QDISC', Icon: 'QDISC',
+        Label: 'Optimize QDISC', Icon: 'QDISC', Category: 'Gaming',
         Description: 'Split data traffic into multiple paths and prioritize small data packets so they aren\'t held up by large data packets.',
         Type: 'select', HasInterfaces: true,
         Options: {
@@ -415,14 +415,14 @@ const Tweaks = {
         Warn: 'Reset after reboot',
     },
     "Wi-Fi Force Low Latency Mode": {
-        Label: 'Enable Wi-Fi Force Low Latency Mode', Icon: 'Wi-FiForceLowLatencyMode',
+        Label: 'Enable Wi-Fi Force Low Latency Mode', Icon: 'Wi-FiForceLowLatencyMode', Category: 'Gaming',
         Description: 'Force Android to enable built-in low-latency mode at system level, falling back to hi-perf mode on devices that lack it.',
         CheckCommand: `sh ${Service} check 'Wi-Fi Force Low Latency Mode'`,
         Expect: ['2', '3'], ONLabel: 'Enabled', OFFLabel: 'Disabled',
         Warn: 'Reset after interface changes',
     },
     "Network Avoid Bad Wi-Fi & Mobile Data Always ON": {
-        Label: 'Disable Network Avoid Bad Wi-Fi & Mobile Data Always ON', Icon: 'NetworkAvoidBadWi-Fi&MobileDataAlwaysON',
+        Label: 'Disable Network Avoid Bad Wi-Fi & Mobile Data Always ON', Icon: 'NetworkAvoidBadWi-Fi&MobileDataAlwaysON', Category: 'Gaming',
         Description: 'Forces system to stay connected to Wi-Fi interface even if signal quality deteriorates, and prevents background cellular data from disrupting transmission stability.',
         ONCommand: 'settings put global network_avoid_bad_wifi 0 && settings put global mobile_data_always_on 0',
         OFFCommand: 'settings put global network_avoid_bad_wifi 1 && settings put global mobile_data_always_on 1',
@@ -430,16 +430,22 @@ const Tweaks = {
         Expect: '0', ONLabel: 'Disabled', OFFLabel: 'Enabled',
     },
     "BLE Scan Always Enabled": {
-        Label: 'Disable BLE Scan Always Enabled', Icon: 'BLEScanAlwaysEnabled',
+        Label: 'Disable BLE Scan Always Enabled', Icon: 'BLEScanAlwaysEnabled', Category: 'Gaming',
         Description: 'Minimize jitter and ping spikes when gaming over 2.4 GHz Wi-Fi network.',
         ONCommand: 'settings put global ble_scan_always_enabled 0', OFFCommand: 'settings put global ble_scan_always_enabled 1',
         CheckCommand: 'settings get global ble_scan_always_enabled', Expect: '0', ONLabel: 'Disabled', OFFLabel: 'Enabled',
     },
     "Wi-Fi Scan Throttle": {
-        Label: 'Enable Wi-Fi Scan Throttle', Icon: 'Wi-FiScanThrottle',
+        Label: 'Enable Wi-Fi Scan Throttle', Icon: 'Wi-FiScanThrottle', Category: 'Gaming',
         Description: 'Limit background Wi-Fi scanning to conserve battery life and prevent jitter.',
         ONCommand: 'settings put global wifi_scan_throttle_enabled 1', OFFCommand: 'settings put global wifi_scan_throttle_enabled 0',
         CheckCommand: 'settings get global wifi_scan_throttle_enabled', Expect: '1', ONLabel: 'Enabled', OFFLabel: 'Disabled',
+    },
+    "Optimize Network Device": {
+        Label: 'Optimize Network Device', Icon: 'OptimizeNetworkDevice', Category: 'Multitasking',
+        Description: 'Raise the network device backlog and NAPI polling budget so the kernel processes more packets per cycle under heavy multitasking.',
+        CheckCommand: `sh ${Service} check 'Optimize Network Device'`, Expect: '0', ONLabel: 'Optimized', OFFLabel: 'Unoptimized',
+        Warn: 'Reset after reboot',
     }
 };
 
@@ -626,7 +632,15 @@ function RenderTweakCards(State) {
     const { LiveState, Unsupported, SelectOptions } = State;
 
     Container.replaceChildren();
+    let LastCategory = null;
     for (const [ID, Tweak] of Object.entries(Tweaks)) {
+        if (Tweak.Category && Tweak.Category !== LastCategory) {
+            const Header = document.createElement('div');
+            Header.className = 'TweakCategory';
+            Header.textContent = Tweak.Category;
+            Container.appendChild(Header);
+            LastCategory = Tweak.Category;
+        }
         const Card = Template.content.cloneNode(true);
         Card.querySelector('.TweakIcon use').setAttribute('href', '#' + Tweak.Icon);
         Card.querySelector('.TweakName').textContent = Tweak.Label || ID;
