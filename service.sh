@@ -286,7 +286,7 @@ ProbeQDISC() {
 }
 
 RunTweak() {
-    local Out HiOut Status HiStatus Set W
+    local Out HiOut Status HiStatus Set W B1 B2 B3
     case "$1:$2" in
         "IP Reach Disconnect:ON" | "IP Reach Disconnect:OFF")
             Set=$([ "$2" = "ON" ] && echo disabled || echo enabled)
@@ -337,6 +337,28 @@ RunTweak() {
             W=$?
             rm -rf "$Core/.qdisc.lock"
             return "$W"
+            ;;
+        "Optimize Network Device:ON")
+            if [ -z "$(ReadTweak NetDevDefault)" ]; then
+                SaveTweak NetDevDefault "$(sysctl -n net.core.netdev_max_backlog 2> /dev/null) $(sysctl -n net.core.netdev_budget 2> /dev/null) $(sysctl -n net.core.netdev_budget_usecs 2> /dev/null)"
+            fi
+            Out=$(sysctl -w net.core.netdev_max_backlog=1000 net.core.netdev_budget=900 net.core.netdev_budget_usecs=6000 2>&1)
+            Status=$?
+            if [ "$Status" -ne 0 ]; then
+                Log ApplyFail "$1 : $2 | ${Out:-sysctl failed}"
+                return 1
+            fi
+            ;;
+        "Optimize Network Device:OFF")
+            read -r B1 B2 B3 <<EOF
+$(ReadTweak NetDevDefault)
+EOF
+            Out=$(sysctl -w net.core.netdev_max_backlog="${B1:-1000}" net.core.netdev_budget="${B2:-300}" net.core.netdev_budget_usecs="${B3:-2000}" 2>&1)
+            Status=$?
+            if [ "$Status" -ne 0 ]; then
+                Log ApplyFail "$1 : $2 | ${Out:-sysctl failed}"
+                return 1
+            fi
             ;;
         *) return 1 ;;
     esac
@@ -435,6 +457,13 @@ LiveTweak() {
                 }
             '
             ;;
+        "Optimize Network Device")
+            if [ "$(sysctl -n net.core.netdev_max_backlog 2> /dev/null)" = "1000" ] && [ "$(sysctl -n net.core.netdev_budget 2> /dev/null)" = "900" ] && [ "$(sysctl -n net.core.netdev_budget_usecs 2> /dev/null)" = "6000" ]; then
+                printf '0\n'
+            else
+                printf '1\n'
+            fi
+            ;;
         *) return 1 ;;
     esac
 }
@@ -443,6 +472,7 @@ TweakState() {
     case "$1" in
         "IP Reach Disconnect") case "$2" in *false*) printf 'ON\n' ;; *) printf 'OFF\n' ;; esac ;;
         "Wi-Fi Force Low Latency Mode") case "$2" in 2 | 3) printf 'ON\n' ;; *) printf 'OFF\n' ;; esac ;;
+        "Optimize Network Device") case "$2" in 0) printf 'ON\n' ;; *) printf 'OFF\n' ;; esac ;;
         *) return 1 ;;
     esac
 }
@@ -496,7 +526,7 @@ EOF
 RestoreTweaks() {
     [ "$(ReadTweak Persistent)" = "ON" ] || return 0
     local Key Value Target
-    for Key in "IP Reach Disconnect" "Wi-Fi Force Low Latency Mode"; do
+    for Key in "IP Reach Disconnect" "Wi-Fi Force Low Latency Mode" "Optimize Network Device"; do
         Value=$(ReadTweak "$Key")
         case "$Value" in
             ON | OFF) RunTweak "$Key" "$Value" || Log RestoreFail "$Key : $Value | boot restore failed" ;;
