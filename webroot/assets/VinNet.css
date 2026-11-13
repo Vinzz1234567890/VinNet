@@ -749,31 +749,12 @@ textarea {
     background-color: var(--outline);
 }
 
-.ir-link {
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--pri);
-    text-decoration: none;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.ir-link svg {
-    flex-shrink: 0;
-}
-
 .ir-icon-github {
     fill: var(--on-surf);
 }
 
 .ir-icon-telegram {
     fill: var(--brand-telegram);
-}
-
-.ir-chevron {
-    fill: currentColor;
-    margin-inline-start: auto;
 }
 
 .chip {
@@ -796,6 +777,15 @@ textarea {
     height: 18px;
     border-radius: 50%;
     object-fit: cover;
+}
+
+.chip-icon {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    padding: 3px;
+    background: var(--surf-xhi);
 }
 
 .IndexRow .chip {
