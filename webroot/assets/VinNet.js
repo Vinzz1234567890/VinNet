@@ -840,10 +840,10 @@ function RenderLinks() {
     for (const Link of Links) {
         const Row = Template.content.cloneNode(true);
         Row.querySelector('.IndexRowlabel').textContent = Link.Label;
-        const Anchor = Row.querySelector('.ir-link');
+        const Anchor = Row.querySelector('.chip');
         Anchor.href = Link.Href;
         const Icon = Anchor.querySelector('svg');
-        Icon.setAttribute('class', Link.IconClass);
+        Icon.setAttribute('class', 'chip-icon ' + Link.IconClass);
         Icon.querySelector('use').setAttribute('href', '#' + Link.Icon);
         Row.querySelector('.ir-link-label').textContent = Link.Text;
         Container.appendChild(Row);
