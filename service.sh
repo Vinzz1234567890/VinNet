@@ -338,7 +338,23 @@ RunTweak() {
             rm -rf "$Core/.qdisc.lock"
             return "$W"
             ;;
-        "Optimize Network Device:ON")
+        "TCP Slow Start After Idle:ON")
+            Out=$(sysctl -w net.ipv4.tcp_slow_start_after_idle=0 2>&1)
+            Status=$?
+            if [ "$Status" -ne 0 ]; then
+                Log ApplyFail "$1 : $2 | ${Out:-sysctl failed}"
+                return 1
+            fi
+            ;;
+        "TCP Slow Start After Idle:OFF")
+            Out=$(sysctl -w net.ipv4.tcp_slow_start_after_idle=1 2>&1)
+            Status=$?
+            if [ "$Status" -ne 0 ]; then
+                Log ApplyFail "$1 : $2 | ${Out:-sysctl failed}"
+                return 1
+            fi
+            ;;
+        "Optimize NetDev:ON")
             if [ -z "$(ReadTweak NetDevDefault)" ]; then
                 SaveTweak NetDevDefault "$(sysctl -n net.core.netdev_max_backlog 2> /dev/null) $(sysctl -n net.core.netdev_budget 2> /dev/null) $(sysctl -n net.core.netdev_budget_usecs 2> /dev/null)"
             fi
@@ -349,7 +365,7 @@ RunTweak() {
                 return 1
             fi
             ;;
-        "Optimize Network Device:OFF")
+        "Optimize NetDev:OFF")
             read -r B1 B2 B3 <<EOF
 $(ReadTweak NetDevDefault)
 EOF
@@ -457,7 +473,10 @@ LiveTweak() {
                 }
             '
             ;;
-        "Optimize Network Device")
+        "TCP Slow Start After Idle")
+            printf '%s\n' "$(sysctl -n net.ipv4.tcp_slow_start_after_idle 2> /dev/null)"
+            ;;
+        "Optimize NetDev")
             if [ "$(sysctl -n net.core.netdev_max_backlog 2> /dev/null)" = "1000" ] && [ "$(sysctl -n net.core.netdev_budget 2> /dev/null)" = "900" ] && [ "$(sysctl -n net.core.netdev_budget_usecs 2> /dev/null)" = "6000" ]; then
                 printf '0\n'
             else
@@ -472,7 +491,8 @@ TweakState() {
     case "$1" in
         "IP Reach Disconnect") case "$2" in *false*) printf 'ON\n' ;; *) printf 'OFF\n' ;; esac ;;
         "Wi-Fi Force Low Latency Mode") case "$2" in 2 | 3) printf 'ON\n' ;; *) printf 'OFF\n' ;; esac ;;
-        "Optimize Network Device") case "$2" in 0) printf 'ON\n' ;; *) printf 'OFF\n' ;; esac ;;
+        "TCP Slow Start After Idle") case "$2" in 0) printf 'ON\n' ;; *) printf 'OFF\n' ;; esac ;;
+        "Optimize NetDev") case "$2" in 0) printf 'ON\n' ;; *) printf 'OFF\n' ;; esac ;;
         *) return 1 ;;
     esac
 }
@@ -526,7 +546,7 @@ EOF
 RestoreTweaks() {
     [ "$(ReadTweak Persistent)" = "ON" ] || return 0
     local Key Value Target
-    for Key in "IP Reach Disconnect" "Wi-Fi Force Low Latency Mode" "Optimize Network Device"; do
+    for Key in "IP Reach Disconnect" "Wi-Fi Force Low Latency Mode" "TCP Slow Start After Idle" "Optimize NetDev"; do
         Value=$(ReadTweak "$Key")
         case "$Value" in
             ON | OFF) RunTweak "$Key" "$Value" || Log RestoreFail "$Key : $Value | boot restore failed" ;;
