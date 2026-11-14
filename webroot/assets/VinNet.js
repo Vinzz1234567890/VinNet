@@ -441,10 +441,16 @@ const Tweaks = {
         ONCommand: 'settings put global wifi_scan_throttle_enabled 1', OFFCommand: 'settings put global wifi_scan_throttle_enabled 0',
         CheckCommand: 'settings get global wifi_scan_throttle_enabled', Expect: '1', ONLabel: 'Enabled', OFFLabel: 'Disabled',
     },
-    "Optimize Network Device": {
-        Label: 'Optimize Network Device', Icon: 'OptimizeNetworkDevice', Category: 'Multitasking',
+    "Optimize NetDev": {
+        Label: 'Optimize NetDev', Icon: 'OptimizeNetworkDevice', Category: 'Multitasking',
         Description: 'Raise the network device backlog and NAPI polling budget so the kernel processes more packets per cycle under heavy multitasking.',
-        CheckCommand: `sh ${Service} check 'Optimize Network Device'`, Expect: '0', ONLabel: 'Optimized', OFFLabel: 'Unoptimized',
+        CheckCommand: `sh ${Service} check 'Optimize NetDev'`, Expect: '0', ONLabel: 'Optimized', OFFLabel: 'Unoptimized',
+        Warn: 'Reset after reboot',
+    },
+    "TCP Slow Start After Idle": {
+        Label: 'Disable TCP Slow Start After Idle', Icon: 'TCPSlowStartAfterIdle', Category: 'Multitasking',
+        Description: 'Prevent TCP from resetting its congestion window after an idle period, keeping throughput high for bursty workloads.',
+        CheckCommand: `sh ${Service} check 'TCP Slow Start After Idle'`, Expect: '0', ONLabel: 'Disabled', OFFLabel: 'Enabled',
         Warn: 'Reset after reboot',
     }
 };
