@@ -1,14 +1,14 @@
 const Core = '/data/adb/VinNet';
 const Service = '/data/adb/modules/VinNet/service.sh';
-const LogFile = '/storage/emulated/0/Download/VinNet.log';
 
 let CallbackCounter = 0;
-function exec(cmd) {
+function exec(cmd, Quiet = false) {
     return new Promise((resolve, reject) => {
         if (window.ksu && typeof ksu.exec === 'function') {
-            const CallbackName = `__exec_cb_${++CallbackCounter}`;
+            const CallbackName = `__exec_cb_${++CallbackCounter}`, Start = performance.now();
             window[CallbackName] = (Code, Output, Error) => {
                 delete window[CallbackName];
+                if (!Quiet) Log('Exec', `${Math.round(performance.now() - Start)} ms | exit ${Code} | ${cmd}`, 'Debug');
                 Code === 0 ? resolve((Output || '').trim()) : reject((Error || '').trim());
             };
             try { ksu.exec(cmd, JSON.stringify({}), CallbackName); } catch (e) { delete window[CallbackName]; reject(String(e)); }
@@ -18,16 +18,36 @@ function exec(cmd) {
     });
 }
 
-let LogQueue = Promise.resolve();
-const Log = (Tag, Data) => {
-    if (Data == null) return;
+const LogLevels = ['Off', 'Error', 'Info', 'Debug'];
+let LogLevel = null, LogBuffer = [], LogFlushing = false, LogFlushTimer = null;
+
+const Log = (Tag, Data, Level = 'Error') => {
+    const Rank = LogLevels.indexOf(Level);
+    if (Data == null || (LogLevel && Rank > LogLevels.indexOf(LogLevel))) return;
     const Content = (typeof Data === 'string' ? Data : JSON.stringify(Data, (K, V) => K === 'Timestamp' ? undefined : V)).replace(/\r?\n/g, ' | ');
     if (!Content) return;
-    const TagSafe = Tag.replace(/'/g, "'\\''"), Safe = Content.replace(/'/g, "'\\''");
-    LogQueue = LogQueue.then(() => exec(
-        `F='${LogFile}'; T="$F.tmp.$$"; { grep -vF '] ${TagSafe}: ${Safe}' "$F" 2>/dev/null; printf '[%s] %s: %s\\n' "$(date '+%F %T')" '${TagSafe}' '${Safe}'; } > "$T" 2>/dev/null && mv -f "$T" "$F" 2>/dev/null || rm -f "$T"`
-    )).catch(() => { });
+    LogBuffer.push([Rank, `${Level[0]} ${Tag}: ${Content}`]);
+    ScheduleFlush();
 };
+
+function ScheduleFlush() {
+    if (LogFlushTimer || LogFlushing || !LogLevel) return;
+    LogFlushTimer = setTimeout(() => { LogFlushTimer = null; FlushLog(); }, 1000);
+}
+
+function FlushLog() {
+    if (LogFlushTimer) { clearTimeout(LogFlushTimer); LogFlushTimer = null; }
+    if (LogFlushing || !LogLevel) return;
+    const Max = LogLevels.indexOf(LogLevel);
+    const Lines = LogBuffer.filter(([Rank]) => Rank <= Max).map(([, Line]) => `'${Line.replace(/'/g, "'\\''")}'`);
+    LogBuffer = [];
+    if (!Lines.length) return;
+    LogFlushing = true;
+    exec(`sh ${Service} log ${Lines.join(' ')}`, true).catch(() => { }).finally(() => {
+        LogFlushing = false;
+        if (LogBuffer.length) ScheduleFlush();
+    });
+}
 
 addEventListener('error', Event => {
     const Target = Event.target, Source = Event.filename || Target?.src || 'unknown';
@@ -40,9 +60,9 @@ addEventListener('unhandledrejection', Event => {
     Log('Error:promise', `${Reason?.stack || Reason || 'unknown'}`);
 });
 
-async function FetchJSON(File) {
+async function FetchJSON(File, Quiet = false) {
     let Raw = '';
-    try { Raw = await exec(`cat ${Core}/${File} 2>/dev/null`); } catch { return null; }
+    try { Raw = await exec(`cat ${Core}/${File} 2>/dev/null`, Quiet); } catch { return null; }
     if (!Raw) return null;
     try { return JSON.parse(Raw); }
     catch (Err) { Log(`JSON:${File}`, `${Err || 'parse failed'} | ${Raw.slice(0, 200)}`); return null; }
@@ -357,8 +377,8 @@ function ApplyMonitor(Data) {
 }
 
 async function FetchMonitor() {
-    exec(`touch ${Core}/ProcessID.json`).catch(Err => Log('ProcessID', `touch | ${Err || 'failed'}`));
-    const Cached = await FetchJSON('Monitor.json');
+    exec(`touch ${Core}/ProcessID.json`, true).catch(Err => Log('ProcessID', `touch | ${Err || 'failed'}`));
+    const Cached = await FetchJSON('Monitor.json', true);
     const Age = Cached && Cached.Timestamp ? Date.now() / 1000 - Cached.Timestamp : null;
     if (Cached && Cached.Latency != null && Cached.Latency !== '—' && Age != null && Age >= 0 && Age <= 30) {
         MonitorUnusable = false;
@@ -367,14 +387,14 @@ async function FetchMonitor() {
     }
     if (!MonitorUnusable) {
         MonitorUnusable = true;
-        Log('MonitorFail', Cached ? 'Monitor.json unusable' : 'Monitor.json missing');
+        Log('Monitor', Cached ? 'Monitor.json unusable' : 'Monitor.json missing', 'Debug');
     }
     ApplyMonitor({ Latency: '—', Jitter: '—' });
 }
 
 let LiveTickInterval = null;
 function LiveTick() {
-    FetchMonitor().catch(Err => Log('MonitorFail', `tick | ${Err || 'failed'}`));
+    FetchMonitor().catch(Err => Log('Monitor', `tick | ${Err || 'failed'}`));
     if (SelectDirty) {
         const ID = SelectDirty; SelectDirty = null;
         RefreshSelect(ID).catch(Err => Log(`Refresh:${ID}`, `${Err || 're-read failed'}`));
@@ -749,6 +769,7 @@ async function ApplyTweak(ID, Payload, Target = 'all') {
             const Out = await exec(Command);
             const SaveFailed = Out.split('\n').includes('SAVE_FAILED');
             if (IsSelect) SelectDirty = ID;
+            if (Tweak.ONCommand) Log('Apply', `${ID} : ${Payload ? 'ON' : 'OFF'}`, 'Info');
             const TargetLabel = Target === 'all' ? 'All' : Target;
             Toast(SaveFailed ? 'Applied, but unable to save state' : `${Tweak.Label || ID}${IsSelect ? ` (${TargetLabel})` : ''} > ${IsSelect ? Tweak.Options[Payload].Label : (Payload ? Tweak.ONLabel : Tweak.OFFLabel)}`);
         } catch (Err) {
@@ -790,18 +811,60 @@ async function MeasureUplink() {
     }
     if (!Count) throw new Error('invalid timing');
     const Mbps = Math.max(1, Math.round(Total / Count));
+    Log('Uplink', `${Mbps} Mbps measured over ${Count} upload(s) of ${Bytes} bytes`, 'Debug');
     await exec(`sh ${Service} uplink ${Mbps}`);
     return Mbps;
 }
 
+function UpdateLogLevelDisplay(Level) {
+    const Select = document.getElementById('SettingLogLevel');
+    Select.dataset.current = Level;
+    Select.querySelector('.TweakSelectValue').textContent = Level;
+    for (const Item of Select.querySelectorAll('.TweakSelectItem')) {
+        Item.classList.toggle('TweakSelectCurrent', Item.dataset.value === Level);
+    }
+    SyncSelectMenu(Select);
+}
+
+async function ApplyLogLevel(Level) {
+    const Field = document.querySelector('#SettingLogLevel .TweakSelectField');
+    Field.disabled = true;
+    try {
+        await exec(`sh ${Service} log_level ${Level}`);
+        LogLevel = Level;
+        UpdateLogLevelDisplay(Level);
+        Toast(`Log Level > ${Level}`);
+    } catch (Err) {
+        Log('LogLevel', `${Level} | ${Err || 'save failed'}`);
+        Toast('Unable to save setting');
+    } finally {
+        Field.disabled = false;
+        Field.focus();
+    }
+}
+
 async function LoadSettings() {
     const Input = document.getElementById('PersistentTweaks');
+    const LogSelect = document.getElementById('SettingLogLevel');
     if (typeof window.ksu?.exec !== 'function') {
         Input.indeterminate = true;
         Input.disabled = true;
-        Log('Persistent', 'Root bridge unavailable');
+        LogSelect.classList.add('TweakSelectDisabled');
+        LogSelect.querySelector('.TweakSelectField').disabled = true;
+        LogLevel = 'Off';
+        LogBuffer = [];
         return;
     }
+    try {
+        const Level = await exec(`sh ${Service} log_level`);
+        if (!LogLevels.includes(Level)) throw new Error(`invalid level [${Level}]`);
+        LogLevel = Level;
+    } catch (Err) {
+        LogLevel = 'Error';
+        Log('LogLevel', `read | ${Err || 'failed'}`);
+    }
+    UpdateLogLevelDisplay(LogLevel);
+    FlushLog();
     try {
         await ReadPersistent();
         Input.checked = PersistentOn;
@@ -952,8 +1015,12 @@ function SetupEventListeners() {
         if (Item) {
             const Select = Item.closest('.TweakSelect');
             CloseSelectMenus();
-            const Target = Select.dataset.target || 'all';
             const Value = Item.dataset.value;
+            if (Select.id === 'SettingLogLevel') {
+                if (Value !== Select.dataset.current) ApplyLogLevel(Value);
+                return;
+            }
+            const Target = Select.dataset.target || 'all';
             if (Value !== Select.dataset.current) {
                 if (Value === 'cake') {
                     Toast('Measuring uplink…');
@@ -980,7 +1047,7 @@ function SetupEventListeners() {
     });
 
     document.addEventListener('visibilitychange', () => {
-        if (document.hidden) StopLiveTicker(); else StartLiveTicker();
+        if (document.hidden) { StopLiveTicker(); FlushLog(); } else StartLiveTicker();
     });
 }
 
@@ -1010,9 +1077,10 @@ function Reveal() {
 }
 
 async function Load() {
-    Log('Session', navigator.userAgent);
+    const Start = performance.now();
+    Log('Session', navigator.userAgent, 'Info');
     setTimeout(() => { if (!Revealed) Log('Load', 'watchdog: data still pending after 8s'); Reveal(); }, 8000);
-    FetchMonitor().catch(Err => Log('MonitorFail', `fetch | ${Err || 'failed'}`));
+    FetchMonitor().catch(Err => Log('Monitor', `fetch | ${Err || 'failed'}`));
     const Results = await Promise.allSettled([
         LoadEnvironment(),
         LoadMetadata(),
@@ -1028,6 +1096,7 @@ async function Load() {
             Log('Load', `${Result.reason?.stack || Result.reason || 'failed'}`);
         }
     }
+    Log('Load', `ready in ${Math.round(performance.now() - Start)} ms`, 'Debug');
     Reveal();
 }
 
