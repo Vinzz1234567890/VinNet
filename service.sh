@@ -3,6 +3,8 @@ ModuleDirectory="${0%/*}"
 Core="/data/adb/VinNet"
 LogPath="/storage/emulated/0/Download/VinNet.log"
 LogLevel=Error
+LogBuffer=32k
+LogBufferBytes=32768
 NL='
 '
 
@@ -64,7 +66,7 @@ LogWrite() {
 LogTrim() {
     local Temp="$LogPath.tmp.$$.$RANDOM"
     LogLock
-    tail -c 65536 "$LogPath" 2> /dev/null | sed 1d > "$Temp" 2> /dev/null && mv -f "$Temp" "$LogPath" 2> /dev/null || rm -f "$Temp"
+    tail -c "$LogBufferBytes" "$LogPath" 2> /dev/null | sed 1d > "$Temp" 2> /dev/null && mv -f "$Temp" "$LogPath" 2> /dev/null || rm -f "$Temp"
     rm -rf "$LogPath.lock"
 }
 
@@ -161,12 +163,21 @@ ReadLogLevel() {
     case "$LogLevel" in Off | Info | Debug) ;; *) LogLevel=Error ;; esac
 }
 
+ReadLogBuffer() {
+    local V
+    V=$(ReadTweak LogBuffer)
+    case "$V" in 2k | 8k | 32k | 128k | 512k) LogBuffer=$V ;; *) LogBuffer=32k ;; esac
+    case "$LogBuffer" in
+        2k) LogBufferBytes=2048 ;;
+        8k) LogBufferBytes=8192 ;;
+        32k) LogBufferBytes=32768 ;;
+        128k) LogBufferBytes=131072 ;;
+        512k) LogBufferBytes=524288 ;;
+    esac
+}
+
 ReadLogLevel
-[ "$LogLevel" != Off ] && LogFilter
-if [ "$LogLevel" != Off ] && [ -w "${LogPath%/*}" ] && [ -f "$LogPath" ] && [ "$(wc -c 2> /dev/null < "$LogPath")" -gt 131072 ]; then
-    LogTrim
-    Log LogTrim "log exceeded 128K, kept the newest 64K" Info
-fi
+ReadLogBuffer
 
 TxQueueLen() {
     local L=""
@@ -822,9 +833,16 @@ case "${1:-}" in
             Error | Info | Debug)
                 SaveTweak LogLevel "$2" || exit 1
                 LogLevel="$2"
-                LogFilter
-                Log Settings "Log Level : $2" Info
+                (LogFilter; Log Settings "Log Level : $2" Info) < /dev/null > /dev/null 2>&1 &
                 ;;
+            *) exit 1 ;;
+        esac
+        exit 0
+        ;;
+    log_buffer)
+        case "${2:-}" in
+            "") printf '%s\n' "$LogBuffer" ;;
+            2k | 8k | 32k | 128k | 512k) SaveTweak LogBuffer "$2" || exit 1 ;;
             *) exit 1 ;;
         esac
         exit 0
@@ -888,6 +906,12 @@ fi
 ProcessID
 trap Cleanup TERM EXIT INT
 
+[ "$LogLevel" != Off ] && LogFilter
+if [ "$LogLevel" != Off ] && [ -w "${LogPath%/*}" ] && [ -f "$LogPath" ] && [ "$(wc -c 2> /dev/null < "$LogPath")" -gt "$LogBufferBytes" ]; then
+    LogTrim
+    Log LogTrim "log trimmed to $LogBuffer" Info
+fi
+
 if "$TC" -V > /dev/null 2>&1; then
     RestoreTweaks
     BootRestored=1
@@ -913,7 +937,11 @@ while true; do
     fi
     if WebUIActive "$Now"; then
         ReadLogLevel
+        ReadLogBuffer
         Monitor "$Now"
+        if [ "$LogLevel" != Off ] && [ -f "$LogPath" ] && [ "$(wc -c 2> /dev/null < "$LogPath")" -gt "$LogBufferBytes" ]; then
+            LogTrim
+        fi
     fi
     sleep 5
 done
