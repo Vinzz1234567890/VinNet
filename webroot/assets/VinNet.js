@@ -19,14 +19,16 @@ function exec(cmd, Quiet = false) {
 }
 
 const LogLevels = ['Off', 'Error', 'Info', 'Debug'];
-let LogLevel = null, LogBuffer = [], LogFlushing = false, LogFlushTimer = null;
+const LogBufferSizes = ['2k', '8k', '32k', '128k', '512k'];
+let LogLevel = null, LogQueue = [], LogFlushing = false, LogFlushTimer = null;
+let LogBuffer = null;
 
 const Log = (Tag, Data, Level = 'Error') => {
     const Rank = LogLevels.indexOf(Level);
     if (Data == null || (LogLevel && Rank > LogLevels.indexOf(LogLevel))) return;
     const Content = (typeof Data === 'string' ? Data : JSON.stringify(Data, (K, V) => K === 'Timestamp' ? undefined : V)).replace(/\r?\n/g, ' | ');
     if (!Content) return;
-    LogBuffer.push([Rank, `${Level[0]} ${Tag}: ${Content}`]);
+    LogQueue.push([Rank, `${Level[0]} ${Tag}: ${Content}`]);
     ScheduleFlush();
 };
 
@@ -39,13 +41,13 @@ function FlushLog() {
     if (LogFlushTimer) { clearTimeout(LogFlushTimer); LogFlushTimer = null; }
     if (LogFlushing || !LogLevel) return;
     const Max = LogLevels.indexOf(LogLevel);
-    const Lines = LogBuffer.filter(([Rank]) => Rank <= Max).map(([, Line]) => `'${Line.replace(/'/g, "'\\''")}'`);
-    LogBuffer = [];
+    const Lines = LogQueue.filter(([Rank]) => Rank <= Max).map(([, Line]) => `'${Line.replace(/'/g, "'\\''")}'`);
+    LogQueue = [];
     if (!Lines.length) return;
     LogFlushing = true;
     exec(`sh ${Service} log ${Lines.join(' ')}`, true).catch(() => { }).finally(() => {
         LogFlushing = false;
-        if (LogBuffer.length) ScheduleFlush();
+        if (LogQueue.length) ScheduleFlush();
     });
 }
 
@@ -833,12 +835,47 @@ async function ApplyLogLevel(Level) {
         await exec(`sh ${Service} log_level ${Level}`);
         LogLevel = Level;
         UpdateLogLevelDisplay(Level);
+        SyncLogBufferState();
         Toast(`Log Level > ${Level}`);
     } catch (Err) {
         Log('LogLevel', `${Level} | ${Err || 'save failed'}`);
         Toast('Unable to save setting');
     } finally {
         Field.disabled = false;
+        Field.focus();
+    }
+}
+
+function UpdateLogBufferDisplay(Size) {
+    const Select = document.getElementById('SettingLogBuffer');
+    Select.dataset.current = Size;
+    Select.querySelector('.TweakSelectValue').textContent = Size;
+    for (const Item of Select.querySelectorAll('.TweakSelectItem')) {
+        Item.classList.toggle('TweakSelectCurrent', Item.dataset.value === Size);
+    }
+    SyncSelectMenu(Select);
+}
+
+function SyncLogBufferState() {
+    const Select = document.getElementById('SettingLogBuffer');
+    const Off = LogLevel === 'Off';
+    Select.classList.toggle('TweakSelectDisabled', Off);
+    Select.querySelector('.TweakSelectField').disabled = Off;
+}
+
+async function ApplyLogBuffer(Size) {
+    const Field = document.querySelector('#SettingLogBuffer .TweakSelectField');
+    Field.disabled = true;
+    try {
+        await exec(`sh ${Service} log_buffer ${Size}`);
+        LogBuffer = Size;
+        UpdateLogBufferDisplay(Size);
+        Toast(`Log Buffer > ${Size}`);
+    } catch (Err) {
+        Log('LogBuffer', `${Size} | ${Err || 'save failed'}`);
+        Toast('Unable to save setting');
+    } finally {
+        SyncLogBufferState();
         Field.focus();
     }
 }
@@ -851,8 +888,11 @@ async function LoadSettings() {
         Input.disabled = true;
         LogSelect.classList.add('TweakSelectDisabled');
         LogSelect.querySelector('.TweakSelectField').disabled = true;
+        const BufferSelect = document.getElementById('SettingLogBuffer');
+        BufferSelect.classList.add('TweakSelectDisabled');
+        BufferSelect.querySelector('.TweakSelectField').disabled = true;
         LogLevel = 'Off';
-        LogBuffer = [];
+        LogQueue = [];
         return;
     }
     try {
@@ -864,6 +904,15 @@ async function LoadSettings() {
         Log('LogLevel', `read | ${Err || 'failed'}`);
     }
     UpdateLogLevelDisplay(LogLevel);
+    try {
+        const Size = await exec(`sh ${Service} log_buffer`);
+        LogBuffer = LogBufferSizes.includes(Size) ? Size : '32k';
+    } catch (Err) {
+        LogBuffer = '32k';
+        Log('LogBuffer', `read | ${Err || 'failed'}`);
+    }
+    UpdateLogBufferDisplay(LogBuffer);
+    SyncLogBufferState();
     FlushLog();
     try {
         await ReadPersistent();
@@ -1018,6 +1067,10 @@ function SetupEventListeners() {
             const Value = Item.dataset.value;
             if (Select.id === 'SettingLogLevel') {
                 if (Value !== Select.dataset.current) ApplyLogLevel(Value);
+                return;
+            }
+            if (Select.id === 'SettingLogBuffer') {
+                if (Value !== Select.dataset.current) ApplyLogBuffer(Value);
                 return;
             }
             const Target = Select.dataset.target || 'all';
