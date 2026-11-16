@@ -91,9 +91,9 @@
                             <div class="TweakName">Log Level</div>
                             <div class="TweakDescription">Control the verbosity of system and module logs recorded in VinNet.log.</div>
                         </div>
-                        <div class="TweakSelect" id="SettingLogLevel" data-current="Error">
+                        <div class="TweakSelect" id="SettingLogLevel" data-current="—">
                             <button type="button" class="TweakSelectField" aria-haspopup="listbox" aria-expanded="false" aria-label="Log Level">
-                                <span class="TweakSelectValue">Error</span>
+                                <span class="TweakSelectValue">—</span>
                                 <svg class="TweakSelectChevron" viewBox="0 0 24 24" aria-hidden="true">
                                     <path d="M7 10l5 5 5-5z" />
                                 </svg>
@@ -103,7 +103,7 @@
                                     <span>Off</span>
                                     <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
                                 </button>
-                                <button type="button" class="TweakSelectItem TweakSelectCurrent" data-value="Error">
+                                <button type="button" class="TweakSelectItem" data-value="Error">
                                     <span>Error</span>
                                     <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
                                 </button>
@@ -115,6 +115,32 @@
                                     <span>Debug</span>
                                     <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
                                 </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="Card">
+                    <div class="Tweak">
+                        <svg class="TweakIcon" viewBox="0 0 24 24" aria-hidden="true">
+                            <use href="#LogBuffer"></use>
+                        </svg>
+                        <div class="TweakBody">
+                            <div class="TweakName">Log Buffer</div>
+                            <div class="TweakDescription">Maximum size of VinNet.log before the oldest entries are trimmed.</div>
+                        </div>
+                        <div class="TweakSelect" id="SettingLogBuffer" data-current="—">
+                            <button type="button" class="TweakSelectField" aria-haspopup="listbox" aria-expanded="false" aria-label="Log Buffer">
+                                <span class="TweakSelectValue">—</span>
+                                <svg class="TweakSelectChevron" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path d="M7 10l5 5 5-5z" />
+                                </svg>
+                            </button>
+                            <div class="TweakSelectMenu" hidden>
+                                <button type="button" class="TweakSelectItem" data-value="2k"><span>2k</span><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></button>
+                                <button type="button" class="TweakSelectItem" data-value="8k"><span>8k</span><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></button>
+                                <button type="button" class="TweakSelectItem" data-value="32k"><span>32k</span><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></button>
+                                <button type="button" class="TweakSelectItem" data-value="128k"><span>128k</span><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></button>
+                                <button type="button" class="TweakSelectItem" data-value="512k"><span>512k</span><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></button>
                             </div>
                         </div>
                     </div>
@@ -241,6 +267,9 @@
         <symbol id="LogLevel" viewBox="0 0 24 24">
             <path
                 d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z" />
+        </symbol>
+        <symbol id="LogBuffer" viewBox="0 0 24 24">
+            <path d="M11.99 18.54l-7.37-5.73L3 14.07l9 7 9-7-1.63-1.27-7.38 5.74zM12 16l7.36-5.73L21 9l-9-7-9 7 1.63 1.27L12 16z" />
         </symbol>
         <symbol id="Metadata" viewBox="0 0 24 24">
             <path
