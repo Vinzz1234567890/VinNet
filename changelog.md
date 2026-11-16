@@ -2,7 +2,91 @@
 
 ---
 
-## v1.2.5-Iris - 2026-11-02 - Latest
+## v1.2.6-Grega - 2026-11-11 - Latest
+
+### ✨Added
+
+- Fifth banner image. `VinNetBanner5.webp`.
+- `Optimize NetDev` tweak. Raises the netdev backlog and NAPI budget. Saves original values for OFF.
+- `TCP Slow Start After Idle` tweak. Writes `net.ipv4.tcp_slow_start_after_idle`.
+- Both new tweaks warn about reboot reset.
+- Log Level setting in Settings. Options: Off, Error, Info, Debug.
+- Log Buffer setting in Settings. Options: 2k, 8k, 32k, 128k, 512k.
+- Service CLI subcommands. `log_level`, `log_buffer`, `log`, `uplink`.
+- Uplink measurement before applying `cake`. Two 2 MB uploads to Cloudflare. Result saved as Mbps.
+- A failed uplink measurement shows a toast. The tweak still applies.
+- `cake` uses the measured uplink for bandwidth.
+- `TxQueueLen()` helper. Reads `tx_queue_len` from sysfs.
+- Tweak categories. Gaming and Multitasking.
+- Four new SVG symbols. Two for tweaks, two for log settings.
+- Debug logs for applies, checks, probes, restores, monitor, and command timings.
+- Upward dropdown opening when space below is tight.
+- Cleanup of temp files from dead service processes.
+
+### 🔄️Changed
+
+- Module version to 1.2.6-Grega. Version code to 20261111.
+- `update.json` bumped to match.
+- Web UI icon and module banner switched to Banner5.
+- Log writer rewritten. The service handles all file writes.
+- Web UI batches log entries. Flush every second.
+- Logs filtered by level in the service and the Web UI.
+- Default log level is Error. Default buffer is 32k.
+- `Off` clears the log and its temp files.
+- Level changes re-filter the existing log.
+- Configurable log trimming replaces the fixed 128 KiB truncation. Runs at boot and while the Web UI is active.
+- Deduplication keeps the newest entry per tag and message.
+- Diagnostics follow the log level. Debug adds binary paths, dmesg, and Wi-Fi dumps.
+- Missing binaries log an Error even at the default level.
+- Monitor cache failures log at Debug.
+- QDISC specs now carry tuned parameters.
+- `fq_codel` uses limit 1024 and quantum 314.
+- `cake` uses besteffort plus measured bandwidth when available.
+- `fq` uses limit 1000 and flow_limit 50.
+- `sfq` uses divisor 4096 and headdrop.
+- `pie` uses bytemode.
+- `fq_pie` uses limit 1024 and quantum 314b.
+- `hhf` uses admit_bytes 32768 and non_hh_weight 4.
+- `sfb` sets its limit to one fifth of `tx_queue_len`. It omits the limit when sysfs is unreadable.
+- `pfifo_fast` and `codel` keep plain names.
+- Specs resolve per interface before each apply.
+- `ProbeQDISC` logs accepted and rejected disciplines at Debug.
+- Boot restore covers the two new sysctl tweaks.
+- Boot restore logs skipped state and each successful apply.
+- Check-time restore logs its decisions at Debug.
+- Link rows use chip styling. Chevrons removed.
+- Banner carousel has five images. Cycle is 26.5 seconds.
+- Header height is 78px. Title is 28px.
+- Navigation labels are 13px and semibold.
+- Form controls inherit the UI font.
+- Switch track animates position and size.
+- Header updates cancel the previous timer.
+- Tweak checks match whole tokens, not substrings.
+- Failed select applies mark the select for live refresh.
+- `persistent` CLI rejects invalid values.
+- `uninstall.sh` drops exit-status aggregation. It also removes log temp files.
+
+### 🔧Fixed
+
+- Vendor status on `fog` could never report Mounted. It now checks only the shipped WCNSS config.
+- Header text could flicker during fast page changes.
+- Select menus could open off-screen near the bottom navigation.
+- Tweak checks could misread `0` inside values like `10`.
+- Direct Web UI log writes could conflict with service writes.
+
+### 🔥Deleted
+
+- `LogFile` constant and direct Web UI log writes.
+- `FlushDiagnose()` helper.
+- `LogRotate` startup entry.
+- `.ir-link` and `.ir-chevron` styles.
+- Chevron icon on information-page links.
+- Navigation bottom gradient.
+- `:is()` selector groups in CSS.
+
+---
+
+## v1.2.5-Iris - 2026-11-02
 
 ### ✨Added
 
