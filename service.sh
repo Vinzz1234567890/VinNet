@@ -2,35 +2,86 @@
 ModuleDirectory="${0%/*}"
 Core="/data/adb/VinNet"
 LogPath="/storage/emulated/0/Download/VinNet.log"
+LogLevel=Error
+NL='
+'
+
+LogAllows() {
+    case "$LogLevel:$1" in
+        Off:* | Error:[ID]* | Info:D*) return 1 ;;
+    esac
+}
+
+LogAdd() {
+    local Message="$3"
+    [ -n "$Message" ] && LogAllows "$1" || return 0
+    case "$Message" in
+        *"$NL"*) Message=$(printf '%s\n' "$Message" | awk 'NF { printf "%s%s", S, $0; S = " | " }') ;;
+    esac
+    [ -n "$LogStamp" ] || LogStamp=$(date '+%F %T')
+    LogBatch="$LogBatch${LogBatch:+$NL}[$LogStamp] ${1%"${1#?}"} $2: $Message"
+}
 
 Log() {
-    local Tag="$1" Message="$2" Temp Lock="$LogPath.lock" Waited=0
-    [ -n "$Message" ] || return 0
-    Message=$(printf '%s' "$Message" | tr '\n' ' ')
-    [ -w "${LogPath%/*}" ] || return 1
-    while ! mkdir "$Lock" 2> /dev/null; do
+    local LogBatch="" LogStamp=""
+    LogAdd "${3:-Error}" "$1" "$2"
+    [ -z "$LogBatch" ] || LogWrite "$LogBatch"
+    return 0
+}
+
+LogLock() {
+    local Waited=0
+    while ! mkdir "$LogPath.lock" 2> /dev/null; do
         Waited=$((Waited + 1))
-        if [ "$Waited" -gt 100 ]; then rm -rf "$Lock"; mkdir "$Lock" 2> /dev/null; break; fi
+        if [ "$Waited" -gt 100 ]; then rm -rf "$LogPath.lock"; mkdir "$LogPath.lock" 2> /dev/null; break; fi
         sleep 0.1
     done
-    Temp="$LogPath.tmp.$$.$RANDOM"
-    {
-        grep -vF "] $Tag: $Message" "$LogPath" 2> /dev/null
-        printf '[%s] %s: %s\n' "$(date '+%F %T')" "$Tag" "$Message"
-    } > "$Temp" 2> /dev/null && mv -f "$Temp" "$LogPath" 2> /dev/null || {
-        rm -f "$Temp"
-        rm -rf "$Lock"
+}
+
+LogWrite() {
+    local Lines="$1" Pending="$Core/.Diagnose.tmp" Input="$LogPath" Temp="$LogPath.tmp.$$.$RANDOM" Status=0
+    if [ ! -w "${LogPath%/*}" ]; then
+        [ -z "$Lines" ] || printf '%s\n' "$Lines" >> "$Pending" 2> /dev/null
         return 1
-    }
-    rm -rf "$Lock"
+    fi
+    LogLock
+    [ -f "$Pending" ] && Lines="$(cat "$Pending" 2> /dev/null)${Lines:+$NL$Lines}"
+    if [ -z "$Lines" ]; then
+        :
+    else
+        [ -f "$Input" ] || Input=/dev/null
+        L="$Lines" awk '
+            BEGIN { N = split(ENVIRON["L"], New, "\n"); for (I = 1; I <= N; I++) Last[substr(New[I], index(New[I], "] ") + 2)] = I }
+            { K = substr($0, index($0, "] ") + 2); if (!(K in Last)) print }
+            END { for (I = 1; I <= N; I++) if (New[I] != "" && Last[substr(New[I], index(New[I], "] ") + 2)] == I) print New[I] }
+        ' "$Input" > "$Temp" 2> /dev/null && mv -f "$Temp" "$LogPath" 2> /dev/null || { rm -f "$Temp"; Status=1; }
+    fi
+    [ "$Status" -ne 0 ] || [ ! -f "$Pending" ] || rm -f "$Pending"
+    rm -rf "$LogPath.lock"
+    return "$Status"
+}
+
+LogTrim() {
+    local Temp="$LogPath.tmp.$$.$RANDOM"
+    LogLock
+    tail -c 65536 "$LogPath" 2> /dev/null | sed 1d > "$Temp" 2> /dev/null && mv -f "$Temp" "$LogPath" 2> /dev/null || rm -f "$Temp"
+    rm -rf "$LogPath.lock"
+}
+
+LogFilter() {
+    [ -f "$LogPath" ] || return 0
+    local Temp="$LogPath.tmp.$$.$RANDOM"
+    LogLock
+    awk -v lvl="$LogLevel" '
+        BEGIN { r["E"] = 1; r["I"] = 2; r["D"] = 3; m = (lvl == "Error" ? 1 : (lvl == "Info" ? 2 : 3)) }
+        /^\[/ { L = substr($0, index($0, "] ") + 2, 1); if (L in r && r[L] > m) next }
+        { K = substr($0, index($0, "] ") + 2); Lines[++N] = $0; Last[K] = N }
+        END { for (I = 1; I <= N; I++) if (Last[substr(Lines[I], index(Lines[I], "] ") + 2)] == I) print Lines[I] }
+    ' "$LogPath" > "$Temp" 2> /dev/null && mv -f "$Temp" "$LogPath" 2> /dev/null || rm -f "$Temp"
+    rm -rf "$LogPath.lock"
 }
 
 ProbeWrite() { ( : > "$1/.WriteProbe" ) 2> /dev/null && rm -f "$1/.WriteProbe"; }
-
-if [ -f "$LogPath" ] && [ "$(wc -c < "$LogPath" 2> /dev/null)" -gt 131072 ]; then
-    ( : > "$LogPath" ) 2> /dev/null
-    Log LogRotate "previous log exceeded 128K, truncated"
-fi
 
 mkdir -p "$Core" 2> /dev/null
 
@@ -104,6 +155,18 @@ SaveTweak() {
     esac
     Write "$Tweaks" "$Content"
 }
+
+ReadLogLevel() {
+    LogLevel=$(ReadTweak LogLevel)
+    case "$LogLevel" in Off | Info | Debug) ;; *) LogLevel=Error ;; esac
+}
+
+ReadLogLevel
+[ "$LogLevel" != Off ] && LogFilter
+if [ "$LogLevel" != Off ] && [ -w "${LogPath%/*}" ] && [ -f "$LogPath" ] && [ "$(wc -c 2> /dev/null < "$LogPath")" -gt 131072 ]; then
+    LogTrim
+    Log LogTrim "log exceeded 128K, kept the newest 64K" Info
+fi
 
 TxQueueLen() {
     local L=""
@@ -189,7 +252,7 @@ EgressLines() {
 }
 
 ApplyInterface() {
-    local D="$1" Key="$2" Spec="$3" Kind Handle Output Lines Kids RootKind Lossy Changed=0 ErrorOutput
+    local D="$1" Key="$2" Spec="$3" Kind Handle Output Lines Kids RootKind Lossy Changed=0 ErrorOutput Done=""
     if ! Output=$("$TC" qdisc show dev "$D" 2> /dev/null); then
         Log ApplyFail "QDISC:$D : $Key | structure unreadable"
         return 1
@@ -202,6 +265,7 @@ ApplyInterface() {
         if [ -z "$Kids" ] && [ "$RootKind" = "mq" ]; then
             ErrorOutput=$("$TC" qdisc replace dev "$D" root $RootKind 2>&1)
             if [ $? -eq 0 ]; then
+                Log QDISC "$D | $RootKind root rebuilt to expose its queues" Debug
                 Output=$("$TC" qdisc show dev "$D" 2> /dev/null)
                 Lines=$(printf '%s\n' "$Output" | EgressLines)
                 Kids=$(printf '%s\n' "$Lines" | awk '$2 != "root" && $2 != "lossy"')
@@ -217,19 +281,22 @@ ApplyInterface() {
             [ -n "$Handle" ] || continue
             if ErrorOutput=$("$TC" qdisc replace dev "$D" parent "$Handle" $Spec 2>&1); then
                 Changed=1
+                Done="$Done $Handle"
             else
                 Log ApplyFail "QDISC:$D : $Key | parent $Handle | ${ErrorOutput:-tc failed}"
             fi
         done <<EOF
 $Kids
 EOF
-        [ "$Changed" -eq 1 ] && return 0
-        return 1
+        [ "$Changed" -eq 1 ] || return 1
+        Log QDISC "$D | root ${RootKind:-none} kept | parents$Done -> $Spec" Debug
+        return 0
     fi
     ErrorOutput=$("$TC" qdisc replace dev "$D" root $Spec 2>&1) || {
         Log ApplyFail "QDISC:$D : $Key | ${ErrorOutput:-tc failed}"
         return 1
     }
+    Log QDISC "$D | root ${RootKind:-none} -> $Spec" Debug
     return 0
 }
 
@@ -239,13 +306,17 @@ ApplyQDISC() {
     if [ "$Target" != "all" ]; then
         Spec=$(QDISCSpec "$Key" "$Target")
         ApplyInterface "$Target" "$Key" "$Spec" || return
+        Log Apply "QDISC:$Target : $Key" Info
         printf '%s\n' "$Target"
         return 0
     fi
     for D in $(Interfaces); do
         Seen=$((Seen + 1))
         Spec=$(QDISCSpec "$Key" "$D")
-        ApplyInterface "$D" "$Key" "$Spec" && Changed=1
+        if ApplyInterface "$D" "$Key" "$Spec"; then
+            Changed=1
+            Log Apply "QDISC:$D : $Key" Info
+        fi
     done
     [ "$Seen" -gt 0 ] || Log ApplyFail "QDISC:all : $Key | no eligible interface"
     [ "$Changed" -eq 1 ]
@@ -277,12 +348,19 @@ ListQDISC() {
 
 ProbeQDISC() {
     command -v "$TC" > /dev/null 2>&1 || return 1
-    local Key Spec
+    local Key Spec Accepted="" Rejected=""
     for Key in pfifo_fast fq_codel cake fq sfq codel pie fq_pie hhf sfb; do
         Spec=$(QDISCSpec "$Key") || continue
-        "$TC" qdisc replace dev lo root $Spec 2> /dev/null && printf '%s\n' "$Key"
+        if "$TC" qdisc replace dev lo root $Spec 2> /dev/null; then
+            printf '%s\n' "$Key"
+            Accepted="$Accepted $Key"
+        else
+            Rejected="$Rejected $Key"
+        fi
     done
-    "$TC" qdisc del dev lo root 2> /dev/null || true
+    "$TC" qdisc del dev lo root 2> /dev/null
+    Log Probe "QDISC on lo | accepted:${Accepted:- none} | rejected:${Rejected:- none}" Debug
+    return 0
 }
 
 RunTweak() {
@@ -312,6 +390,7 @@ RunTweak() {
                     printf '%s\n%s\n' "$Out" "$HiOut" >&2
                     return 1
                 fi
+                Log Apply "Wi-Fi Force Low Latency Mode : ON | low-latency rejected, hi-perf used | ${Out:-no output}" Debug
             fi
             ;;
         "Wi-Fi Force Low Latency Mode:OFF")
@@ -388,8 +467,12 @@ ApplyLowLatency() {
         [ "$Desired" = "$Last" ] && return
         if Err=$(RunTweak "Wi-Fi Force Low Latency Mode" "$Desired" 2>&1); then
             Output=$(LiveTweak "Wi-Fi Force Low Latency Mode")
-            if [ -n "$Output" ] && [ "$(TweakState "Wi-Fi Force Low Latency Mode" "$Output")" != "$Desired" ]; then
+            if [ -z "$Output" ]; then
+                Log Apply "Wi-Fi Force Low Latency Mode : $Desired | live state unreadable" Info
+            elif [ "$(TweakState "Wi-Fi Force Low Latency Mode" "$Output")" != "$Desired" ]; then
                 Log TweakFail "Wi-Fi Force Low Latency Mode : $Desired | live mask $Output"
+            else
+                Log Apply "Wi-Fi Force Low Latency Mode : $Desired" Info
             fi
         else
             Log TweakFail "Wi-Fi Force Low Latency Mode : $Desired | ${Err:-apply failed}"
@@ -437,6 +520,7 @@ ApplyTweak() {
                     Log VerifyFail "$1 : $2 | system reports $Live"
                     return 1
                 }
+                Log Apply "$1 : $2" Info
                 SaveTweak "$1" "$2" || SaveFailed=1
             fi
             ;;
@@ -498,7 +582,7 @@ TweakState() {
 }
 
 CheckTweak() {
-    local ID="$1" Output Live Desired
+    local ID="$1" Output Live="" Desired=""
     [ "$ID" != "QDISC" ] || { CheckQDISC; return; }
     Output=$(LiveTweak "$ID") || return
     [ -n "$Output" ] || return 0
@@ -508,13 +592,20 @@ CheckTweak() {
         case "$Desired" in
             ON | OFF)
                 if [ "$Live" != "$Desired" ]; then
+                    Log Check "$ID | live $Live, desired $Desired, re-applying" Debug
                     RunTweak "$ID" "$Desired" || Log RestoreFail "$ID : $Desired re-apply failed"
                     Output=$(LiveTweak "$ID") || return
-                    [ "$(TweakState "$ID" "$Output")" = "$Desired" ] || Log RestoreFail "$ID : $Desired | system still reports $(TweakState "$ID" "$Output")"
+                    Live=$(TweakState "$ID" "$Output")
+                    if [ "$Live" = "$Desired" ]; then
+                        Log Apply "$ID : $Desired | re-applied by check" Info
+                    else
+                        Log RestoreFail "$ID : $Desired | system still reports $Live"
+                    fi
                 fi
                 ;;
         esac
     fi
+    LogAllows Debug && Log Check "$ID | live ${Live:-$(TweakState "$ID" "$Output")}${Desired:+, desired $Desired}" Debug
     printf '%s\n' "$Output"
 }
 
@@ -530,6 +621,7 @@ CheckQDISC() {
             [ -n "$Desired" ] || continue
             case "$Current" in none | unknown) continue ;; esac
             if [ "$Current" != "$Desired" ]; then
+                Log Check "QDISC:$D | live $Current, desired $Desired, re-applying" Debug
                 RunTweak QDISC "$Desired" "$D" > /dev/null || Log RestoreFail "QDISC:$D : $Desired re-apply failed"
                 Changed=1
             fi
@@ -540,16 +632,26 @@ EOF
             Output=$(ListQDISC) || return
         fi
     fi
+    Log Check "QDISC | live $Output" Debug
     printf '%s\n' "$Output"
 }
 
 RestoreTweaks() {
-    [ "$(ReadTweak Persistent)" = "ON" ] || return 0
+    if [ "$(ReadTweak Persistent)" != "ON" ]; then
+        Log Restore "boot restore skipped | Persistent Tweaks OFF" Debug
+        return 0
+    fi
     local Key Value Target
     for Key in "IP Reach Disconnect" "Wi-Fi Force Low Latency Mode" "TCP Slow Start After Idle" "Optimize NetDev"; do
         Value=$(ReadTweak "$Key")
         case "$Value" in
-            ON | OFF) RunTweak "$Key" "$Value" || Log RestoreFail "$Key : $Value | boot restore failed" ;;
+            ON | OFF)
+                if RunTweak "$Key" "$Value"; then
+                    Log Apply "$Key : $Value | boot restore" Info
+                else
+                    Log RestoreFail "$Key : $Value | boot restore failed"
+                fi
+                ;;
         esac
     done
 
@@ -568,49 +670,37 @@ RestoreTweaks() {
 }
 
 Diagnose() {
-    local Arch="Unsupported" DmesgLines WifiLines Pending="$Core/.Diagnose.tmp" Stamp BinPath
+    local Arch="Unsupported" Bin Line Lines LogBatch="" LogStamp=""
+    LogAllows Error || return 0
     case "$ABI" in arm64*) Arch="Supported (arm64)" ;; armeabi*) Arch="Supported (arm)" ;; esac
-    Stamp=$(date '+%F %T')
-
-    {
-        echo "[$Stamp] Diagnose: ABI=$ABI Architecture=$Arch"
-        printf '[%s] Diagnose: device=%s %s android=%s kernel=%s\n' "$Stamp" "$Brand" "$Model" "$Android" "$Kernel"
-        echo "[$Stamp] Diagnose: module=$(sed -n 's/^version=//p' "$Identity" 2> /dev/null)"
-        for Bin in ping awk tc resetprop; do
-            BinPath=$(command -v "$Bin" 2> /dev/null)
-            [ -n "$BinPath" ] && echo "[$Stamp] Diagnose: $Bin found at $BinPath" || echo "[$Stamp] Diagnose: $Bin MISSING"
-        done
-        if ProbeWrite "$Core"; then
-            echo "[$Stamp] Diagnose: $Core writable"
-        else
-            echo "[$Stamp] Diagnose: $Core NOT writable"
-            echo "[$Stamp] Diagnose: mount -- $(mount 2> /dev/null | grep -E ' /data |modules' | tr '\n' ' ')"
+    if LogAllows Info; then
+        LogAdd Info Diagnose "ABI=$ABI Architecture=$Arch"
+        LogAdd Info Diagnose "device=$Brand $Model android=$Android kernel=$Kernel"
+        LogAdd Info Diagnose "module=$(sed -n 's/^version=//p' "$Identity" 2> /dev/null)"
+    fi
+    for Bin in ping awk tc resetprop; do
+        if ! command -v "$Bin" > /dev/null 2>&1; then
+            LogAdd Error Diagnose "$Bin MISSING"
+        elif LogAllows Debug; then
+            LogAdd Debug Diagnose "$Bin found at $(command -v "$Bin")"
         fi
-        DmesgLines=$(dmesg 2> /dev/null | grep -iE "f2fs|erofs|remount" | tail -5)
-        [ -n "$DmesgLines" ] && printf '%s\n' "$DmesgLines" | while IFS= read -r Line; do [ -n "$Line" ] && echo "[$Stamp] Diagnose: dmesg -- $Line"; done
-        WifiLines=$(dumpsys wifi 2> /dev/null | grep -E 'Wi-Fi is|Dump of ClientModeImpl|curState=|Supplicant state|mPowerSaveDisableRequests' | head -20)
-        [ -n "$WifiLines" ] && printf '%s\n' "$WifiLines" | while IFS= read -r Line; do [ -n "$Line" ] && echo "[$Stamp] Diagnose: wifi -- $Line"; done
-    } > "$Pending" 2> /dev/null
-
-    FlushDiagnose
-}
-
-FlushDiagnose() {
-    local Pending="$Core/.Diagnose.tmp" ExistingLines="" Lock="$LogPath.lock" Waited=0
-    [ -f "$Pending" ] || return 0
-    [ -w "${LogPath%/*}" ] || return 1
-    while ! mkdir "$Lock" 2> /dev/null; do
-        Waited=$((Waited + 1))
-        if [ "$Waited" -gt 100 ]; then rm -rf "$Lock"; mkdir "$Lock" 2> /dev/null; break; fi
-        sleep 0.1
     done
-    [ -f "$LogPath" ] && ExistingLines=$(grep -v "Diagnose:" "$LogPath" 2> /dev/null | grep -vE '^[[:space:]]*\[[[:space:]]*[0-9]+\.[0-9]+\]')
-
-    {
-        cat "$Pending"
-        [ -z "$ExistingLines" ] || printf '%s\n' "$ExistingLines"
-    } > "$LogPath" 2> /dev/null && rm -f "$Pending"
-    rm -rf "$Lock"
+    if ProbeWrite "$Core"; then
+        LogAdd Debug Diagnose "$Core writable"
+    else
+        LogAdd Error Diagnose "$Core NOT writable | mount -- $(mount 2> /dev/null | grep -E ' /data |modules')"
+    fi
+    if LogAllows Debug; then
+        Lines=$(dmesg 2> /dev/null | grep -iE "f2fs|erofs|remount" | tail -5)
+        while IFS= read -r Line; do [ -z "$Line" ] || LogAdd Debug Diagnose "dmesg -- $Line"; done <<EOF
+$Lines
+EOF
+        Lines=$(dumpsys wifi 2> /dev/null | grep -E 'Wi-Fi is|Dump of ClientModeImpl|curState=|Supplicant state|mPowerSaveDisableRequests' | head -20)
+        while IFS= read -r Line; do [ -z "$Line" ] || LogAdd Debug Diagnose "wifi -- $Line"; done <<EOF
+$Lines
+EOF
+    fi
+    [ -z "$LogBatch" ] || LogWrite "$LogBatch"
 }
 
 ProcessID() { Write "$ProcessID" "$(printf '{"PID":%s,"Timestamp":%s}\n' "$$" "$(date +%s)")"; }
@@ -687,6 +777,7 @@ Monitor() {
             if [ "$Latency" != "$LastLatency" ] || [ "$Jitter" != "$LastJitter" ] || [ $((Timestamp - LastMonitorWrite)) -ge 20 ]; then
                 LastLatency="$Latency" LastJitter="$Jitter" LastMonitorWrite="$Timestamp"
                 Write "$Monitor" "$(printf '{"Latency":%s,"Jitter":%s,"Timestamp":%s}\n' "$Latency" "$Jitter" "$Timestamp")"
+                Log Monitor "latency $Latency ms, jitter $Jitter ms" Debug
             fi
             return
         fi
@@ -712,9 +803,41 @@ case "${1:-}" in
     persistent)
         case "${2:-}" in
             "") ReadTweak Persistent ;;
-            ON | OFF) SaveTweak Persistent "$2" ;;
+            ON | OFF)
+                SaveTweak Persistent "$2" || exit 1
+                Log Settings "Persistent Tweaks : $2" Info
+                exit 0
+                ;;
             *) exit 1 ;;
         esac
+        exit
+        ;;
+    log_level)
+        case "${2:-}" in
+            "") printf '%s\n' "$LogLevel" ;;
+            Off)
+                SaveTweak LogLevel Off || exit 1
+                rm -f "$LogPath" "$LogPath".tmp.* "$Core/.Diagnose.tmp" 2> /dev/null
+                ;;
+            Error | Info | Debug)
+                SaveTweak LogLevel "$2" || exit 1
+                LogLevel="$2"
+                LogFilter
+                Log Settings "Log Level : $2" Info
+                ;;
+            *) exit 1 ;;
+        esac
+        exit 0
+        ;;
+    log)
+        shift
+        LogBatch="" LogStamp=""
+        for Line in "$@"; do
+            Level=${Line%% *}
+            Line=${Line#* }
+            LogAdd "$Level" "${Line%%: *}" "${Line#*: }"
+        done
+        [ -z "$LogBatch" ] || LogWrite "$LogBatch"
         exit
         ;;
     apply)
@@ -738,9 +861,10 @@ case "${1:-}" in
     uplink)
         case "${2:-}" in
             '' | *[!0-9]*) exit 1 ;;
-            *) SaveTweak UpMbit "$2" ;;
         esac
-        exit
+        SaveTweak UpMbit "$2" || exit 1
+        Log Uplink "$2 Mbps saved for cake bandwidth" Info
+        exit 0
         ;;
 esac
 
@@ -767,6 +891,8 @@ trap Cleanup TERM EXIT INT
 if "$TC" -V > /dev/null 2>&1; then
     RestoreTweaks
     BootRestored=1
+else
+    Log Restore "boot restore deferred | tc not ready" Debug
 fi
 Metadata
 Environment
@@ -774,7 +900,7 @@ Environment
 while true; do
     Now=$(date +%s)
     [ -d "$Core" ] || mkdir -p "$Core" 2> /dev/null
-    [ -f "$Core/.Diagnose.tmp" ] && FlushDiagnose
+    [ -f "$Core/.Diagnose.tmp" ] && LogWrite ""
     [ -s "$ProcessID" ] || ProcessID
     [ -f "$Metadata" ] || Metadata
     [ -f "$Environment" ] || Environment
@@ -786,6 +912,7 @@ while true; do
         fi
     fi
     if WebUIActive "$Now"; then
+        ReadLogLevel
         Monitor "$Now"
     fi
     sleep 5
