@@ -81,6 +81,44 @@
                         </label>
                     </div>
                 </div>
+
+                <div class="Card">
+                    <div class="Tweak">
+                        <svg class="TweakIcon" viewBox="0 0 24 24" aria-hidden="true">
+                            <use href="#LogLevel"></use>
+                        </svg>
+                        <div class="TweakBody">
+                            <div class="TweakName">Log Level</div>
+                            <div class="TweakDescription">Control the verbosity of system and module logs recorded in VinNet.log.</div>
+                        </div>
+                        <div class="TweakSelect" id="SettingLogLevel" data-current="Error">
+                            <button type="button" class="TweakSelectField" aria-haspopup="listbox" aria-expanded="false" aria-label="Log Level">
+                                <span class="TweakSelectValue">Error</span>
+                                <svg class="TweakSelectChevron" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path d="M7 10l5 5 5-5z" />
+                                </svg>
+                            </button>
+                            <div class="TweakSelectMenu" hidden>
+                                <button type="button" class="TweakSelectItem" data-value="Off">
+                                    <span>Off</span>
+                                    <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+                                </button>
+                                <button type="button" class="TweakSelectItem TweakSelectCurrent" data-value="Error">
+                                    <span>Error</span>
+                                    <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+                                </button>
+                                <button type="button" class="TweakSelectItem" data-value="Info">
+                                    <span>Info</span>
+                                    <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+                                </button>
+                                <button type="button" class="TweakSelectItem" data-value="Debug">
+                                    <span>Debug</span>
+                                    <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <div class="Page" id="PageInfo">
@@ -199,6 +237,10 @@
         </symbol>
         <symbol id="Persistent" viewBox="0 0 24 24">
             <path d="M12 4V1L7 6l5 5V7c3.31 0 6 2.69 6 6a6 6 0 1 1-12 0H4a8 8 0 1 0 16 0c0-4.42-3.58-8-8-8z" />
+        </symbol>
+        <symbol id="LogLevel" viewBox="0 0 24 24">
+            <path
+                d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z" />
         </symbol>
         <symbol id="Metadata" viewBox="0 0 24 24">
             <path
