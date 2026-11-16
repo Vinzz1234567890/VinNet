@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="webroot/assets/VinNetBanner4.webp" alt="VinNet banner" width="100%" />
+<img src="webroot/assets/VinNetBanner5.webp" alt="VinNet banner" width="100%" />
 
 <br />
 <br />
@@ -31,49 +31,51 @@
 
 ## Overview
 
-VinNet is a root module for one thing only: network optimization on Android. It tunes parameters that Android and the kernel already expose: `cmd wifi`, global `settings`, `resetprop`, and the kernel's queueing discipline layer (`tc`). It does not install a VPN, a proxy, a fake "gaming mode", or a hidden bandwidth profile. Every change is opt-in, checked live, and verified after it is applied.
+VinNet tunes knobs Android and the kernel already give you. No VPN. No proxy. No "gaming mode" theater. Just AOSP and kernel parameters, tested and checked on device.
 
-- **Built to be measured.** Every tweak in this module was personally tested for its real effect before it shipped. Placebo is not on the menu.
-- **Honest state.** The Web UI reads live state after every apply. Unsupported tweaks disable themselves; unknown states show an indeterminate switch.
-- **Opt-in, opt-out.** Persistent Tweaks restores the reset-prone trio after boot and during checks, only if you turn it on.
+- **Receipts over vibes.** Live state gets re-read after every apply.
+- **Tested, not pasted.** Every tweak was tested for a real effect. Placebo is not the business model.
+- **Your call.** Persistent Tweaks restores reset-prone tweaks after boot. Opt in or don't.
 
 ## Why this exists
 
-Most "network optimization" modules floating around are not built, they are assembled. Random scripts copied from a forum post, tweaks that have nothing to do with networking at all, and sometimes commands that never did anything in the first place. Apply them once at boot, get a nice "Enabled" toast, and never check whether the thing actually stuck. On some devices it silently didn't: the AOSP service reset it, the path the script fired at doesn't match your ROM, your interfaces are laid out differently, and the module has no idea. It applied the same way on every phone in existence, and reported the same success on every phone that failed.
+Most "network optimizer" modules are fan fiction with root access. Copied scripts. Random sysctls from old forum threads. Commands that never did anything. Then a green "Enabled" badge that means absolutely nothing.
 
-VinNet was built as the opposite of that:
+VinNet does the boring part properly:
 
-| The usual network module | VinNet |
+| Mid modules | VinNet |
 | :-- | :-- |
-| Scripts copied from somewhere, tweaks with no real relation to networking, sometimes pure hallucination | Only real, built-in AOSP and kernel parameters, each one personally tested for effect |
-| Applies once, never checks again | Applies, then re-reads live state and reports the truth |
-| Says "Enabled" even when the tweak was unsupported or didn't stick | Unsupported means disabled. Unknown means indeterminate. Failures come with a reason in the log |
-| One path for every device, regardless of ROM or interface layout | Per-interface QDISC, kernel probing on `lo`, an interface whitelist, per-queue handling on multi-queue setups |
-| Tweak gets reset by the system, gone forever | Persistent Tweaks re-applies the reset-prone trio after boot and during Web UI checks (opt-in) |
-| Zero way to see what actually happened | One log: `/storage/emulated/0/Download/VinNet.log` |
+| Scripts and vibes | AOSP/kernel knobs, each tested |
+| Apply once, hope it sticks | Apply, re-read live state, report |
+| "Enabled" even when unsupported | Unsupported = disabled. Unknown = indeterminate |
+| One path for every phone | Per-interface QDISC, kernel probe, per-queue |
+| System resets it. Nobody cares | Persistent Tweaks restores it, opt in |
+| No logs, just screenshots | One log with reasons |
 
-If a module never told you anything went wrong, ask yourself why.
+If your module has never told you something failed, it is not optimized. It is just quiet.
 
 ## Tweaks
 
-Every tweak below is short, each one tested to do something real before it shipped.
+Eight tweaks. All tested. None decorative.
 
-| Tweak | What it changes | Reset |
-| :-- | :-- | :-- |
-| 📶 **IP Reach Disconnect** | Keeps Wi-Fi from dropping when the network gets unstable. | After reboot |
-| 🚦 **QDISC** | One of 10 queue disciplines for all eligible interfaces or one interface; `Custom` when they differ. | After reboot |
-| ⚡ **Wi-Fi Force Low Latency Mode** | Android's low-latency mode, with hi-perf fallback. | After interface changes |
-| 🌐 **Network Avoid Bad Wi-Fi & Mobile Data Always ON** | Keeps Wi-Fi connected as signal degrades; stops background cellular data from disrupting transmission. | Persists |
-| 📡 **BLE Scan Always Enabled** | Reduces jitter and ping spikes on 2.4 GHz Wi-Fi. | Persists |
-| 🔍 **Wi-Fi Scan Throttle** | Limits background Wi-Fi scanning to cut jitter and save battery. | Persists |
+| Tweak | Group | What it does | Reset |
+| :-- | :-- | :-- | :-- |
+| 📶 IP Reach Disconnect | Gaming | Keeps Wi-Fi from dropping on unstable networks | Reboot |
+| 🚦 QDISC | Gaming | 10 disciplines, all or one interface | Reboot |
+| ⚡ Wi-Fi Force Low Latency Mode | Gaming | Low-latency mode, hi-perf fallback | Interface changes |
+| 🌐 Network Avoid Bad Wi-Fi + Mobile Data Always ON | Gaming | Keeps Wi-Fi, stops cellular cutting in | Persists |
+| 📡 BLE Scan Always Enabled | Gaming | Fewer jitter spikes on 2.4 GHz | Persists |
+| 🔍 Wi-Fi Scan Throttle | Gaming | Less scanning, less jitter, more battery | Persists |
+| 🆕 🧠 Optimize NetDev | Multitasking | Bigger netdev backlog and NAPI budget under load | Reboot |
+| 🆕 🧠 TCP Slow Start After Idle | Multitasking | Keeps TCP throughput after idle gaps | Reboot |
 
 <details>
 <summary>How a switch becomes a system call</summary>
 <br />
 
-Nothing applies until you tap the switch. The Web UI persists your desired value to `/data/adb/VinNet` first; `service.sh` applies it, then re-reads live state to verify before saying it's done. If the value cannot be persisted, the apply is skipped, because applying something the system will forget is just placebo.
+Tap. Persist. Apply. Verify. Report.
 
-Displayed status always comes from live reads. `Tweaks.json` stores desired values for Persistent Tweaks only.
+The Web UI saves your intent first. `service.sh` applies it, then re-reads live state before saying it is done. If the value cannot be saved, the apply is skipped. No "trust me bro".
 
 </details>
 
@@ -83,52 +85,58 @@ Displayed status always comes from live reads. `Tweaks.json` stores desired valu
 
 | Discipline | What it is |
 | :-- | :-- |
-| `pfifo_fast` | Classless FIFO, the kernel default on many builds |
-| `fq_codel` | Fair queue + CoDel AQM, the "just works" fix for bufferbloat |
-| `cake` | `fq_codel` on steroids, better per-host fairness and overhead handling |
+| `pfifo_fast` | Classless FIFO, common kernel default |
+| `fq_codel` | Fair queue + CoDel, the bufferbloat fix |
+| `cake` | Fairer than `fq_codel`, handles overhead |
 | `fq` | Fair queuing per flow |
-| `sfq` | Stochastic fair queueing, older flow-fairness discipline |
-| `codel` | Controlled delay AQM, kills bufferbloat without per-flow queues |
-| `pie` | Proportional integral controller AQM, same goal as CoDel |
-| `fq_pie` | `fq` + PIE AQM combo |
-| `hhf` | Heavy-hitter filter, isolates few fat flows (video, game) from mice flows |
-| `sfb` | Stochastic fair blue, fairness under persistent congestion |
+| `sfq` | Stochastic fair queueing, the classic |
+| `codel` | Controlled delay AQM, no per-flow queues |
+| `pie` | Proportional integral AQM, CoDel cousin |
+| `fq_pie` | `fq` plus PIE |
+| `hhf` | Heavy-hitter filter, isolates fat flows |
+| `sfb` | Stochastic fair blue, fairness when congested |
 
-Probed on `lo` against your running kernel; only what it accepts is offered. Multi-queue interfaces get the discipline per queue.
+QDISC specs carry tuned parameters. `cake` measures your uplink first with two 2 MB uploads to Cloudflare, then sets bandwidth. If the measurement fails, the tweak still applies.
+
+</details>
+
+<details>
+<summary>Settings that don't waste your time</summary>
+<br />
+
+**Log Level:** Off, Error, Info, Debug. Default is Error. Off wipes the log.
+
+**Log Buffer:** 2k, 8k, 32k, 128k, 512k. Default is 32k. Oldest entries drop first.
+
+Diagnostics follow the log level. Debug adds binary paths, dmesg, and Wi-Fi dumps.
 
 </details>
 
 ## Compatibility
 
-Standard Magisk module format. No native binaries, no ABI drama.
+Magisk module format. No native binaries. No ABI cosplay.
 
-| Environment | Module | Web UI |
-| :-- | :--: | :-- |
-| **Magisk** | Supported | Requires a Web UI-capable host |
-| **KernelSU** | Supported | Module screen |
-| **APatch** | Supported | Module screen |
+<kbd>Magisk</kbd>&nbsp; <kbd>KernelSU</kbd>&nbsp; <kbd>APatch</kbd>
 
-- On `fog`, the installer keeps the bundled `WCNSS_qcom_cfg.ini`. Other devices keep stock vendor files and mount nothing (`skip_mount`).
-- KernelSU/APatch forks on the standard module format should work, but are not individually tested. APatch itself targets ARM64.
-- Every tweak still needs your device to actually have the knob. What is supported on your hardware is what you get to toggle.
+Only `fog` keeps the bundled `WCNSS_qcom_cfg.ini`. Other devices mount nothing (`skip_mount`). Stock stays stock.
 
 ## Install
 
 <a href="https://github.com/Vinzz1234567890/VinNet/releases/latest"><img src="https://img.shields.io/badge/Download-Latest%20release-0E7490?style=for-the-badge&amp;labelColor=1C1B1F&amp;logo=github" alt="Download the latest VinNet release" /></a>
 
-Requires a rooted Android device and a supported module manager.
+Rooted Android, supported manager. That is the whole requirement.
 
 - [ ] Grab the latest `VinNet-*.zip` from [<ins>Releases</ins>](https://github.com/Vinzz1234567890/VinNet/releases)
 - [ ] Open your root manager &rarr; <kbd>Modules</kbd> &rarr; <kbd>Install from storage</kbd>
 - [ ] Reboot
-- [ ] Open the Web UI and enable <kbd>Persistent Tweaks</kbd> in Settings, unless you like re-applying stuff by hand
+- [ ] Open the Web UI. Turn on <kbd>Persistent Tweaks</kbd> if you hate re-doing work
 
 > [!IMPORTANT]
-> Remove conflicting network-tuning modules first. Two modules writing the same `tc`, `settings`, or `resetprop` values, and live state will happily lie to you.
+> Remove conflicting network modules first. Two writers fighting over `tc` is a skill issue you do not need.
 
 ## Diagnostics
 
-One log: **`/storage/emulated/0/Download/VinNet.log`**. Device/kernel/ABI, module version, tool paths, core writability, filtered Wi-Fi state, and the reason behind every tweak failure. The service truncates it at 128 KiB on startup, so it never eats your storage.
+Receipts live in **`/storage/emulated/0/Download/VinNet.log`**. Every failure comes with a reason. Level and buffer size are yours to set.
 
 Pull it over ADB:
 
@@ -140,22 +148,22 @@ adb pull /storage/emulated/0/Download/VinNet.log
 <summary>What to include in a bug report</summary>
 <br />
 
-Please don't just say "Wi-Fi is laggy". Include:
+Do not just say "laggy". Include:
 
 - The log
 - Root manager + version, device/ROM, Android version
-- Which tweak; for QDISC, the interface and the discipline
-- Whether Persistent Tweaks is enabled
+- The tweak. For QDISC, the interface and discipline
+- Whether Persistent Tweaks is on
 
 </details>
 
 ## FAQ
 
 <details>
-<summary>Will this double my bandwidth or fix my Wi-Fi forever?</summary>
+<summary>Will this double my bandwidth?</summary>
 <br />
 
-No. It is tuning, not magic. Expect fewer bufferbloat spikes, steadier latency, lower jitter, especially on 2.4 GHz Wi-Fi and cellular. Anyone promising "1000% faster internet" is selling placebo.
+No. Anyone promising that is selling you vibes. Expect steadier ping and less jitter. That is it.
 
 </details>
 
@@ -163,15 +171,15 @@ No. It is tuning, not magic. Expect fewer bufferbloat spikes, steadier latency, 
 <summary>What does Persistent Tweaks restore?</summary>
 <br />
 
-The reset-prone trio: `IP Reach Disconnect`, `QDISC` (all and per-interface), and `Wi-Fi Force Low Latency Mode`. Re-applied after boot and during Web UI checks. Off by default, because VinNet doesn't touch your settings without a tap.
+The reset-prone trio: `IP Reach Disconnect`, `QDISC`, and `Wi-Fi Force Low Latency Mode`. After boot and during checks. Off by default. No forced behavior.
 
 </details>
 
 <details>
-<summary>A tweak says &quot;Not supported&quot;, why?</summary>
+<summary>A tweak says &quot;Not supported&quot;. Why?</summary>
 <br />
 
-Short answer: its live check failed or returned nothing. The control disables itself and sends no commands. For QDISC this means no eligible interface on the device, or a kernel that accepted none of the 10 disciplines on the `lo` probe.
+Your device said no. The switch disables itself and sends no commands. Good modules do not lie.
 
 </details>
 
@@ -179,37 +187,29 @@ Short answer: its live check failed or returned nothing. The control disables it
 <summary>Does the service drain battery?</summary>
 <br />
 
-Nope. It wakes every 5 seconds for a cheap state check, and only pings `1.1.1.1` and `1.0.0.1` while the Web UI is open.
+Nope. Cheap 5 second loop. Ping only while the Web UI is open.
 
 </details>
 
 <details>
-<summary>Why does the installer skip the vendor config on my device?</summary>
+<summary>Can I stack it with other network modules?</summary>
 <br />
 
-The bundled `WCNSS_qcom_cfg.ini` is `fog`-only. Everywhere else the bundled `system` tree is removed at install time and a `skip_mount` flag is set, so the module mounts nothing and only manages runtime state.
-
-</details>
-
-<details>
-<summary>Can I run VinNet alongside other network modules?</summary>
-<br />
-
-Technically yes, practically please don't. If something else writes the same `tc`/`settings` values, yours wins only when it applies last, and neither of you can tell who owns `fq_codel`. Live state checks exist to tell the truth, not to referee a turf war.
+Please do not. Two modules writing `tc` and `settings` is not a flex. Live checks exist to tell the truth, not referee a turf war.
 
 </details>
 
 ## Safety
 
 > [!WARNING]
-> Root access can break things. VinNet changes network settings and kernel queue disciplines; use it at your own risk. Tweaks are opt-in, and some reset after reboot or interface changes. Do not stack conflicting network modules. VinNet is not affiliated with Google, Android, Magisk, KernelSU, or APatch.
+> Root can break things. VinNet changes network settings and kernel queue disciplines. Use your brain. Tweaks are opt-in, and some reset after reboot or interface changes. VinNet is not affiliated with Google, Android, Magisk, KernelSU, or APatch.
 
 ## Community
 
 - **Repository:** [Vinzz1234567890/VinNet](https://github.com/Vinzz1234567890/VinNet)
 - **Telegram:** [Vinzz Repository](https://t.me/VinzzRepository)
 - **Feedback:** [@Vinzz1234567890](https://t.me/Vinzz1234567890)
-- **Like it?** [Star the repo](https://github.com/Vinzz1234567890/VinNet), it genuinely helps
+- **Like it?** [Star the repo](https://github.com/Vinzz1234567890/VinNet). If it slapped, say so.
 
 ## License
 
