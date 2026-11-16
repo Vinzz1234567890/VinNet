@@ -6,4 +6,4 @@ author=Vinzz
 description=Simple Implementation of Network Optimization
 webuiIcon=webroot/assets/VinNetBanner5.webp
 banner=webroot/assets/VinNetBanner5.webp
-updateJson=https://raw.githubusercontent.com/Vinzz1234567890/VinNet/refs/heads/main/update.json
+updateJson=https://raw.githubusercontent.com/Vinzz1234567890/VinNet/refs/heads/Release/update.json
