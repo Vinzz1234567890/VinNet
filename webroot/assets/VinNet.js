@@ -858,9 +858,14 @@ function UpdateLogBufferDisplay(Size) {
 
 function SyncLogBufferState() {
     const Select = document.getElementById('SettingLogBuffer');
+    const Btn = document.getElementById('BtnExportLog');
     const Off = LogLevel === 'Off';
     Select.classList.toggle('TweakSelectDisabled', Off);
     Select.querySelector('.TweakSelectField').disabled = Off;
+    if (Btn) {
+        Btn.classList.toggle('TweakSelectDisabled', Off);
+        Btn.disabled = Off;
+    }
 }
 
 async function ApplyLogBuffer(Size) {
@@ -880,9 +885,32 @@ async function ApplyLogBuffer(Size) {
     }
 }
 
+let ExportingLog = false;
+async function ExportLog() {
+    if (ExportingLog) return;
+    ExportingLog = true;
+    try {
+        if (LogLevel === 'Off') {
+            Toast('No Log to Export');
+            return;
+        }
+        await exec(`sh ${Service} export_log`);
+    } catch (Err) {
+        if (Err === 'EMPTY' || Err?.includes('EMPTY')) {
+            Toast('No Log to Export');
+        } else {
+            Toast('Failed to Export Log');
+            Log('ExportLog', `${Err?.message || Err || 'failed'}`);
+        }
+    } finally {
+        ExportingLog = false;
+    }
+}
+
 async function LoadSettings() {
     const Input = document.getElementById('PersistentTweaks');
     const LogSelect = document.getElementById('SettingLogLevel');
+    const ExportBtn = document.getElementById('BtnExportLog');
     if (typeof window.ksu?.exec !== 'function') {
         Input.indeterminate = true;
         Input.disabled = true;
@@ -891,9 +919,22 @@ async function LoadSettings() {
         const BufferSelect = document.getElementById('SettingLogBuffer');
         BufferSelect.classList.add('TweakSelectDisabled');
         BufferSelect.querySelector('.TweakSelectField').disabled = true;
+        if (ExportBtn) {
+            ExportBtn.classList.add('TweakSelectDisabled');
+            ExportBtn.disabled = true;
+            ExportBtn.innerHTML = '<span>—</span>';
+        }
         LogLevel = 'Off';
         LogQueue = [];
         return;
+    }
+    if (ExportBtn) {
+        ExportBtn.innerHTML = `
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+                <use href="#ExportLog"></use>
+            </svg>
+            <span>Export</span>
+        `;
     }
     try {
         const Level = await exec(`sh ${Service} log_level`);
@@ -1026,6 +1067,12 @@ function SetupEventListeners() {
     });
 
     document.addEventListener('click', async Event => {
+        const ExportBtn = Event.target.closest('#BtnExportLog');
+        if (ExportBtn) {
+            ExportLog();
+            return;
+        }
+
         const Chip = Event.target.closest('.TweakChip');
         if (Chip) {
             const ChipsContainer = Chip.closest('.TweakChips'), Card = Chip.closest('.Card');
