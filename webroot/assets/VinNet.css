@@ -682,9 +682,17 @@ textarea {
     visibility: visible;
 }
 
-.TweakSelect.TweakSelectDisabled {
+.TweakSelect.TweakSelectDisabled,
+.TweakChip.TweakSelectDisabled {
     opacity: 0.5;
     pointer-events: none;
+}
+
+#BtnExportLog {
+    color: var(--on-surf);
+    margin-top: 2px;
+    min-width: 52px;
+    justify-content: center;
 }
 
 .Switch {
