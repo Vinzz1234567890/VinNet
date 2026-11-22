@@ -1,7 +1,7 @@
 #!/system/bin/sh
 ModuleDirectory="${0%/*}"
 Core="/data/adb/VinNet"
-LogPath="/storage/emulated/0/Download/VinNet.log"
+LogPath="$Core/VinNet.log"
 LogLevel=Error
 LogBuffer=32k
 LogBufferBytes=32768
@@ -311,12 +311,19 @@ EOF
     return 0
 }
 
+ApplyLeaf() {
+    ApplyInterface "$1" "$2" "$3" && return 0
+    [ "$2" = cake ] || return 1
+    ApplyInterface "$1" "$2" cake || return 1
+    Log QDISC "$1 | cake tuned spec unsupported, applied bare cake" Info
+}
+
 ApplyQDISC() {
     local Key="$1" Target="${2:-all}" Spec D Seen=0 Changed=0
     QDISCSpec "$Key" > /dev/null || { Log ApplyFail "QDISC : $Key is not a supported value"; return 1; }
     if [ "$Target" != "all" ]; then
         Spec=$(QDISCSpec "$Key" "$Target")
-        ApplyInterface "$Target" "$Key" "$Spec" || return
+        ApplyLeaf "$Target" "$Key" "$Spec" || return
         Log Apply "QDISC:$Target : $Key" Info
         printf '%s\n' "$Target"
         return 0
@@ -324,7 +331,7 @@ ApplyQDISC() {
     for D in $(Interfaces); do
         Seen=$((Seen + 1))
         Spec=$(QDISCSpec "$Key" "$D")
-        if ApplyInterface "$D" "$Key" "$Spec"; then
+        if ApplyLeaf "$D" "$Key" "$Spec"; then
             Changed=1
             Log Apply "QDISC:$D : $Key" Info
         fi
@@ -359,10 +366,9 @@ ListQDISC() {
 
 ProbeQDISC() {
     command -v "$TC" > /dev/null 2>&1 || return 1
-    local Key Spec Accepted="" Rejected=""
+    local Key Accepted="" Rejected=""
     for Key in pfifo_fast fq_codel cake fq sfq codel pie fq_pie hhf sfb; do
-        Spec=$(QDISCSpec "$Key") || continue
-        if "$TC" qdisc replace dev lo root $Spec 2> /dev/null; then
+        if "$TC" qdisc replace dev lo root $Key 2> /dev/null; then
             printf '%s\n' "$Key"
             Accepted="$Accepted $Key"
         else
@@ -845,6 +851,13 @@ case "${1:-}" in
             2k | 8k | 32k | 128k | 512k) SaveTweak LogBuffer "$2" || exit 1 ;;
             *) exit 1 ;;
         esac
+        exit 0
+        ;;
+    export_log)
+        [ -f "$LogPath" ] && [ -s "$LogPath" ] || { printf 'EMPTY\n' >&2; exit 2; }
+        Content=$(cat "$LogPath" 2> /dev/null)
+        [ -n "$Content" ] || { printf 'EMPTY\n' >&2; exit 2; }
+        am start --user 0 -a android.intent.action.SEND -t "text/plain" --es android.intent.extra.TEXT "$Content" > /dev/null 2>&1 || exit 1
         exit 0
         ;;
     log)
