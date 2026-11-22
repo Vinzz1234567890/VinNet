@@ -136,12 +136,12 @@ Rooted Android, supported manager. That is the whole requirement.
 
 ## Diagnostics
 
-Receipts live in **`/storage/emulated/0/Download/VinNet.log`**. Every failure comes with a reason. Level and buffer size are yours to set.
+Receipts live in **`/data/adb/VinNet/VinNet.log`** (or share via Web UI Settings). Every failure comes with a reason. Level and buffer size are yours to set.
 
 Pull it over ADB:
 
 ```sh
-adb pull /storage/emulated/0/Download/VinNet.log
+adb pull /data/adb/VinNet/VinNet.log
 ```
 
 <details>
