@@ -868,6 +868,41 @@ function SyncLogBufferState() {
     }
 }
 
+const Themes = ['Material', 'MiuiX'];
+let Theme = 'Material';
+
+function ApplyTheme(Name) {
+    document.documentElement.dataset.theme = Name;
+}
+
+function UpdateThemeDisplay(Name) {
+    const Select = document.getElementById('SettingTheme');
+    Select.dataset.current = Name;
+    Select.querySelector('.TweakSelectValue').textContent = Name;
+    for (const Item of Select.querySelectorAll('.TweakSelectItem')) {
+        Item.classList.toggle('TweakSelectCurrent', Item.dataset.value === Name);
+    }
+    SyncSelectMenu(Select);
+}
+
+async function ApplyThemeSetting(Name) {
+    const Field = document.querySelector('#SettingTheme .TweakSelectField');
+    Field.disabled = true;
+    try {
+        await exec(`sh ${Service} theme ${Name}`);
+        Theme = Name;
+        ApplyTheme(Name);
+        UpdateThemeDisplay(Name);
+        Toast(`Theme > ${Name}`);
+    } catch (Err) {
+        Log('Theme', `${Name} | ${Err || 'save failed'}`);
+        Toast('Unable to save setting');
+    } finally {
+        Field.disabled = false;
+        Field.focus();
+    }
+}
+
 async function ApplyLogBuffer(Size) {
     const Field = document.querySelector('#SettingLogBuffer .TweakSelectField');
     Field.disabled = true;
@@ -955,6 +990,15 @@ async function LoadSettings() {
     UpdateLogBufferDisplay(LogBuffer);
     SyncLogBufferState();
     FlushLog();
+    try {
+        const Saved = await exec(`sh ${Service} theme`);
+        Theme = Themes.includes(Saved) ? Saved : 'Material';
+    } catch (Err) {
+        Theme = 'Material';
+        Log('Theme', `read | ${Err || 'failed'}`);
+    }
+    ApplyTheme(Theme);
+    UpdateThemeDisplay(Theme);
     try {
         await ReadPersistent();
         Input.checked = PersistentOn;
@@ -1118,6 +1162,10 @@ function SetupEventListeners() {
             }
             if (Select.id === 'SettingLogBuffer') {
                 if (Value !== Select.dataset.current) ApplyLogBuffer(Value);
+                return;
+            }
+            if (Select.id === 'SettingTheme') {
+                if (Value !== Select.dataset.current) await ApplyThemeSetting(Value);
                 return;
             }
             const Target = Select.dataset.target || 'all';
