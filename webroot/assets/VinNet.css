@@ -714,8 +714,8 @@ textarea {
     position: absolute;
     inset: 0;
     border-radius: 16px;
-    background: color-mix(in srgb, var(--primary) 14%, var(--surf-xhi));
-    border: 2px solid var(--line);
+    background: color-mix(in srgb, var(--on-surf) 15%, var(--surf-xhi));
+    border: 2px solid transparent;
     transition: background-color 0.22s, border-color 0.22s;
 }
 
@@ -733,6 +733,8 @@ textarea {
 }
 
 .Switch:has(input:disabled) .SwitchTrack {
+    background: var(--pri-mix-14);
+    border: 1px solid var(--out-var);
     opacity: 0.5;
     cursor: default;
 }
