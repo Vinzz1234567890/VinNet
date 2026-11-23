@@ -828,3 +828,17 @@ textarea {
     opacity: 1;
     transform: translateX(-50%) translateY(0);
 }
+
+[data-theme="MiuiX"] .Card {
+    border-radius: 28px;
+}
+
+[data-theme="MiuiX"] .TweakSelectItem,
+[data-theme="MiuiX"] .ProcessOverlay {
+    border-radius: 14px;
+}
+
+[data-theme="MiuiX"] .ProcessOverlay,
+[data-theme="MiuiX"] .Snack {
+    box-shadow: none;
+}
