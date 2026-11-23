@@ -853,6 +853,16 @@ case "${1:-}" in
         esac
         exit 0
         ;;
+    theme)
+        case "${2:-}" in
+            "") Theme=$(ReadTweak Theme)
+                printf '%s\n' "${Theme:-Material}"
+                ;;
+            Material | MiuiX) SaveTweak Theme "$2" || exit 1 ;;
+            *) exit 1 ;;
+        esac
+        exit 0
+        ;;
     export_log)
         [ -f "$LogPath" ] && [ -s "$LogPath" ] || { printf 'EMPTY\n' >&2; exit 2; }
         Content=$(cat "$LogPath" 2> /dev/null)
