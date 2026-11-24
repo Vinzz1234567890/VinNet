@@ -13,29 +13,45 @@
     --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
     --ease-smooth: cubic-bezier(0.2, 1, 0.2, 1);
 
-    --pri: var(--primary);
-    --on-pri: var(--onPrimary);
-    --pri-mix-40: color-mix(in srgb, var(--primary) 40%, transparent);
-    --pri-mix-14: color-mix(in srgb, var(--primary) 14%, transparent);
+    --pri: var(--primary, #A8C7FA);
+    --on-pri: var(--onPrimary, #063158);
+    --pri-mix-40: color-mix(in srgb, var(--pri) 40%, transparent);
+    --pri-mix-14: color-mix(in srgb, var(--pri) 14%, transparent);
 
-    --bg: var(--background);
-    --surf-lo: var(--surfaceContainerLow, var(--surface));
-    --surf-c: var(--surfaceContainer, var(--surface));
-    --surf-hi: var(--surfaceContainerHigh, var(--surfaceVariant));
-    --surf-xhi: var(--surfaceContainerHighest, var(--surfaceVariant));
+    --bg: var(--background, #111418);
+    --surf-lo: var(--surfaceContainerLow, var(--surface, #191C20));
+    --surf-c: var(--surfaceContainer, var(--surface, #1D2024));
+    --surf-hi: var(--surfaceContainerHigh, var(--surfaceVariant, #282A2F));
+    --surf-xhi: var(--surfaceContainerHighest, var(--surfaceVariant, #33353A));
 
-    --on-surf: var(--onSurface);
-    --on-surf-var: var(--onSurfaceVariant);
-    --line: var(--outline, var(--onSurfaceVariant));
-    --out-var: var(--outlineVariant);
+    --on-surf: var(--onSurface, #E2E2E9);
+    --on-surf-var: var(--onSurfaceVariant, #C4C6D0);
+    --line: var(--outline, var(--onSurfaceVariant, #8E9099));
+    --out-var: var(--outlineVariant, #44474E);
 
     --Good: #6EF2A8;
     --Warn: #FFD166;
-    --Bad: var(--error);
+    --Bad: var(--error, #F2B8B5);
     --brand-telegram: #26A5E4;
 
     --loader: 25px;
     --loader-ring: 3px;
+}
+
+@media (prefers-color-scheme: light) {
+    :root {
+        --pri: var(--primary, #0B57D0);
+        --on-pri: var(--onPrimary, #FFFFFF);
+        --bg: var(--background, #F8F9FF);
+        --surf-lo: var(--surfaceContainerLow, var(--surface, #F2F3FA));
+        --surf-c: var(--surfaceContainer, var(--surface, #ECEEF4));
+        --surf-hi: var(--surfaceContainerHigh, var(--surfaceVariant, #E6E8EE));
+        --surf-xhi: var(--surfaceContainerHighest, var(--surfaceVariant, #E1E2E8));
+        --on-surf: var(--onSurface, #191C20);
+        --on-surf-var: var(--onSurfaceVariant, #44474E);
+        --line: var(--outline, var(--onSurfaceVariant, #74777F));
+        --out-var: var(--outlineVariant, #C4C6D0);
+    }
 }
 
 *,
@@ -229,22 +245,24 @@ textarea {
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 10px 0 14px;
+    padding: 8px 0 10px;
     gap: 4px;
 }
 
 .NavigationBar svg,
 .NavigationBarActive svg {
-    width: 22px;
-    height: 22px;
+    width: 64px;
+    height: 32px;
+    padding: 4px 20px;
+    box-sizing: border-box;
+    border-radius: 16px;
     fill: var(--on-surf-var);
-    transition: fill 0.25s, transform 0.42s var(--spring);
+    transition: fill 0.2s, background-color 0.25s var(--ease-smooth), transform 0.25s var(--spring);
 }
 
 .NavigationBarActive svg {
-    transform: scale(1.15);
+    background-color: var(--pri-mix-14);
     fill: var(--pri);
-    filter: drop-shadow(0 0 6px var(--pri-mix-40));
 }
 
 .NavigationBarLabel {
@@ -371,6 +389,7 @@ textarea {
 
 .Card {
     background: var(--surf-c);
+    border: 1px solid var(--out-var);
     border-radius: 24px;
     padding: 18px;
     contain: style;
@@ -554,7 +573,7 @@ textarea {
     width: 100%;
     padding: 11px 14px;
     border: 1px solid var(--out-var);
-    border-radius: 12px;
+    border-radius: 16px;
     background: var(--pri-mix-14);
     color: var(--on-surf);
     font-size: 13px;
@@ -710,8 +729,8 @@ textarea {
     position: absolute;
     inset: 0;
     border-radius: 16px;
-    background: color-mix(in srgb, var(--on-surf) 15%, var(--surf-xhi));
-    border: 2px solid transparent;
+    background: var(--surf-hi);
+    border: 2px solid var(--line);
     transition: background-color 0.22s, border-color 0.22s;
 }
 
@@ -917,4 +936,28 @@ textarea {
 [data-theme="MiuiX"] .Snack {
     border-radius: 16px;
     box-shadow: none;
+}
+
+[data-theme="MiuiX"] .SwitchTrack {
+    border: 2px solid transparent;
+    background: color-mix(in srgb, var(--on-surf) 15%, var(--surf-xhi));
+}
+
+[data-theme="MiuiX"] .NavigationBar,
+[data-theme="MiuiX"] .NavigationBarActive {
+    padding: 10px 0 14px;
+}
+
+[data-theme="MiuiX"] .NavigationBar svg,
+[data-theme="MiuiX"] .NavigationBarActive svg {
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border-radius: 0;
+    background: transparent;
+}
+
+[data-theme="MiuiX"] .NavigationBarActive svg {
+    transform: scale(1.15);
+    filter: drop-shadow(0 0 6px var(--pri-mix-40));
 }
