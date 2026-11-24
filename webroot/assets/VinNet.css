@@ -124,7 +124,7 @@ textarea {
 }
 
 .LoadingScreenText {
-    font-size: 15px;
+    font-size: 17px;
     font-weight: 600;
     color: var(--on-surf-var);
     letter-spacing: 0.3px;
@@ -604,7 +604,7 @@ textarea {
     padding: 6px;
     border: 1px solid var(--out-var);
     border-radius: 16px;
-    background: color-mix(in srgb, var(--primary) 10%, var(--surf-hi));
+    background: color-mix(in srgb, var(--pri) 10%, var(--surf-hi));
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
     transform-origin: top;
     animation: TweakSelectIn 0.16s var(--ease-smooth);
@@ -829,16 +829,92 @@ textarea {
     transform: translateX(-50%) translateY(0);
 }
 
-[data-theme="MiuiX"] .Card {
-    border-radius: 28px;
+[data-theme="MiuiX"] {
+    --bg: #F7F7F7;
+    --on-surf: #1A1A1A;
+    --on-surf-var: #757575;
+    --surf-lo: #F7F7F7;
+    --surf-c: #FFFFFF;
+    --surf-hi: #F0F0F0;
+    --surf-xhi: #E8E8E8;
+    --pri: #3482FF;
+    --on-pri: #FFFFFF;
+    --pri-mix-40: color-mix(in srgb, var(--pri) 40%, transparent);
+    --pri-mix-14: color-mix(in srgb, var(--pri) 14%, transparent);
+    --line: #E0E0E0;
+    --out-var: #EBEBEB;
 }
 
-[data-theme="MiuiX"] .TweakSelectItem,
-[data-theme="MiuiX"] .ProcessOverlay {
+@media (prefers-color-scheme: dark) {
+    [data-theme="MiuiX"] {
+        --bg: #000000;
+        --on-surf: #F2F2F7;
+        --on-surf-var: #8E8E93;
+        --surf-lo: #000000;
+        --surf-c: #1C1C1E;
+        --surf-hi: #2C2C2E;
+        --surf-xhi: #3A3A3C;
+        --pri: #2775F5;
+        --line: #2C2C2E;
+        --out-var: #2C2C2E;
+    }
+}
+
+[data-theme="MiuiX"] .Pages {
+    padding-inline: 16px;
+}
+
+[data-theme="MiuiX"] .Card {
+    border-radius: 20px;
+    padding: 16px;
+    border: 1px solid var(--out-var);
+    background: var(--surf-c);
+    transition: background-color 0.2s ease;
+}
+
+[data-theme="MiuiX"] .Tweak {
+    padding: 12px 0;
+}
+
+[data-theme="MiuiX"] .TweakIcon {
+    border-radius: 10px;
+}
+
+[data-theme="MiuiX"] .TweakSelectField,
+[data-theme="MiuiX"] .TweakSelectMenu {
+    background: color-mix(in srgb, var(--pri) 14%, var(--surf-c));
+}
+
+[data-theme="MiuiX"] .TweakSelectField {
     border-radius: 14px;
 }
 
-[data-theme="MiuiX"] .ProcessOverlay,
+[data-theme="MiuiX"] .TweakSelectMenu {
+    border-radius: 16px;
+}
+
+[data-theme="MiuiX"] .TweakSelectItem {
+    border-radius: 10px;
+}
+
+[data-theme="MiuiX"] .TweakChip {
+    border-radius: 999px;
+    border-color: transparent;
+    background: var(--pri-mix-14);
+    color: var(--pri);
+}
+
+[data-theme="MiuiX"] .chip {
+    border-radius: 999px;
+}
+
+[data-theme="MiuiX"] .ProcessOverlay {
+    border-radius: 14px;
+    box-shadow: none;
+    border-color: transparent;
+}
+
 [data-theme="MiuiX"] .Snack {
+    border-radius: 16px;
     box-shadow: none;
 }
