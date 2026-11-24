@@ -870,6 +870,10 @@ function SyncLogBufferState() {
 
 const Themes = ['Material', 'MiuiX'];
 let Theme = 'Material';
+try {
+    const Cached = localStorage.getItem('VinNet_Theme');
+    if (Cached && Themes.includes(Cached)) Theme = Cached;
+} catch (e) {}
 
 function ApplyTheme(Name) {
     document.documentElement.dataset.theme = Name;
@@ -891,6 +895,7 @@ async function ApplyThemeSetting(Name) {
     try {
         await exec(`sh ${Service} theme ${Name}`);
         Theme = Name;
+        try { localStorage.setItem('VinNet_Theme', Name); } catch (e) {}
         ApplyTheme(Name);
         UpdateThemeDisplay(Name);
         Toast(`Theme > ${Name}`);
@@ -942,6 +947,23 @@ async function ExportLog() {
     }
 }
 
+async function LoadTheme() {
+    if (typeof window.ksu?.exec !== 'function') {
+        ApplyTheme(Theme);
+        return;
+    }
+    try {
+        const Saved = await exec(`sh ${Service} theme`);
+        Theme = Themes.includes(Saved) ? Saved : 'Material';
+        try { localStorage.setItem('VinNet_Theme', Theme); } catch (e) {}
+    } catch (Err) {
+        Theme = 'Material';
+        Log('Theme', `read | ${Err || 'failed'}`);
+    }
+    ApplyTheme(Theme);
+    UpdateThemeDisplay(Theme);
+}
+
 async function LoadSettings() {
     const Input = document.getElementById('PersistentTweaks');
     const LogSelect = document.getElementById('SettingLogLevel');
@@ -954,6 +976,12 @@ async function LoadSettings() {
         const BufferSelect = document.getElementById('SettingLogBuffer');
         BufferSelect.classList.add('TweakSelectDisabled');
         BufferSelect.querySelector('.TweakSelectField').disabled = true;
+        const ThemeSelect = document.getElementById('SettingTheme');
+        if (ThemeSelect) {
+            ThemeSelect.classList.add('TweakSelectDisabled');
+            ThemeSelect.querySelector('.TweakSelectField').disabled = true;
+            ThemeSelect.querySelector('.TweakSelectValue').textContent = '—';
+        }
         if (ExportBtn) {
             ExportBtn.classList.add('TweakSelectDisabled');
             ExportBtn.disabled = true;
@@ -990,15 +1018,6 @@ async function LoadSettings() {
     UpdateLogBufferDisplay(LogBuffer);
     SyncLogBufferState();
     FlushLog();
-    try {
-        const Saved = await exec(`sh ${Service} theme`);
-        Theme = Themes.includes(Saved) ? Saved : 'Material';
-    } catch (Err) {
-        Theme = 'Material';
-        Log('Theme', `read | ${Err || 'failed'}`);
-    }
-    ApplyTheme(Theme);
-    UpdateThemeDisplay(Theme);
     try {
         await ReadPersistent();
         Input.checked = PersistentOn;
@@ -1230,6 +1249,7 @@ async function Load() {
     setTimeout(() => { if (!Revealed) Log('Load', 'watchdog: data still pending after 8s'); Reveal(); }, 8000);
     FetchMonitor().catch(Err => Log('Monitor', `fetch | ${Err || 'failed'}`));
     const Results = await Promise.allSettled([
+        LoadTheme(),
         LoadEnvironment(),
         LoadMetadata(),
         LoadProcessID(),
