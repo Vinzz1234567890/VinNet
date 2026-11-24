@@ -8,6 +8,12 @@
     <meta name="color-scheme" content="light dark">
     <meta name="description" content="VinNet - Simple Implementation of Network Optimization for Android">
     <title>VinNet</title>
+    <script>
+        try {
+            var T = localStorage.getItem('VinNet_Theme');
+            if (T) document.documentElement.dataset.theme = T;
+        } catch (e) {}
+    </script>
     <link rel="stylesheet" href="https://mui.kernelsu.org/internal/insets.css">
     <link rel="stylesheet" href="https://mui.kernelsu.org/internal/colors.css">
     <link rel="stylesheet" href="assets/VinNet.css">
@@ -168,29 +174,6 @@
                                 <button type="button" class="TweakSelectItem" data-value="32k"><span>32k</span><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></button>
                                 <button type="button" class="TweakSelectItem" data-value="128k"><span>128k</span><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></button>
                                 <button type="button" class="TweakSelectItem" data-value="512k"><span>512k</span><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="Card">
-                    <div class="Tweak">
-                        <svg class="TweakIcon" viewBox="0 0 24 24" aria-hidden="true">
-                            <use href="#LogBuffer"></use>
-                        </svg>
-                        <div class="TweakBody">
-                            <div class="TweakName">Theme</div>
-                            <div class="TweakDescription">Visual style of the VinNet WebUI.</div>
-                        </div>
-                        <div class="TweakSelect" id="SettingTheme" data-current="—">
-                            <button type="button" class="TweakSelectField" aria-haspopup="listbox" aria-expanded="false" aria-label="Theme">
-                                <span class="TweakSelectValue">—</span>
-                                <svg class="TweakSelectChevron" viewBox="0 0 24 24" aria-hidden="true">
-                                    <path d="M7 10l5 5 5-5z" />
-                                </svg>
-                            </button>
-                            <div class="TweakSelectMenu" hidden>
-                                <button type="button" class="TweakSelectItem" data-value="Material"><span>Material</span><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></button>
-                                <button type="button" class="TweakSelectItem" data-value="MiuiX"><span>MiuiX</span><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></button>
                             </div>
                         </div>
                     </div>
