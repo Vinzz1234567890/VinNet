@@ -157,7 +157,10 @@ textarea {
     inset: 0 0 auto;
     z-index: 5;
     padding: calc(16px + var(--safe-top)) 18px 14px;
-    background: var(--surf-lo);
+    background: color-mix(in srgb, var(--surf-lo) 85%, transparent);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-bottom: 1px solid color-mix(in srgb, var(--out-var) 40%, transparent);
     touch-action: none;
     contain: layout style;
 }
@@ -232,7 +235,10 @@ textarea {
     position: absolute;
     inset: auto 0 0;
     z-index: 5;
-    background: var(--surf-lo);
+    background: color-mix(in srgb, var(--surf-lo) 85%, transparent);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-top: 1px solid color-mix(in srgb, var(--out-var) 40%, transparent);
     display: flex;
     padding-bottom: var(--safe-bottom);
     touch-action: none;
@@ -263,6 +269,11 @@ textarea {
 .NavigationBarActive svg {
     background-color: var(--pri-mix-14);
     fill: var(--pri);
+}
+
+.NavigationBar:active svg,
+.NavigationBarActive:active svg {
+    transform: scale(0.92);
 }
 
 .NavigationBarLabel {
@@ -301,6 +312,7 @@ textarea {
     border-radius: 32px;
     overflow: hidden;
     flex-shrink: 0;
+    border: 1px solid var(--out-var);
 }
 
 .Banner {
@@ -825,27 +837,30 @@ textarea {
     position: fixed;
     bottom: calc(80px + var(--safe-bottom));
     left: 50%;
-    transform: translateX(-50%) translateY(20px);
-    background: var(--surf-xhi);
+    transform: translateX(-50%) translateY(20px) scale(0.92);
+    background: color-mix(in srgb, var(--surf-hi) 90%, var(--pri));
     color: var(--on-surf);
     font-size: 13px;
-    font-weight: 500;
-    padding: 12px 20px;
-    border-radius: 14px;
+    font-weight: 600;
+    padding: 10px 22px;
+    border-radius: 999px;
+    border: 1px solid var(--out-var);
     width: max-content;
     max-width: calc(100vw - 32px);
     white-space: normal;
     text-align: center;
     opacity: 0;
-    transition: opacity 0.2s, transform 0.2s;
+    transition: opacity 0.25s var(--ease-smooth), transform 0.32s var(--spring);
     pointer-events: none;
     z-index: 100;
-    box-shadow: 0 4px 20px rgb(0 0 0 / 0.4);
+    box-shadow: 0 8px 24px rgb(0 0 0 / 0.35);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
 }
 
 .Snack.Show {
     opacity: 1;
-    transform: translateX(-50%) translateY(0);
+    transform: translateX(-50%) translateY(0) scale(1);
 }
 
 [data-theme="MiuiX"] {
