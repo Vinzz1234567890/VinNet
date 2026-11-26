@@ -31,43 +31,43 @@
 
 ## Overview
 
-VinNet tunes knobs Android and the kernel already give you. No VPN. No proxy. No "gaming mode" theater. Just AOSP and kernel parameters, tested and checked on device.
+VinNet tunes the knobs Android and the kernel already expose. No VPN. No proxy. No made-up "gaming mode". Just AOSP and kernel parameters, tested on device and checked after every apply.
 
-- **Receipts over vibes.** Live state gets re-read after every apply.
-- **Tested, not pasted.** Every tweak was tested for a real effect. Placebo is not the business model.
-- **Your call.** Persistent Tweaks restores reset-prone tweaks after boot. Opt in or don't.
+- **Receipts, not vibes.** Live state gets re-read after every apply.
+- **Tested, not copy-pasted.** Every tweak was checked for a real effect. Placebo is not the business model.
+- **Self-starting daemon.** The Web UI checks it. If dead, it restarts. No babysitting.
 
 ## Why this exists
 
-Most "network optimizer" modules are fan fiction with root access. Copied scripts. Random sysctls from old forum threads. Commands that never did anything. Then a green "Enabled" badge that means absolutely nothing.
-
-VinNet does the boring part properly:
+Most "network optimizer" modules are fan fiction with root access. Scripts from a forum dumpster. Random sysctls from 2014. Commands that never existed. Then a green "Enabled" badge doing its best impersonation of truth. Absolutely cooked.
 
 | Mid modules | VinNet |
 | :-- | :-- |
-| Scripts and vibes | AOSP/kernel knobs, each tested |
-| Apply once, hope it sticks | Apply, re-read live state, report |
-| "Enabled" even when unsupported | Unsupported = disabled. Unknown = indeterminate |
-| One path for every phone | Per-interface QDISC, kernel probe, per-queue |
-| System resets it. Nobody cares | Persistent Tweaks restores it, opt in |
-| No logs, just screenshots | One log with reasons |
+| Copied scripts, zero tests | AOSP/kernel knobs, each tested |
+| Apply once, pray, done | Apply, re-read live state, report |
+| "Enabled" when the tweak is dead | Unsupported = disabled. Unknown = indeterminate |
+| One path for every phone. L take | Per-interface QDISC, kernel probe, per-queue |
+| Reboot nukes it. Nobody cares | Persistent Tweaks restores it, opt in |
+| No logs. Just vibes and screenshots | One log with reasons |
 
-If your module has never told you something failed, it is not optimized. It is just quiet.
+If your module has never once told you something failed, it is not optimized. It is quiet and delulu.
 
 ## Tweaks
 
-Eight tweaks. All tested. None decorative.
+Eight tweaks. Tested. Zero decorative junk.
 
-| Tweak | Group | What it does | Reset |
-| :-- | :-- | :-- | :-- |
-| 📶 IP Reach Disconnect | Gaming | Keeps Wi-Fi from dropping on unstable networks | Reboot |
-| 🚦 QDISC | Gaming | 10 disciplines, all or one interface | Reboot |
-| ⚡ Wi-Fi Force Low Latency Mode | Gaming | Low-latency mode, hi-perf fallback | Interface changes |
-| 🌐 Network Avoid Bad Wi-Fi + Mobile Data Always ON | Gaming | Keeps Wi-Fi, stops cellular cutting in | Persists |
-| 📡 BLE Scan Always Enabled | Gaming | Fewer jitter spikes on 2.4 GHz | Persists |
-| 🔍 Wi-Fi Scan Throttle | Gaming | Less scanning, less jitter, more battery | Persists |
-| 🆕 🧠 Optimize NetDev | Multitasking | Bigger netdev backlog and NAPI budget under load | Reboot |
-| 🆕 🧠 TCP Slow Start After Idle | Multitasking | Keeps TCP throughput after idle gaps | Reboot |
+| Tweak | Group | What it does |
+| :-- | :-- | :-- |
+| IP Reach Disconnect | Gaming | Keeps Wi-Fi from dropping on unstable networks |
+| QDISC | Gaming | 10 disciplines, all or one interface |
+| Wi-Fi Force Low Latency Mode | Gaming | Low-latency mode, hi-perf fallback |
+| Network Avoid Bad Wi-Fi + Mobile Data Always ON | Gaming | Keeps Wi-Fi, stops cellular cutting in |
+| BLE Scan Always Enabled | Gaming | Fewer jitter spikes on 2.4 GHz |
+| Wi-Fi Scan Throttle | Gaming | Less scanning, less jitter, more battery |
+| Optimize NetDev | Multitasking | Bigger netdev backlog and NAPI budget under load |
+| TCP Slow Start After Idle | Multitasking | Keeps TCP throughput after idle gaps |
+
+Reset-prone tweaks are the ones Persistent Tweaks restores. FAQ has the list.
 
 <details>
 <summary>How a switch becomes a system call</summary>
@@ -75,7 +75,7 @@ Eight tweaks. All tested. None decorative.
 
 Tap. Persist. Apply. Verify. Report.
 
-The Web UI saves your intent first. `service.sh` applies it, then re-reads live state before saying it is done. If the value cannot be saved, the apply is skipped. No "trust me bro".
+The Web UI saves intent first. `service.sh` applies it, then re-reads live state before saying it is done. If the value cannot be saved, the apply is skipped. No "trust me bro".
 
 </details>
 
@@ -96,17 +96,21 @@ The Web UI saves your intent first. `service.sh` applies it, then re-reads live 
 | `hhf` | Heavy-hitter filter, isolates fat flows |
 | `sfb` | Stochastic fair blue, fairness when congested |
 
-QDISC specs carry tuned parameters. `cake` measures your uplink first with two 2 MB uploads to Cloudflare, then sets bandwidth. If the measurement fails, the tweak still applies.
+QDISC specs carry tuned parameters. `cake` measures uplink with two 2 MB uploads to Cloudflare. Strict kernel says no, bare `cake` gets applied. Still works. Still honest.
 
 </details>
 
 <details>
-<summary>Settings that don't waste your time</summary>
+<summary>Settings, not a mid-life crisis</summary>
 <br />
+
+**Theme:** Material or MiuiX. Saved in `Tweaks.json` and `localStorage`. Applied before first paint. No flash of the wrong look.
 
 **Log Level:** Off, Error, Info, Debug. Default is Error. Off wipes the log.
 
 **Log Buffer:** 2k, 8k, 32k, 128k, 512k. Default is 32k. Oldest entries drop first.
+
+**Export Log:** Shares `VinNet.log` through Android SEND. No digging through folders.
 
 Diagnostics follow the log level. Debug adds binary paths, dmesg, and Wi-Fi dumps.
 
@@ -124,19 +128,22 @@ Only `fog` keeps the bundled `WCNSS_qcom_cfg.ini`. Other devices mount nothing (
 
 <a href="https://github.com/Vinzz1234567890/VinNet/releases/latest"><img src="https://img.shields.io/badge/Download-Latest%20release-0E7490?style=for-the-badge&amp;labelColor=1C1B1F&amp;logo=github" alt="Download the latest VinNet release" /></a>
 
-Rooted Android, supported manager. That is the whole requirement.
+Root required. No PC, no fastboot, no terminal cosplay.
 
-- [ ] Grab the latest `VinNet-*.zip` from [<ins>Releases</ins>](https://github.com/Vinzz1234567890/VinNet/releases)
-- [ ] Open your root manager &rarr; <kbd>Modules</kbd> &rarr; <kbd>Install from storage</kbd>
-- [ ] Reboot
-- [ ] Open the Web UI. Turn on <kbd>Persistent Tweaks</kbd> if you hate re-doing work
+| Do | What actually happens |
+| :-- | :-- |
+| Flash `VinNet-*.zip` from <kbd>Modules</kbd> &rarr; <kbd>Install from storage</kbd> | Installer reads the device codename. `fog` keeps the vendor Wi-Fi config. Everyone else gets `skip_mount` and zero vendor files |
+| Reboot | Service waits for boot, publishes its PID, then starts the watchdog |
+| Open the Web UI | Daemon gets checked. If dead, it restarts on the spot |
+| Flip one switch | Intent saved to `/data/adb/VinNet`, applied, re-read live |
+| Optional: <kbd>Persistent Tweaks</kbd> | Reset-prone tweaks come back after boot and during checks |
 
 > [!IMPORTANT]
-> Remove conflicting network modules first. Two writers fighting over `tc` is a skill issue you do not need.
+> Remove conflicting network modules first. Two modules writing the same `tc` and `settings` values make live state a liar. Not a flex.
 
 ## Diagnostics
 
-Receipts live in **`/data/adb/VinNet/VinNet.log`** (or share via Web UI Settings). Every failure comes with a reason. Level and buffer size are yours to set.
+Receipts live in **`/data/adb/VinNet/VinNet.log`**. Every failure comes with a reason. Or hit **Export Log** in Settings and let Android handle the sharing.
 
 Pull it over ADB:
 
@@ -148,7 +155,7 @@ adb pull /data/adb/VinNet/VinNet.log
 <summary>What to include in a bug report</summary>
 <br />
 
-Do not just say "laggy". Include:
+Do not just say "laggy". That is not a bug report. That is a vibe.
 
 - The log
 - Root manager + version, device/ROM, Android version
@@ -163,7 +170,7 @@ Do not just say "laggy". Include:
 <summary>Will this double my bandwidth?</summary>
 <br />
 
-No. Anyone promising that is selling you vibes. Expect steadier ping and less jitter. That is it.
+No. Anyone promising that is selling you vibes. Expect steadier ping and less jitter. Cope with reality.
 
 </details>
 
@@ -171,7 +178,7 @@ No. Anyone promising that is selling you vibes. Expect steadier ping and less ji
 <summary>What does Persistent Tweaks restore?</summary>
 <br />
 
-The reset-prone trio: `IP Reach Disconnect`, `QDISC`, and `Wi-Fi Force Low Latency Mode`. After boot and during checks. Off by default. No forced behavior.
+The reset-prone set: `IP Reach Disconnect`, `QDISC`, `Wi-Fi Force Low Latency Mode`, `Optimize NetDev`, and `TCP Slow Start After Idle`. After boot and during checks. Off by default. No forced behavior.
 
 </details>
 
@@ -179,7 +186,7 @@ The reset-prone trio: `IP Reach Disconnect`, `QDISC`, and `Wi-Fi Force Low Laten
 <summary>A tweak says &quot;Not supported&quot;. Why?</summary>
 <br />
 
-Your device said no. The switch disables itself and sends no commands. Good modules do not lie.
+Your device said no. The switch disables itself and sends no commands. Good modules do not lie. Unlike the rest of that folder.
 
 </details>
 
@@ -195,7 +202,15 @@ Nope. Cheap 5 second loop. Ping only while the Web UI is open.
 <summary>Can I stack it with other network modules?</summary>
 <br />
 
-Please do not. Two modules writing `tc` and `settings` is not a flex. Live checks exist to tell the truth, not referee a turf war.
+Please do not. Two modules writing `tc` and `settings` is not a flex. It is a clown show. Live checks exist to tell the truth, not referee a turf war.
+
+</details>
+
+<details>
+<summary>Why is the Web UI showing a PID out of nowhere?</summary>
+<br />
+
+That is the daemon. It starts on demand and the dashboard polls `status` live. If it dies, the next Web UI open brings it back. No ritual required.
 
 </details>
 
@@ -209,7 +224,7 @@ Please do not. Two modules writing `tc` and `settings` is not a flex. Live check
 - **Repository:** [Vinzz1234567890/VinNet](https://github.com/Vinzz1234567890/VinNet)
 - **Telegram:** [Vinzz Repository](https://t.me/VinzzRepository)
 - **Feedback:** [@Vinzz1234567890](https://t.me/Vinzz1234567890)
-- **Like it?** [Star the repo](https://github.com/Vinzz1234567890/VinNet). If it slapped, say so.
+- **Like it?** [Star the repo](https://github.com/Vinzz1234567890/VinNet). If it slapped, say so. If not, file a log, not a vibe check.
 
 ## License
 
