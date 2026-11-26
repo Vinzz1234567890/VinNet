@@ -60,6 +60,10 @@
         --on-surf-var: var(--onSurfaceVariant, #44474E);
         --line: var(--outline, var(--onSurfaceVariant, #74777F));
         --out-var: var(--outlineVariant, #C4C6D0);
+
+        --Good: #0B7A4B;
+        --Warn: #9A5B00;
+        --Bad: var(--error, #B3261E);
     }
 }
 
@@ -529,6 +533,8 @@ textarea {
 
 .TweakWarn {
     font-size: var(--fs-caption);
+    font-weight: 500;
+    letter-spacing: 0.1px;
     color: var(--Warn);
     margin-top: 4px;
 }
@@ -726,7 +732,7 @@ textarea {
 
 .TweakSelect.TweakSelectDisabled,
 .TweakChip.TweakSelectDisabled {
-    opacity: 0.5;
+    opacity: 0.66;
     pointer-events: none;
 }
 
@@ -877,21 +883,34 @@ textarea {
 }
 
 [data-theme="MiuiX"] {
-    --bg: #F7F7F7;
-    --on-surf: #1A1A1A;
-    --on-surf-var: #757575;
-    --surf-lo: #F7F7F7;
+    --bg: #F2F3F5;
+    --on-surf: #101114;
+    --on-surf-var: #6B7280;
+    --surf-lo: #F2F3F5;
     --surf-c: #FFFFFF;
-    --surf-hi: #F0F0F0;
-    --surf-xhi: #E8E8E8;
+    --surf-hi: #F1F2F5;
+    --surf-xhi: #E7E9ED;
+
     --pri: #3482FF;
+    --pri-ink: #1F6FEB;
     --on-pri: #FFFFFF;
     --pri-mix-40: color-mix(in srgb, var(--pri) 40%, transparent);
     --pri-mix-14: color-mix(in srgb, var(--pri) 14%, transparent);
     --sec-c: var(--pri-mix-14);
-    --on-sec-c: var(--pri);
-    --line: #E0E0E0;
-    --out-var: #EBEBEB;
+    --on-sec-c: var(--pri-ink);
+
+    --line: #DCE0E6;
+    --out-var: #E7E9EE;
+    --divider: #E7EAEF;
+
+    --Good: #0B7A4B;
+    --Warn: #9A5B00;
+    --Bad: #C0392B;
+
+    --mx-card: 20px;
+    --mx-ctl: 12px;
+    --mx-shadow: 0 1px 2px rgb(16 24 40 / 0.04), 0 14px 32px -24px rgb(16 24 40 / 0.35);
+    --mx-shadow-pop: 0 18px 44px -20px rgb(16 24 40 / 0.40), 0 2px 8px rgb(16 24 40 / 0.05);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -903,91 +922,448 @@ textarea {
         --surf-c: #1C1C1E;
         --surf-hi: #2C2C2E;
         --surf-xhi: #3A3A3C;
-        --pri: #2775F5;
-        --line: #2C2C2E;
+        --pri-ink: #6EA8FF;
+        --pri-mix-14: color-mix(in srgb, var(--pri) 22%, transparent);
+        --line: #3A3A3C;
         --out-var: #2C2C2E;
+        --divider: #26262A;
+        --Good: #6EF2A8;
+        --Warn: #FFD166;
+        --Bad: #FF8F8A;
+        --mx-shadow: 0 1px 2px rgb(0 0 0 / 0.5);
+        --mx-shadow-pop: 0 20px 44px -18px rgb(0 0 0 / 0.8);
     }
 }
 
-[data-theme="MiuiX"] .Pages {
-    padding-inline: 16px;
+[data-theme="MiuiX"] .Page {
+    padding: calc(var(--topbar-h) + 12px) 16px calc(var(--botnav-h) + 18px);
+    gap: 12px;
 }
 
-[data-theme="MiuiX"] .Card {
-    border-radius: 20px;
-    padding: 16px;
-    border: 1px solid var(--out-var);
-    background: var(--surf-c);
-    transition: background-color 0.2s ease;
+[data-theme="MiuiX"] .Header {
+    padding: calc(20px + var(--safe-top)) 20px 15px;
+    background: color-mix(in srgb, var(--bg) 76%, transparent);
+    border-bottom: 0;
+    box-shadow: none;
+    backdrop-filter: saturate(180%) blur(20px);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
+    -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 10px), transparent);
+    mask-image: linear-gradient(to bottom, #000 calc(100% - 10px), transparent);
 }
 
-[data-theme="MiuiX"] .Tweak {
-    padding: 12px 0;
+[data-theme="MiuiX"] .HeaderTitle {
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.7px;
+    line-height: 1.12;
 }
 
-[data-theme="MiuiX"] .TweakIcon {
-    border-radius: 10px;
+[data-theme="MiuiX"] .HeaderDescription {
+    font-size: 12.5px;
+    line-height: 1.4;
+    color: var(--on-surf-var);
+    margin-top: 3px;
+    letter-spacing: 0.1px;
 }
 
-[data-theme="MiuiX"] .TweakSelectField,
-[data-theme="MiuiX"] .TweakSelectMenu {
-    background: color-mix(in srgb, var(--pri) 14%, var(--surf-c));
+[data-theme="MiuiX"] .BannerWrap {
+    border: 0;
+    border-radius: var(--mx-card);
+    box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.07);
 }
 
-[data-theme="MiuiX"] .TweakSelectField {
-    border-radius: 14px;
-}
-
-[data-theme="MiuiX"] .TweakSelectMenu {
-    border-radius: 16px;
-}
-
-[data-theme="MiuiX"] .TweakSelectItem {
-    border-radius: 10px;
-}
-
-[data-theme="MiuiX"] .TweakChip {
-    border-radius: 999px;
-    border-color: transparent;
-    background: var(--pri-mix-14);
-    color: var(--pri);
-}
-
-[data-theme="MiuiX"] .chip {
-    border-radius: 999px;
+[data-theme="MiuiX"] .BannerWrap::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background: linear-gradient(to top, rgb(0 0 0 / 0.30), rgb(0 0 0 / 0) 46%);
 }
 
 [data-theme="MiuiX"] .ProcessOverlay {
-    border-radius: 14px;
+    z-index: 2;
+    bottom: 12px;
+    left: 12px;
+    padding: 5px 10px;
+    gap: 6px;
+    border: 0;
+    border-radius: 10px;
+    background: rgb(0 0 0 / 0.34);
     box-shadow: none;
-    border-color: transparent;
+    backdrop-filter: blur(14px) saturate(140%);
+    -webkit-backdrop-filter: blur(14px) saturate(140%);
 }
 
-[data-theme="MiuiX"] .Snack {
-    border-radius: 16px;
+[data-theme="MiuiX"] .ProcessLabel {
+    font-size: 10px;
+    letter-spacing: 0.9px;
+    color: rgb(255 255 255 / 0.60);
+}
+
+[data-theme="MiuiX"] .ProcessValue {
+    font-size: 11px;
+    color: #FFFFFF;
+    font-variant-numeric: tabular-nums;
+}
+
+[data-theme="MiuiX"] .Card {
+    padding: 16px;
+    border: 0;
+    border-radius: var(--mx-card);
+    background: var(--surf-c);
+    box-shadow: var(--mx-shadow);
+}
+
+[data-theme="MiuiX"] .CardLabel {
+    gap: 7px;
+    margin-bottom: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: -0.1px;
+}
+
+[data-theme="MiuiX"] .CardLabel svg {
+    width: 16px;
+    height: 16px;
+    fill: var(--pri-ink);
+}
+
+[data-theme="MiuiX"] .IndexRow {
+    padding: 11px 0;
+    gap: 12px;
+    border-bottom-color: var(--divider);
+}
+
+[data-theme="MiuiX"] .IndexRowlabel {
+    font-size: 13px;
+    color: var(--on-surf-var);
+}
+
+[data-theme="MiuiX"] .IndexRowValue {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: -0.1px;
+    font-variant-numeric: tabular-nums;
+}
+
+[data-theme="MiuiX"] #PageTweaks {
+    gap: 0;
+}
+
+[data-theme="MiuiX"] #PageSettings {
+    gap: 0;
+}
+
+[data-theme="MiuiX"] .TweakCategory {
+    padding: 18px 4px 7px;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.1px;
+    text-transform: none;
+    color: var(--on-surf-var);
+}
+
+[data-theme="MiuiX"] #PageSettings > .Card,
+[data-theme="MiuiX"] #PageTweaks > .Card {
+    position: relative;
+    padding: 0 16px;
+    border: 0;
+    border-radius: 0;
+    background: var(--surf-c);
     box-shadow: none;
+}
+
+[data-theme="MiuiX"] #PageSettings > .Card:first-child {
+    border-radius: var(--mx-card);
+    box-shadow: var(--mx-shadow);
+}
+
+[data-theme="MiuiX"] #PageSettings > .Card:nth-child(2) {
+    margin-top: 14px;
+    border-radius: var(--mx-card) var(--mx-card) 0 0;
+}
+
+[data-theme="MiuiX"] #PageTweaks > .TweakCategory + .Card {
+    border-radius: var(--mx-card) var(--mx-card) 0 0;
+}
+
+[data-theme="MiuiX"] #PageSettings > .Card:last-child,
+[data-theme="MiuiX"] #PageTweaks > .Card:last-child,
+[data-theme="MiuiX"] #PageTweaks > .Card:has(+ .TweakCategory) {
+    border-radius: 0 0 var(--mx-card) var(--mx-card);
+}
+
+[data-theme="MiuiX"] #PageSettings > .Card:nth-child(n+3)::before,
+[data-theme="MiuiX"] #PageTweaks > .Card + .Card::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 66px;
+    right: 16px;
+    height: 1px;
+    background: var(--divider);
+    pointer-events: none;
+}
+
+[data-theme="MiuiX"] .Tweak {
+    position: relative;
+    padding: 15px 0;
+    gap: 14px;
+    border-bottom: 0;
+    align-items: center;
+}
+
+[data-theme="MiuiX"] .Card > .Tweak:first-child,
+[data-theme="MiuiX"] .Card > .Tweak:last-child {
+    padding-top: 15px;
+    padding-bottom: 15px;
+}
+
+[data-theme="MiuiX"] .Tweak:not(:last-child)::after {
+    content: "";
+    position: absolute;
+    left: 50px;
+    right: 0;
+    bottom: 0;
+    height: 1px;
+    background: var(--divider);
+    pointer-events: none;
+}
+
+[data-theme="MiuiX"] .TweakIcon {
+    width: 36px;
+    height: 36px;
+    padding: 8px;
+    border-radius: 12px;
+    background: var(--pri-mix-14);
+    fill: var(--pri-ink);
+}
+
+[data-theme="MiuiX"] .TweakName {
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: -0.1px;
+    line-height: 1.3;
+}
+
+[data-theme="MiuiX"] .TweakDescription {
+    margin-top: 3px;
+    font-size: 12.5px;
+    line-height: 1.4;
+    color: var(--on-surf-var);
+}
+
+[data-theme="MiuiX"] .TweakWarn {
+    margin-top: 5px;
+    font-size: 11px;
 }
 
 [data-theme="MiuiX"] .SwitchTrack {
-    border: 2px solid transparent;
-    background: color-mix(in srgb, var(--on-surf) 15%, var(--surf-xhi));
+    border: 0;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--on-surf) 12%, var(--surf-hi));
+}
+
+[data-theme="MiuiX"] .SwitchThumb {
+    left: 4px;
+    width: 24px;
+    height: 24px;
+    background: #FFFFFF;
+    box-shadow: 0 2px 5px rgb(16 24 40 / 0.18), 0 1px 1px rgb(16 24 40 / 0.10);
+}
+
+[data-theme="MiuiX"] .Switch input:checked ~ .SwitchTrack {
+    background-color: var(--pri);
+}
+
+[data-theme="MiuiX"] .Switch input:checked ~ .SwitchTrack .SwitchThumb {
+    transform: translateY(-50%) translateX(20px);
+    background-color: #FFFFFF;
+}
+
+[data-theme="MiuiX"] .Switch input:indeterminate ~ .SwitchTrack .SwitchThumb {
+    left: 50%;
+    width: 12px;
+    height: 2px;
+    border-radius: 1px;
+    transform: translate(-50%, -50%);
+    background-color: var(--on-surf-var);
+    box-shadow: none;
+}
+
+[data-theme="MiuiX"] .Switch:has(input:disabled) .SwitchTrack {
+    background: color-mix(in srgb, var(--on-surf) 8%, var(--surf-xhi));
+    opacity: 0.6;
+}
+
+[data-theme="MiuiX"] .TweakSelect.TweakSelectOpen {
+    z-index: 30;
+}
+
+[data-theme="MiuiX"] .Card:has(.TweakSelectOpen) {
+    z-index: 4;
+}
+
+[data-theme="MiuiX"] .TweakSelectField {
+    width: 100%;
+    padding: 11px 12px;
+    border: 0;
+    border-radius: var(--mx-ctl);
+    background: var(--surf-hi);
+    color: var(--on-surf);
+    font-size: 13px;
+    font-weight: 600;
+}
+
+[data-theme="MiuiX"] .TweakSelectField:active,
+[data-theme="MiuiX"] .TweakSelect.TweakSelectOpen .TweakSelectField {
+    background: var(--surf-xhi);
+    border-color: transparent;
+}
+
+[data-theme="MiuiX"] .TweakSelect.TweakSelectStatic .TweakSelectField:active {
+    background: var(--surf-hi);
+}
+
+[data-theme="MiuiX"] .TweakSelectChevron {
+    width: 18px;
+    height: 18px;
+    fill: var(--on-surf-var);
+}
+
+[data-theme="MiuiX"] .TweakSelectMenu {
+    padding: 6px;
+    border: 0;
+    border-radius: 16px;
+    background: var(--surf-c);
+    box-shadow: var(--mx-shadow-pop);
+}
+
+[data-theme="MiuiX"] .TweakSelectItem {
+    padding: 11px 12px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+[data-theme="MiuiX"] .TweakSelectItem.TweakSelectCurrent {
+    background: var(--pri-mix-14);
+    color: var(--pri-ink);
+    font-weight: 600;
+}
+
+[data-theme="MiuiX"] .TweakSelectItem svg {
+    fill: var(--pri-ink);
+}
+
+[data-theme="MiuiX"] .TweakChip {
+    padding: 6px 12px;
+    border: 0;
+    border-radius: 999px;
+    background: var(--surf-hi);
+    color: var(--on-surf);
+    font-size: 12.5px;
+    font-weight: 500;
+}
+
+[data-theme="MiuiX"] .TweakChip.TweakChipActive {
+    background: var(--pri);
+    color: var(--on-pri);
+    font-weight: 600;
+    box-shadow: 0 6px 14px -8px var(--pri-mix-40);
+}
+
+[data-theme="MiuiX"] .chip {
+    padding: 5px 12px 5px 8px;
+    border: 0;
+    border-radius: 999px;
+    background: var(--surf-hi);
+    color: var(--on-surf);
+    font-size: 12.5px;
+    font-weight: 500;
+}
+
+[data-theme="MiuiX"] .Snack {
+    padding: 11px 18px;
+    border: 0;
+    border-radius: 15px;
+    background: color-mix(in srgb, #1C1C1E 92%, transparent);
+    color: #FFFFFF;
+    font-size: 12.5px;
+    font-weight: 500;
+    box-shadow: 0 18px 44px -20px rgb(0 0 0 / 0.55);
+    backdrop-filter: blur(16px) saturate(160%);
+    -webkit-backdrop-filter: blur(16px) saturate(160%);
+}
+
+[data-theme="MiuiX"] .Navigation {
+    border-top: 0;
+    background: color-mix(in srgb, var(--bg) 80%, transparent);
+    box-shadow: 0 -1px 0 var(--divider);
+    backdrop-filter: saturate(180%) blur(20px);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
 }
 
 [data-theme="MiuiX"] .NavigationBar,
 [data-theme="MiuiX"] .NavigationBarActive {
-    padding: 10px 0 14px;
+    padding: 8px 0 9px;
+    gap: 3px;
 }
 
 [data-theme="MiuiX"] .NavigationBar svg,
 [data-theme="MiuiX"] .NavigationBarActive svg {
-    width: 22px;
-    height: 22px;
+    width: 24px;
+    height: 24px;
     padding: 0;
-    border-radius: 0;
+    border-radius: 8px;
     background: transparent;
+    fill: var(--on-surf-var);
+    transition: transform 0.26s var(--spring), fill 0.2s var(--ease-smooth);
 }
 
 [data-theme="MiuiX"] .NavigationBarActive svg {
-    transform: scale(1.15);
-    filter: drop-shadow(0 0 6px var(--pri-mix-40));
+    transform: translateY(-1px) scale(1.06);
+    fill: var(--pri-ink);
+}
+
+[data-theme="MiuiX"] .NavigationBarLabel {
+    font-size: 10.5px;
+    font-weight: 500;
+    letter-spacing: 0.1px;
+    color: var(--on-surf-var);
+    opacity: 1;
+}
+
+[data-theme="MiuiX"] .NavigationBarActive .NavigationBarLabel {
+    font-weight: 600;
+    color: var(--pri-ink);
+}
+
+[data-theme="MiuiX"] .NavigationBar:active svg,
+[data-theme="MiuiX"] .NavigationBarActive:active svg {
+    transform: scale(0.9);
+    transition-duration: 0.12s;
+}
+
+@media (prefers-color-scheme: dark) {
+    [data-theme="MiuiX"] .Card {
+        box-shadow: none;
+    }
+
+    [data-theme="MiuiX"] .TweakSelectMenu {
+        background: var(--surf-hi);
+    }
+
+    [data-theme="MiuiX"] .Snack {
+        background: color-mix(in srgb, #2C2C2E 94%, transparent);
+    }
+
+    [data-theme="MiuiX"] .BannerWrap::after {
+        background: linear-gradient(to top, rgb(0 0 0 / 0.50), rgb(0 0 0 / 0) 50%);
+    }
+
+    [data-theme="MiuiX"] .BannerWrap {
+        box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.05);
+    }
 }
