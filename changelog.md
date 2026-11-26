@@ -2,10 +2,65 @@
 
 ---
 
-## v1.2.6-Grega - 2026-11-11 - Latest
+## v1.2.7-Gusgam - 2026-11-20 - Latest
 
 ### ✨Added
+- Theme setting. Options: Material and MiuiX. Default is Material.
+- `theme` CLI subcommand. Reads and saves the choice in `Tweaks.json`.
+- Theme cached in `localStorage`. Applied before first paint.
+- MUI insets and colors stylesheets.
+- Light and dark color schemes. `color-scheme: light dark`.
+- MiuiX palette. Custom radii, shadows, and component styles.
+- Host-derived Material tokens. Fallback colors included.
+- Export Log button in Settings.
+- `export_log` CLI subcommand. Shares the log via Android SEND intent.
+- Export Log SVG symbol.
+- Daemon CLI subcommands. `status` and `start`.
+- `IsDaemon()` and `RecordedPID()` helpers.
+- `StartDaemon()` with `setsid`. HUP trap fallback.
+- `.start.lock` for on-demand starts.
+- OOM score adjustment for the daemon. -1000, or 0 as fallback.
+- `ApplyLeaf()` helper. Retries bare `cake`.
+- Font size and loader tokens.
 
+### 🔄️Changed
+- Module version to 1.2.7-Gusgam. Version code to 20261120.
+- `update.json` bumped. URLs now use the Release branch.
+- Log path moved to `/data/adb/VinNet/VinNet.log`.
+- Web UI icon and banner switched to Banner1.
+- Banner1 asset replaced.
+- README banner and ADB pull path updated.
+- `ProbeQDISC` probes plain qdisc names.
+- Web UI reads the PID from `sh service.sh status`.
+- Web UI checks the daemon at load. Missing daemon starts on demand.
+- PID refreshes on the Dashboard tick.
+- `LogLevel Off` disables Export Log.
+- Theme and export controls disable without the root bridge.
+- Header height is 82px.
+- Loading ring uses variables.
+- Color tokens map to host variables.
+
+### 🔧Fixed
+- Tuned `cake` specs could fail on strict kernels. Bare `cake` is used as fallback.
+- QDISC probe could reject supported disciplines. It no longer uses tuned specs.
+- Stale `ProcessID.json` could point to a dead process. PIDs are checked against `/proc`.
+- `status` clears an invalid PID file.
+- The daemon could die with its parent session. It now detaches.
+- Duplicate service instances could run at boot. Recorded PIDs block them.
+- Update URLs used the nonexistent `main` branch.
+- The log stayed outside Core after uninstall. It is now removed with Core.
+
+### 🔥Deleted
+- Log deletion line in `uninstall.sh`.
+- Direct `ProcessID.json` read in the Web UI.
+- `LoadingScreenAnimation::before` rule.
+- Static `theme-color` value `#1C1B1F`.
+
+---
+
+## v1.2.6-Grega - 2026-11-11
+
+### ✨Added
 - Fifth banner image. `VinNetBanner5.webp`.
 - `Optimize NetDev` tweak. Raises the netdev backlog and NAPI budget. Saves original values for OFF.
 - `TCP Slow Start After Idle` tweak. Writes `net.ipv4.tcp_slow_start_after_idle`.
@@ -24,7 +79,6 @@
 - Cleanup of temp files from dead service processes.
 
 ### 🔄️Changed
-
 - Module version to 1.2.6-Grega. Version code to 20261111.
 - `update.json` bumped to match.
 - Web UI icon and module banner switched to Banner5.
@@ -67,7 +121,6 @@
 - `uninstall.sh` drops exit-status aggregation. It also removes log temp files.
 
 ### 🔧Fixed
-
 - Vendor status on `fog` could never report Mounted. It now checks only the shipped WCNSS config.
 - Header text could flicker during fast page changes.
 - Select menus could open off-screen near the bottom navigation.
@@ -75,7 +128,6 @@
 - Direct Web UI log writes could conflict with service writes.
 
 ### 🔥Deleted
-
 - `LogFile` constant and direct Web UI log writes.
 - `FlushDiagnose()` helper.
 - `LogRotate` startup entry.
@@ -89,7 +141,6 @@
 ## v1.2.5-Iris - 2026-11-02
 
 ### ✨Added
-
 - `tc` binary resolution (`ResolveTC`) at service start and re-resolved in the monitor loop: prefers `command -v tc`, then probes `/sbin/tc`, `/product/bin/tc`, `/system_ext/bin/tc`, `/system/bin/tc`, `/system/xbin/tc`, `/odm/bin/tc`, and `/vendor/bin/tc`, requiring a working `tc -V`; every QDISC path now invokes the resolved binary
 - Deferred boot-time restoration: when no usable `tc` exists at boot, `RestoreTweaks` is postponed and retried from the service loop until `tc` becomes available, instead of failing silently
 - Per-queue QDISC application (`ApplyInterface`): leaf disciplines are now installed on each child qdisc handle when the interface has addressable children or an unparseable/lossy parent; `mq` roots without children are rebuilt first to re-create per-queue children; unreadable structures and unaddressable queues are logged and treated as failures; per-handle failures are logged individually
@@ -104,7 +155,6 @@
 - Preconnect hint for `avatars.githubusercontent.com` (GitHub avatar) in the Web UI head
 
 ### 🔄️Changed
-
 - QDISC options from 24 to 10: `prio`, `pfifo`, `bfifo`, `tbf`, `red`, `htb`, `netem`, `drr`, `choke`, `qfq`, `cbq`, `hfsc`, `ets`, and `mqprio` removed; `pfifo_fast`, `fq_codel`, `cake`, `fq`, `sfq`, `codel`, `pie`, `fq_pie`, `hhf`, and `sfb` remain; the service specifications, the `lo` probe list, and the Web UI option list all use the same reduced set
 - QDISC interface eligibility: `seth_lte*`, `sipa*`, `enp*`, `ens*`, `eno*`, and exact `gprs` added to the eligible list; CLAT/464XLAT (`v4-*`, `v6-*`, `clat*`, `464*`) and Wi-Fi Aware/NAN (`aware*`, `nan*`, `ccmni-lan*`, `ccmni_lan*`) prefixes are now excluded; virtual/tunnel/VPN interfaces (`bridge*`, `vxlan*`, `geneve*`, `gre*`, `gretap*`, `erspan*`, `ipsec*`, `xfrm*`, `wg*`) are excluded
 - `ApplyQDISC` now reports unsupported values and missing eligible interfaces through `ApplyFail`, tracks per-interface changes, and only reports success when at least one interface changed
@@ -127,7 +177,6 @@
 - Loading screen removal now uses a 400 ms fallback timeout in addition to `transitionend`
 
 ### 📈Improved
-
 - QDISC safety and compatibility on multi-queue and hierarchical layouts: leaf disciplines are installed under existing parents instead of replacing the root, preserving parent qdiscs and filters
 - Log integrity under concurrent service and Web UI writers through mkdir-based mutual exclusion
 - Tweak application reliability: the desired state is persisted before applying, and the apply is skipped with an explanatory log when persistence fails; verification failures surface explicit reasons instead of silent ambiguity
@@ -138,7 +187,6 @@
 - Uninstall diagnosability: a failing removal command is now reflected in the exit code
 
 ### 🔧Fixed
-
 - `Write()` returned success when persisting runtime state failed because of a missing trailing `return 1`; callers now see the failure
 - Hierarchical/multi-queue qdisc setups could be destroyed by a root `tc qdisc replace`; leaf disciplines are now applied per child handle, with an `mq` rebuild fallback and per-handle error logging
 - QDISC apply could interleave between boot restore and the Web UI (or two applies), racing `tc` invocations; applications are now serialized through `$Core/.qdisc.lock`
@@ -158,7 +206,6 @@
 - Invalid raw `&` in the `NetworkAvoidBadWi-Fi&MobileDataAlwaysON` symbol id is now escaped as `&amp;`
 
 ### 🔥Deleted
-
 - Vertical bounce (overscroll boundary resistance): `SetupVerticalBounce`, `BounceResistance`, `VerticalBouncing`, `.Page.VerticalDragging`, `.Page.Bouncing`, and the `--bounce-y` transform component
 - QDISC disciplines `prio`, `pfifo`, `bfifo`, `tbf`, `red`, `htb`, `netem`, `drr`, `choke`, `qfq`, `cbq`, `hfsc`, `ets`, and `mqprio` (service specifications, `lo` probe list, and Web UI options)
 - Bundled `wpa_supplicant.conf` and `wpa_supplicant_overlay.conf` vendor Wi-Fi configurations; only `WCNSS_qcom_cfg.ini` remains
@@ -174,7 +221,6 @@
 ## v1.2.4-Gyze - 2026-10-25
 
 ### ✨Added
-
 - Settings page with a Persistent Tweaks toggle and a new navigation destination
 - `Tweaks.json` reintroduced as the service-owned store for the `Persistent` setting and desired values of `IP Reach Disconnect`, `Wi-Fi Force Low Latency Mode`, `QDISC:all`, and per-interface `QDISC:*` entries, with `QDISC:all` replacing per-interface entries; Persistent Tweaks is off by default
 - Boot-time and check-time restoration for those reset-prone tweaks when Persistent Tweaks is enabled
@@ -188,7 +234,6 @@
 - Specific "Applied, but unable to save state" feedback when a tweak applies but its desired value cannot be persisted
 
 ### 🔄️Changed
-
 - Module version from `1.2.3-Gatom` to `1.2.4-Gyze`
 - Module version code from `20261024` to `20261025`
 - Web UI icon from `VinNetBanner3.webp` to `VinNetBanner4.webp`
@@ -203,7 +248,6 @@
 - Other internal refactoring and cleanup
 
 ### 📈Improved
-
 - Persistent Tweaks reliability by storing desired values only and restoring only the reset-prone tweaks the user opted into
 - Wi-Fi Force Low Latency reliability through mode cleanup, fallback handling, and completed-dump-aware live detection
 - QDISC coverage across cellular, PPP, WWAN, CLAT, and Ethernet interface layouts
@@ -213,14 +257,12 @@
 - Maintainability by moving tweak apply, check, and probe logic into the shared service CLI
 
 ### 🔧Fixed
-
 - Wi-Fi Force Low Latency Mode could fail when a previous mode state was still active; apply now disables the target mode before enabling it and falls back to hi-perf
 - Wi-Fi Force Low Latency live detection could select the wrong `ClientModeImpl` dump; it now requires a completed, non-quit dump
 - Unknown root displayed as literal `Unknown` and unselected QDISC as `-`; both now use `—`
 - Installer could proceed with an unreadable device codename, a missing `fog` vendor config, or failed vendor cleanup; it now aborts with a specific message
 
 ### 🔥Deleted
-
 - Web UI `TuneNet` helper
 - Inline Web UI apply and check commands for `IP Reach Disconnect`, `QDISC`, and `Wi-Fi Force Low Latency Mode`
 - QDISC `Spec` fields from Web UI options
@@ -232,7 +274,6 @@
 ## v1.2.3-Gatom - 2026-10-24
 
 ### 🔄️Changed
-
 - Module version from `1.2.2-Fless` to `1.2.3-Gatom`
 - Module version code from `20261011` to `20261024`
 - Web UI icon from `VinNetBanner1.webp` to `VinNetBanner3.webp`
@@ -244,18 +285,15 @@
 - Other internal formatting and declaration cleanup
 
 ### 📈Improved
-
 - Routine overhead through cached device identity values, conditional diagnostic flushes, and a 5-second sampling cadence
 - Web UI rendering through a leaner stylesheet and a shorter initial markup path
 - Code maintainability through removal of the unused command wrapper and consolidation of declarations and conditionals
 
 ### 🔧Fixed
-
 - Identical service and Web UI log entries could accumulate across service restarts and Web UI reloads; both writers now replace matching `Tag: Message` lines with one shared rule
 - Multi-line log messages could break the one-entry-per-line format; service messages now collapse to spaces and Web UI messages to ` | `
 
 ### 🔥Deleted
-
 - Service `LastLog` variable and its consecutive-duplicate guard
 - Web UI `LogSeen` in-memory deduplication set
 - `Command` helper and function-based tweak command support
@@ -270,7 +308,6 @@
 ## v1.2.2-Fless - 2026-10-11
 
 ### ✨Added
-
 - QDISC queue-discipline selector with 19 options, replacing the previous `fq_codel`/`pfifo_fast` toggle: `pfifo_fast`, `fq_codel`, `cake`, `fq`, `sfq`, `codel`, `pie`, `fq_pie`, `prio`, `pfifo`, `bfifo`, `tbf`, `red`, `htb`, `netem`, `drr`, `hhf`, `sfb`, and `choke`
 - QDISC interface chips for `All` and each detected interface with a recognized qdisc, using Wi-Fi, cellular, USB, Ethernet, and generic icons
 - Per-interface QDISC state tracking with a `Custom` label when selected interfaces use different disciplines
@@ -283,7 +320,6 @@
 - Device brand/model, Android version, kernel version, module version, and resolved tool paths in the diagnostic log
 
 ### 🔄️Changed
-
 - Module version from `1.2.1-JioGraze` to `1.2.2-Fless`
 - Module version code from `20260930` to `20261011`
 - QDISC status check from a global `fq_codel` count to root/parent qdisc detection for each up, whitelisted interface
@@ -310,7 +346,6 @@
 - Metadata, JSON parse, image decode, command, and link failures now produce log entries instead of being silent or toast-only
 
 ### 📈Improved
-
 - QDISC compatibility and accuracy across devices with different interface layouts and kernel qdisc support
 - Tweak status accuracy and safety on devices where a live check is unavailable
 - Log reliability and diagnostic value across the service and Web UI
@@ -321,7 +356,6 @@
 - Code maintainability through grouped initialization and removal of unused resetprop plumbing
 
 ### 🔧Fixed
-
 - QDISC could be applied to interfaces that were down or outside the intended data-interface set
 - QDISC status could appear optimized from any `fq_codel` occurrence even when no eligible interface used it
 - Unsupported tweaks could remain interactive and still send their commands
@@ -331,7 +365,6 @@
 - Repeated Web UI log entries could reappear after another message used the same tag
 
 ### 🔥Deleted
-
 - `Wi-Fi Country Code` tweak and its icon
 - `Force LTE CA` tweak and its icon
 - Separate `Mobile Data Always ON` tweak and icon
@@ -345,7 +378,6 @@
 ## v1.2.1-JioGraze - 2026-09-30
 
 ### ✨Added
-
 - Persistent VinNet Core directory at `/data/adb/VinNet`
 - Log deduplication and 128 KiB log rotation
 - Diagnostic log buffering and flushing
@@ -356,7 +388,6 @@
 - Other additions
 
 ### 🔄️Changed
-
 - Module version from `1.2.0-Leaks` to `1.2.1-JioGraze`
 - Module version code from `20260928` to `20260930`
 - Core data location from module `webroot/Core` to `/data/adb/VinNet`
@@ -384,7 +415,6 @@
 - Other internal refactoring
 
 ### 📈Improved
-
 - Runtime Core reliability by moving writable state outside the read-only module filesystem
 - Logging reliability and storage management
 - Diagnostic information handling
@@ -398,7 +428,6 @@
 - General code structure and reduction of redundant implementation
 
 ### 🔧Fixed
-
 - Runtime state failures caused by attempting to write Core data inside the module filesystem
 - Excessive growth of `VinNet.log`
 - Duplicate log entries for identical tags
@@ -409,7 +438,6 @@
 - Other minor runtime and Web UI issues
 
 ### 🔥Deleted
-
 - Runtime Core recovery logic using module remount
 - Runtime Core tmpfs fallback
 - `/data/local/tmp/VinNetCore` fallback
@@ -427,14 +455,12 @@
 ## v1.2.0-Leaks - 2026-09-28
 
 ### ✨Added
-
 - Root-aware `resetprop` execution fallback for KernelSU, APatch, and Magisk
 - Runtime recovery for missing Web UI Core data files
 - Automatic recreation of `ProcessID.json`, `Metadata.json`, `Environment.json`, and `Tweaks.json` when missing
 - Other additions
 
 ### 🔄️Changed
-
 - Module version from `1.1.9-Demond` to `1.2.0-Leaks`
 - Module version code from `20260906` to `20260928`
 - Service process locking from dedicated `service.pid` to `ProcessID.json`
@@ -452,7 +478,6 @@
 - Other internal changes
 
 ### 📈Improved
-
 - Compatibility of `resetprop`-based tweaks across KernelSU, APatch, and Magisk environments
 - Persistence and consistency of tweak state management
 - Service process locking reliability by using the existing process state file
@@ -463,7 +488,6 @@
 - General code simplicity and maintainability
 
 ### 🔧Fixed
-
 - Duplicate runtime state management between `VinNet.conf` and `Tweaks.json`
 - Dependency on `Detect.txt` for Web UI activity detection
 - Dependency on `service.pid` when `ProcessID.json` already contains the active process ID
@@ -472,7 +496,6 @@
 - Other minor runtime handling issues
 
 ### 🔥Deleted
-
 - `VinNet.conf` runtime configuration dependency
 - `Detect.txt` runtime detection file
 - `service.pid` runtime lock file
@@ -487,7 +510,6 @@
 ## v1.1.9-Demond - 2026-09-27
 
 ### ✨Added
-
 - Dynamic rendering system for Web UI links using reusable `LinkRowTemplate`
 - Centralized Web UI links configuration in `VinNet.js`
 - Additional logging for tweak state checks and tweak execution failures
@@ -496,7 +518,6 @@
 - GitHub avatar host preconnect for remote contributor images
 
 ### 🔄️Changed
-
 - Module version from `1.1.8-Igrum` to `1.1.9-Demond`
 - Module version code from `20260906` to `20260927`
 - Service initialization to wait for Android boot completion before initializing the module core
@@ -520,7 +541,6 @@
 - Other code refactoring and simplification
 
 ### 📈Improved
-
 - Web UI maintainability through centralized link configuration and reusable rendering
 - Service code maintainability through reusable logging and write-probe functions
 - Metadata parsing efficiency and consistency
@@ -534,14 +554,12 @@
 - Overall module code size and internal complexity
 
 ### 🔧Fixed
-
 - Potential shell quoting issues when writing JSON content to `VinNet.log`
 - Tweak state-check failures are now logged instead of being silently ignored
 - Tweak execution failures are now logged for diagnosis
 - Minor Web UI update and DOM-handling issues
 
 ### 🔥Deleted
-
 - `ReportCredit()` function from `customize.sh`
 - Static link markup previously embedded directly in `index.html`
 - Redundant Web UI link rendering implementation
@@ -554,7 +572,6 @@
 ## v1.1.8-Igrum - 2026-09-06
 
 ### ✨Added
-
 - Diagnostic logging for service, filesystem, binary, and network monitor errors
 - Recovery mechanism for an unwritable `webroot/Core` directory using remount, temporary filesystem, or fallback storage
 - Live state detection for Web UI tweaks
@@ -565,7 +582,6 @@
 - Feedback link to the Web UI information page
 
 ### 🔄️Changed
-
 - Module version from `1.1.7-Zecht` to `1.1.8-Igrum`
 - Module version code from `20260825` to `20260906`
 - Module description from `Enhanced Implementation of Network Optimization` to `Simple Implementation of Network Optimization`
@@ -584,7 +600,6 @@
 - Other Web UI and service refactoring
 
 ### 📈Improved
-
 - Web UI swipe and drag interaction
 - Navigation transition smoothness and page synchronization
 - Tweak status accuracy through live system-state verification
@@ -596,7 +611,6 @@
 - General Web UI, service, and installation code structure
 
 ### 🔧Fixed
-
 - Web UI tweak switches displaying outdated states when the actual system state differs from saved configuration
 - Web UI failure when `Metadata.json` is unavailable
 - Dashboard monitor failure when `Monitor.json` is unavailable
@@ -606,7 +620,6 @@
 - Other Web UI navigation and runtime reliability issues
 
 ### 🔥Deleted
-
 - Bundled `iw-arm` binary
 - Bundled `iw-arm64` binary
 - `webroot/assets/VinNet.webp`
@@ -623,7 +636,6 @@
 ## v1.1.7-Zecht - 2026-08-25
 
 ### ✨Added
-
 - `Disable Wi-Fi Scan Throttle Enabled` tweak to Web UI
 - Multi-host network monitoring using `8.8.8.8`, `1.1.1.1`, `8.8.4.4`, and `1.0.0.1`
 - Dedicated `service.pid` lock file for service process protection
@@ -631,7 +643,6 @@
 - Other additions
 
 ### 🔄️Changed
-
 - Module version from `1.1.6-Gresde` to `1.1.7-Zecht`
 - Module version code from `20260808` to `20260825`
 - Module description from `Enhanced Implementation of Network Optimization` to `Simple Implementation of Network Optimization`
@@ -650,7 +661,6 @@
 - Other changes
 
 ### 📈Improved
-
 - Network monitor reliability through multiple ping targets
 - Network monitor persistence by periodically rewriting monitor data
 - Service process locking and cleanup
@@ -661,14 +671,12 @@
 - Other improvements
 
 ### 🔧Fixed
-
 - Possible stale `Monitor.json` data when latency and jitter values do not change
 - Service lock collision caused by using `ProcessID.json` as the service lock
 - Web UI active-page synchronization after scrolling/navigation
 - Other fixes
 
 ### 🔥Deleted
-
 - Single `VinNetBanner.webp` asset
 - Local `Vinzz1234567890.webp` contributor avatar
 - Previous `ProcessID.json`-based service lock mechanism
