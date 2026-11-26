@@ -722,6 +722,31 @@ EOF
 
 ProcessID() { Write "$ProcessID" "$(printf '{"PID":%s,"Timestamp":%s}\n' "$$" "$(date +%s)")"; }
 
+IsDaemon() {
+    local C
+    [ -n "$1" ] && kill -0 "$1" 2> /dev/null || return 1
+    C=$(tr '\0' ' ' 2> /dev/null < "/proc/$1/cmdline")
+    [ -z "$C" ] || case "$C" in *service.sh*) return 0 ;; *) return 1 ;; esac
+}
+
+RecordedPID() {
+    [ -f "$ProcessID" ] || return 1
+    local Line
+    read -r Line 2> /dev/null < "$ProcessID"
+    Line="${Line#*\"PID\":}"
+    Line="${Line%%[!0-9]*}"
+    IsDaemon "$Line" || return 1
+    printf '%s\n' "$Line"
+}
+
+StartDaemon() {
+    if command -v setsid > /dev/null 2>&1; then
+        setsid sh "$0" < /dev/null > /dev/null 2>&1 &
+    else
+        ( trap '' HUP; sh "$0" ) < /dev/null > /dev/null 2>&1 &
+    fi
+}
+
 Cleanup() {
     local T P
     rm -f "$ProcessID" "$Core"/*.tmp.$$ "$Core/.Diagnose.tmp" "$LogPath".tmp.* 2> /dev/null
@@ -891,6 +916,29 @@ case "${1:-}" in
         CheckTweak "$@"
         exit
         ;;
+    status)
+        RecordedPID && exit 0
+        rm -f "$ProcessID" 2> /dev/null
+        exit 1
+        ;;
+    start)
+        RecordedPID > /dev/null && exit 0
+        W=0
+        until mkdir "$Core/.start.lock" 2> /dev/null; do
+            RecordedPID > /dev/null && exit 0
+            W=$((W + 1))
+            if [ "$W" -gt 50 ]; then rm -rf "$Core/.start.lock"; mkdir "$Core/.start.lock" 2> /dev/null; break; fi
+            sleep 0.1
+        done
+        StartDaemon
+        for I in 1 2 3 4 5 6 7 8 9 10; do
+            sleep 0.2
+            RecordedPID && { rm -rf "$Core/.start.lock"; Log Daemon "restarted on demand" Info; exit 0; }
+        done
+        rm -rf "$Core/.start.lock"
+        Log Daemon "restart failed | spawned process published no PID"
+        exit 1
+        ;;
     probe-qdisc)
         ProbeQDISC
         exit
@@ -910,6 +958,12 @@ case "${1:-}" in
 esac
 
 until [ "$(resetprop sys.boot_completed)" = "1" ]; do sleep 3; done
+
+RecordedPID > /dev/null && exit 0
+{ echo -1000 > "/proc/$$/oom_score_adj" || echo 0 > "/proc/$$/oom_score_adj"; } 2> /dev/null
+ProcessID
+trap Cleanup TERM EXIT INT
+
 sleep 3
 
 Brand=$(resetprop ro.product.brand)
@@ -919,15 +973,6 @@ Kernel=$(uname -r)
 ABI=$(resetprop ro.product.cpu.abi)
 
 Diagnose
-
-if [ -f "$ProcessID" ]; then
-    read -r Line 2> /dev/null < "$ProcessID"
-    OldPID="${Line#*\"PID\":}"
-    OldPID="${OldPID%%[!0-9]*}"
-    [ -n "$OldPID" ] && kill -0 "$OldPID" 2> /dev/null && exit 0
-fi
-ProcessID
-trap Cleanup TERM EXIT INT
 
 [ "$LogLevel" != Off ] && LogFilter
 if [ "$LogLevel" != Off ] && [ -w "${LogPath%/*}" ] && [ -f "$LogPath" ] && [ "$(wc -c 2> /dev/null < "$LogPath")" -gt "$LogBufferBytes" ]; then
