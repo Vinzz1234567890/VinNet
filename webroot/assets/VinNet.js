@@ -341,8 +341,16 @@ async function LoadEnvironment() {
 }
 
 let ProcessID = null;
+let DaemonChecked = false;
+
+async function EnsureDaemon() {
+    if (DaemonChecked) return;
+    DaemonChecked = true;
+    if (await exec(`sh ${Service} status`).catch(() => '')) return;
+    await exec(`sh ${Service} start`).catch(Err => Log('Daemon', `start | ${Err || 'failed'}`));
+}
+
 async function LoadProcessID() {
-    const Cached = await FetchJSON('ProcessID.json');
     if (!ProcessID) {
         const BannerWrap = document.querySelector('#PageDashboard .BannerWrap');
         if (!BannerWrap) return;
@@ -355,7 +363,8 @@ async function LoadProcessID() {
         }
         ProcessID = Overlay.querySelector('#ProcessID');
     }
-    ProcessID.textContent = Cached && Cached.PID != null ? Cached.PID : '—';
+    const Live = await exec(`sh ${Service} status`).catch(() => '');
+    ProcessID.textContent = Live || '—';
 }
 
 let LastMonitor = { Latency: null, Jitter: null };
@@ -397,6 +406,7 @@ async function FetchMonitor() {
 let LiveTickInterval = null;
 function LiveTick() {
     FetchMonitor().catch(Err => Log('Monitor', `tick | ${Err || 'failed'}`));
+    if (CurrentPageID === 'Dashboard') LoadProcessID().catch(Err => Log('ProcessID', `probe | ${Err || 'failed'}`));
     if (SelectDirty) {
         const ID = SelectDirty; SelectDirty = null;
         RefreshSelect(ID).catch(Err => Log(`Refresh:${ID}`, `${Err || 're-read failed'}`));
@@ -1252,7 +1262,7 @@ async function Load() {
         LoadTheme(),
         LoadEnvironment(),
         LoadMetadata(),
-        LoadProcessID(),
+        EnsureDaemon().then(LoadProcessID),
         RenderLinks(),
         RenderTweaks(),
         LoadSettings(),
