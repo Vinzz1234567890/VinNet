@@ -3,59 +3,63 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="theme-color" content="#111418">
     <meta name="color-scheme" content="light dark">
     <meta name="description" content="VinNet - Simple Implementation of Network Optimization for Android">
     <title>VinNet</title>
     <script>
         try {
-            var T = localStorage.getItem('VinNet_Theme');
-            if (T) document.documentElement.dataset.theme = T;
-        } catch (e) {}
+            var CachedTheme = localStorage.getItem('VinNet_Theme');
+            if (CachedTheme) document.documentElement.dataset.theme = CachedTheme;
+        } catch (e) { }
     </script>
     <link rel="stylesheet" href="https://mui.kernelsu.org/internal/insets.css">
     <link rel="stylesheet" href="https://mui.kernelsu.org/internal/colors.css">
-    <link rel="stylesheet" href="assets/VinNet.css">
-    <link rel="preload" href="assets/GoogleSansFlex.woff2" as="font" type="font/woff2" crossorigin>
-    <link rel="preload" href="assets/VinNetBanner1.webp" as="image" type="image/webp" fetchpriority="high">
+    <link rel="stylesheet" href="Assets/VinNet.css">
+    <link rel="preload" href="Assets/GoogleSansFlex.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="Assets/VinNetBanner1.webp" as="image" type="image/webp" fetchpriority="high">
     <link rel="preconnect" href="https://avatars.githubusercontent.com">
 </head>
 
 <body>
     <div id="LoadingScreen">
         <div class="LoadingScreenAnimation"></div>
-        <noscript><div class="LoadingScreenText">JavaScript is required…</div></noscript>
+        <noscript>
+            <div class="LoadingScreenText" data-i18n="JavaScript is required…">JavaScript is required…</div>
+        </noscript>
     </div>
 
     <div id="WebUI">
         <header class="Header">
             <div class="HeaderText">
                 <h1 class="HeaderTitle">VinNet</h1>
-                <div class="HeaderDescription">Simple Implementation of Network Optimization</div>
+                <div class="HeaderDescription" data-i18n="Simple Implementation of Network Optimization">Simple
+                    Implementation of Network Optimization</div>
             </div>
         </header>
 
         <main class="Pages">
             <div class="Page" id="PageDashboard">
                 <div class="BannerWrap">
-                    <img src="assets/VinNetBanner1.webp" alt="" class="Banner" width="508" height="152"
-                        decoding="sync" fetchpriority="high" draggable="false">
-                    <img src="assets/VinNetBanner2.webp" alt="" class="Banner" width="508" height="152"
-                        decoding="async" fetchpriority="low" draggable="false">
-                    <img src="assets/VinNetBanner3.webp" alt="" class="Banner" width="508" height="152"
-                        decoding="async" fetchpriority="low" draggable="false">
-                    <img src="assets/VinNetBanner4.webp" alt="" class="Banner" width="508" height="152"
-                        decoding="async" fetchpriority="low" draggable="false">
-                    <img src="assets/VinNetBanner5.webp" alt="" class="Banner" width="508" height="152"
-                        decoding="async" fetchpriority="low" draggable="false">
+                    <img src="Assets/VinNetBanner1.webp" alt="" class="Banner" width="508" height="152" decoding="sync"
+                        fetchpriority="high" draggable="false">
+                    <img src="Assets/VinNetBanner2.webp" alt="" class="Banner" width="508" height="152" decoding="async"
+                        fetchpriority="low" draggable="false">
+                    <img src="Assets/VinNetBanner3.webp" alt="" class="Banner" width="508" height="152" decoding="async"
+                        fetchpriority="low" draggable="false">
+                    <img src="Assets/VinNetBanner4.webp" alt="" class="Banner" width="508" height="152" decoding="async"
+                        fetchpriority="low" draggable="false">
+                    <img src="Assets/VinNetBanner5.webp" alt="" class="Banner" width="508" height="152" decoding="async"
+                        fetchpriority="low" draggable="false">
                 </div>
                 <div class="Card">
                     <div class="CardLabel">
                         <svg viewBox="0 0 24 24" aria-hidden="true">
                             <use href="#Monitor,IPReachDisconnect"></use>
                         </svg>
-                        Monitor
+                        <span data-i18n="Monitor">Monitor</span>
                     </div>
                     <div id="MonitorRows"></div>
                 </div>
@@ -64,7 +68,7 @@
                         <svg viewBox="0 0 24 24" aria-hidden="true">
                             <use href="#Environment"></use>
                         </svg>
-                        Environment
+                        <span data-i18n="Environment">Environment</span>
                     </div>
                     <div id="EnvironmentRows"></div>
                 </div>
@@ -76,23 +80,49 @@
                 <div class="Card">
                     <div class="Tweak">
                         <svg class="TweakIcon" viewBox="0 0 24 24" aria-hidden="true">
-                            <use href="#LogBuffer"></use>
+                            <use href="#Theme"></use>
                         </svg>
                         <div class="TweakBody">
-                            <div class="TweakName">Theme</div>
-                            <div class="TweakDescription">Visual style of the VinNet WebUI.</div>
+                            <div class="TweakName" data-i18n="Theme">Theme</div>
                         </div>
                         <div class="TweakSelect" id="SettingTheme" data-current="—">
-                            <button type="button" class="TweakSelectField" aria-haspopup="listbox" aria-expanded="false" aria-label="Theme">
+                            <button type="button" class="TweakSelectField" aria-haspopup="listbox" aria-expanded="false"
+                                aria-label="Theme" data-i18n-aria="Theme">
                                 <span class="TweakSelectValue">—</span>
                                 <svg class="TweakSelectChevron" viewBox="0 0 24 24" aria-hidden="true">
                                     <path d="M7 10l5 5 5-5z" />
                                 </svg>
                             </button>
                             <div class="TweakSelectMenu" hidden>
-                                <button type="button" class="TweakSelectItem" data-value="Material"><span>Material</span><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></button>
-                                <button type="button" class="TweakSelectItem" data-value="MiuiX"><span>MiuiX</span><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></button>
+                                <button type="button" class="TweakSelectItem"
+                                    data-value="Material"><span>Material</span><svg viewBox="0 0 24 24">
+                                        <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
+                                    </svg></button>
+                                <button type="button" class="TweakSelectItem" data-value="MiuiX"><span>MiuiX</span><svg
+                                        viewBox="0 0 24 24">
+                                        <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
+                                    </svg></button>
                             </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="Card">
+                    <div class="Tweak">
+                        <svg class="TweakIcon" viewBox="0 0 24 24" aria-hidden="true">
+                            <use href="#Language"></use>
+                        </svg>
+                        <div class="TweakBody">
+                            <div class="TweakName" data-i18n="Language">Language</div>
+                        </div>
+                        <div class="TweakSelect" id="SettingLanguage" data-current="—">
+                            <button type="button" class="TweakSelectField" aria-haspopup="listbox" aria-expanded="false"
+                                aria-label="Language" data-i18n-aria="Language">
+                                <span class="TweakSelectValue">—</span>
+                                <svg class="TweakSelectChevron" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path d="M7 10l5 5 5-5z" />
+                                </svg>
+                            </button>
+                            <div class="TweakSelectMenu" hidden></div>
                         </div>
                     </div>
                 </div>
@@ -102,11 +132,11 @@
                             <use href="#Persistent"></use>
                         </svg>
                         <div class="TweakBody">
-                            <div class="TweakName">Persistent Tweaks</div>
-                            <div class="TweakDescription">Reapply tweaks marked with a reset warning once after boot and during tweak checks.</div>
+                            <div class="TweakName" data-i18n="Persistent Tweaks">Persistent Tweaks</div>
                         </div>
                         <label class="Switch">
-                            <input type="checkbox" id="PersistentTweaks" aria-label="Persistent Tweaks">
+                            <input type="checkbox" id="PersistentTweaks" aria-label="Persistent Tweaks"
+                                data-i18n-aria="Persistent Tweaks">
                             <div class="SwitchTrack">
                                 <div class="SwitchThumb"></div>
                             </div>
@@ -120,11 +150,11 @@
                             <use href="#LogLevel"></use>
                         </svg>
                         <div class="TweakBody">
-                            <div class="TweakName">Log Level</div>
-                            <div class="TweakDescription">Control the verbosity of system and module logs recorded in VinNet.log.</div>
+                            <div class="TweakName" data-i18n="Log Level">Log Level</div>
                         </div>
                         <div class="TweakSelect" id="SettingLogLevel" data-current="—">
-                            <button type="button" class="TweakSelectField" aria-haspopup="listbox" aria-expanded="false" aria-label="Log Level">
+                            <button type="button" class="TweakSelectField" aria-haspopup="listbox" aria-expanded="false"
+                                aria-label="Log Level" data-i18n-aria="Log Level">
                                 <span class="TweakSelectValue">—</span>
                                 <svg class="TweakSelectChevron" viewBox="0 0 24 24" aria-hidden="true">
                                     <path d="M7 10l5 5 5-5z" />
@@ -133,19 +163,27 @@
                             <div class="TweakSelectMenu" hidden>
                                 <button type="button" class="TweakSelectItem" data-value="Off">
                                     <span>Off</span>
-                                    <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+                                    <svg viewBox="0 0 24 24">
+                                        <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
+                                    </svg>
                                 </button>
                                 <button type="button" class="TweakSelectItem" data-value="Error">
                                     <span>Error</span>
-                                    <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+                                    <svg viewBox="0 0 24 24">
+                                        <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
+                                    </svg>
                                 </button>
                                 <button type="button" class="TweakSelectItem" data-value="Info">
                                     <span>Info</span>
-                                    <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+                                    <svg viewBox="0 0 24 24">
+                                        <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
+                                    </svg>
                                 </button>
                                 <button type="button" class="TweakSelectItem" data-value="Debug">
                                     <span>Debug</span>
-                                    <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+                                    <svg viewBox="0 0 24 24">
+                                        <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
+                                    </svg>
                                 </button>
                             </div>
                         </div>
@@ -157,22 +195,37 @@
                             <use href="#LogBuffer"></use>
                         </svg>
                         <div class="TweakBody">
-                            <div class="TweakName">Log Buffer</div>
-                            <div class="TweakDescription">Maximum size of VinNet.log before the oldest entries are trimmed.</div>
+                            <div class="TweakName" data-i18n="Log Buffer">Log Buffer</div>
                         </div>
                         <div class="TweakSelect" id="SettingLogBuffer" data-current="—">
-                            <button type="button" class="TweakSelectField" aria-haspopup="listbox" aria-expanded="false" aria-label="Log Buffer">
+                            <button type="button" class="TweakSelectField" aria-haspopup="listbox" aria-expanded="false"
+                                aria-label="Log Buffer" data-i18n-aria="Log Buffer">
                                 <span class="TweakSelectValue">—</span>
                                 <svg class="TweakSelectChevron" viewBox="0 0 24 24" aria-hidden="true">
                                     <path d="M7 10l5 5 5-5z" />
                                 </svg>
                             </button>
                             <div class="TweakSelectMenu" hidden>
-                                <button type="button" class="TweakSelectItem" data-value="2k"><span>2k</span><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></button>
-                                <button type="button" class="TweakSelectItem" data-value="8k"><span>8k</span><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></button>
-                                <button type="button" class="TweakSelectItem" data-value="32k"><span>32k</span><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></button>
-                                <button type="button" class="TweakSelectItem" data-value="128k"><span>128k</span><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></button>
-                                <button type="button" class="TweakSelectItem" data-value="512k"><span>512k</span><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></button>
+                                <button type="button" class="TweakSelectItem" data-value="2k"><span>2k</span><svg
+                                        viewBox="0 0 24 24">
+                                        <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
+                                    </svg></button>
+                                <button type="button" class="TweakSelectItem" data-value="8k"><span>8k</span><svg
+                                        viewBox="0 0 24 24">
+                                        <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
+                                    </svg></button>
+                                <button type="button" class="TweakSelectItem" data-value="32k"><span>32k</span><svg
+                                        viewBox="0 0 24 24">
+                                        <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
+                                    </svg></button>
+                                <button type="button" class="TweakSelectItem" data-value="128k"><span>128k</span><svg
+                                        viewBox="0 0 24 24">
+                                        <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
+                                    </svg></button>
+                                <button type="button" class="TweakSelectItem" data-value="512k"><span>512k</span><svg
+                                        viewBox="0 0 24 24">
+                                        <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
+                                    </svg></button>
                             </div>
                         </div>
                     </div>
@@ -183,10 +236,10 @@
                             <use href="#ExportLog"></use>
                         </svg>
                         <div class="TweakBody">
-                            <div class="TweakName">Export Log</div>
-                            <div class="TweakDescription">Share VinNet.log to other applications.</div>
+                            <div class="TweakName" data-i18n="Export Log">Export Log</div>
                         </div>
-                        <button type="button" class="TweakChip" id="BtnExportLog" aria-label="Export Log">
+                        <button type="button" class="TweakChip" id="BtnExportLog" aria-label="Export Log"
+                            data-i18n-aria="Export Log">
                             <span>—</span>
                         </button>
                     </div>
@@ -199,7 +252,7 @@
                         <svg viewBox="0 0 24 24" aria-hidden="true">
                             <use href="#Metadata" />
                         </svg>
-                        Metadata
+                        <span data-i18n="Metadata">Metadata</span>
                     </div>
                     <div id="MetadataRows"></div>
                 </div>
@@ -208,7 +261,7 @@
                         <svg viewBox="0 0 24 24" aria-hidden="true">
                             <use href="#Links" />
                         </svg>
-                        Links
+                        <span data-i18n="Links">Links</span>
                     </div>
                     <div id="LinkRows"></div>
                 </div>
@@ -217,14 +270,15 @@
                         <svg viewBox="0 0 24 24" aria-hidden="true">
                             <use href="#Contributors" />
                         </svg>
-                        Contributors
+                        <span data-i18n="Contributors">Contributors</span>
                     </div>
                     <div class="IndexRow">
-                        <span class="IndexRowlabel">Developer</span>
+                        <span class="IndexRowlabel" data-i18n="Developer">Developer</span>
                         <a class="chip" href="https://github.com/Vinzz1234567890">
                             <img src="https://avatars.githubusercontent.com/Vinzz1234567890?v=4&s=72"
                                 class="chip-avatar" alt="Vinzz Avatar" width="18" height="18" loading="lazy"
-                                decoding="async" fetchpriority="low" onerror="this.style.visibility='hidden'" draggable="false">
+                                decoding="async" fetchpriority="low" onerror="this.style.visibility='hidden'"
+                                draggable="false">
                             Vinzz
                         </a>
                     </div>
@@ -239,7 +293,7 @@
                     data-fill="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z">
                     <path d="" />
                 </svg>
-                <span class="NavigationBarLabel">Dashboard</span>
+                <span class="NavigationBarLabel" data-i18n="Dashboard">Dashboard</span>
             </div>
             <div class="NavigationBar" data-page="Tweaks" role="button" tabindex="0">
                 <svg viewBox="0 0 24 24" aria-hidden="true"
@@ -247,7 +301,7 @@
                     data-fill="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z">
                     <path d="" />
                 </svg>
-                <span class="NavigationBarLabel">Tweaks</span>
+                <span class="NavigationBarLabel" data-i18n="Tweaks">Tweaks</span>
             </div>
             <div class="NavigationBar" data-page="Settings" role="button" tabindex="0">
                 <svg viewBox="0 0 24 24" aria-hidden="true"
@@ -255,7 +309,7 @@
                     data-fill="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.488.488 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z">
                     <path d="" />
                 </svg>
-                <span class="NavigationBarLabel">Settings</span>
+                <span class="NavigationBarLabel" data-i18n="Settings">Settings</span>
             </div>
             <div class="NavigationBar" data-page="Info" role="button" tabindex="0">
                 <svg viewBox="0 0 24 24" aria-hidden="true"
@@ -263,7 +317,7 @@
                     data-fill="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z">
                     <path d="" />
                 </svg>
-                <span class="NavigationBarLabel">Info</span>
+                <span class="NavigationBarLabel" data-i18n="Info">Info</span>
             </div>
         </nav>
 
@@ -314,12 +368,21 @@
             <path
                 d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z" />
         </symbol>
+        <symbol id="Theme" viewBox="0 0 24 24">
+            <path
+                d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.01-.23-.26-.38-.61-.38-.99 0-.83.67-1.5 1.5-1.5H16c2.76 0 5-2.24 5-5 0-4.42-4.03-8-9-8zm-5.5 9c-.83 0-1.5-.67-1.5-1.5S5.67 9 6.5 9 8 9.67 8 10.5 7.33 12 6.5 12zm3-4C8.67 8 8 7.33 8 6.5S8.67 5 9.5 5s1.5.67 1.5 1.5S10.33 8 9.5 8zm5 0c-.83 0-1.5-.67-1.5-1.5S13.67 5 14.5 5s1.5.67 1.5 1.5S15.33 8 14.5 8zm3 4c-.83 0-1.5-.67-1.5-1.5S16.67 9 17.5 9s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z" />
+        </symbol>
         <symbol id="LogBuffer" viewBox="0 0 24 24">
-            <path d="M11.99 18.54l-7.37-5.73L3 14.07l9 7 9-7-1.63-1.27-7.38 5.74zM12 16l7.36-5.73L21 9l-9-7-9 7 1.63 1.27L12 16z" />
+            <path
+                d="M11.99 18.54l-7.37-5.73L3 14.07l9 7 9-7-1.63-1.27-7.38 5.74zM12 16l7.36-5.73L21 9l-9-7-9 7 1.63 1.27L12 16z" />
         </symbol>
         <symbol id="ExportLog" viewBox="0 0 24 24">
             <path
                 d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92c0-1.61-1.31-2.92-2.92-2.92z" />
+        </symbol>
+        <symbol id="Language" viewBox="0 0 24 24">
+            <path
+                d="M12.87 15.07l-2.54-2.51.03-.03c1.74-1.94 2.98-4.17 3.71-6.53H17V4h-7V2H8v2H1v1.99h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z" />
         </symbol>
         <symbol id="Metadata" viewBox="0 0 24 24">
             <path
@@ -404,7 +467,7 @@
             if (W) { W.className += ' Ready'; }
         }, 8000);
     </script>
-    <script src="assets/VinNet.js"></script>
+    <script src="Assets/VinNet.js"></script>
 </body>
 
 </html>
