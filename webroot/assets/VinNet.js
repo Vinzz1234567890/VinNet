@@ -83,7 +83,7 @@ function Toast(Message) {
 function OpenLink(URL) {
     exec(`am start -a android.intent.action.VIEW -d "${URL}"`).catch(Err => {
         Log('Link', `${URL} | ${Err || 'failed'}`);
-        Toast('Unable to open link');
+        Toast(T('Unable to open link'));
     });
 }
 
@@ -95,6 +95,68 @@ function GetElement(ID) {
 
 const LatencyColor = v => v <= 30 ? 'var(--Good)' : v <= 50 ? 'var(--Warn)' : 'var(--Bad)';
 const JitterColor = v => v === 0 ? 'var(--Good)' : v <= 10 ? 'var(--Warn)' : 'var(--Bad)';
+
+const Languages = {
+    English: { Label: 'English', File: null, Html: 'en', Codes: ['en'] },
+    Indonesian: { Label: 'Indonesian', File: 'Languages/Indonesian.js', Html: 'id', Codes: ['id', 'in'] },
+};
+const LanguageNames = Object.keys(Languages);
+const LanguageLabel = Name => (Languages[Name] && Languages[Name].Label) || Name;
+const Strings = window.VinNetStrings || (window.VinNetStrings = {});
+const StringsLoading = new Map();
+
+function LoadStrings(Name) {
+    const Entry = Languages[Name];
+    if (!Entry) return Promise.resolve(false);
+    if (!Entry.File || Strings[Name]) return Promise.resolve(true);
+    if (StringsLoading.has(Name)) return StringsLoading.get(Name);
+    const Loading = new Promise(Resolve => {
+        const Script = document.createElement('script');
+        Script.src = Entry.File;
+        Script.onload = () => Resolve(Boolean(Strings[Name]));
+        Script.onerror = () => { Log('Language', `${Entry.File} | load failed`); Resolve(false); };
+        document.head.appendChild(Script);
+    });
+    StringsLoading.set(Name, Loading);
+    return Loading;
+}
+
+let Language = 'English';
+
+const T = Key => (Strings[Language] && Strings[Language][Key]) || Key;
+
+function MatchLanguage(Tag) {
+    const Base = String(Tag || '').toLowerCase().split(/[-_]/)[0];
+    return LanguageNames.find(Name => Languages[Name].Codes.includes(Base)) || 'English';
+}
+
+function DetectLanguage() {
+    const Tags = [];
+    try { if (Array.isArray(navigator.languages)) Tags.push(...navigator.languages); } catch (e) { }
+    if (navigator.language) Tags.push(navigator.language);
+    return Tags.length ? MatchLanguage(Tags[0]) : 'English';
+}
+
+function ReadCachedLanguage() {
+    try {
+        const Cached = localStorage.getItem('VinNet_Language');
+        if (Cached === 'Indonesia') return 'Indonesian';
+        if (LanguageNames.includes(Cached)) return Cached;
+    } catch (e) { }
+    return null;
+}
+
+function SetLanguage(Name) {
+    Language = LanguageNames.includes(Name) ? Name : 'English';
+    document.documentElement.lang = Languages[Language].Html;
+}
+
+function ApplyStaticText() {
+    for (const Element of document.querySelectorAll('[data-i18n]')) Element.textContent = T(Element.dataset.i18n);
+    for (const Element of document.querySelectorAll('[data-i18n-aria]')) Element.setAttribute('aria-label', T(Element.dataset.i18nAria));
+}
+
+SetLanguage(ReadCachedLanguage() || DetectLanguage());
 
 async function ExecFields(Entries) {
     const Results = await Promise.all(Entries.map(async ([ID, , CMD]) => {
@@ -157,15 +219,19 @@ function UpdateHeader(Meta) {
     if (!HeaderTitle || !HeaderDescription) return;
     const HeaderText = HeaderTitle.parentElement;
     if (!HeaderText) {
-        HeaderTitle.textContent = Meta.Title;
-        HeaderDescription.textContent = Meta.Description;
+        HeaderTitle.dataset.i18n = Meta.Title;
+        HeaderDescription.dataset.i18n = Meta.Description;
+        HeaderTitle.textContent = T(Meta.Title);
+        HeaderDescription.textContent = T(Meta.Description);
         return;
     }
     HeaderText.style.opacity = '0';
     clearTimeout(HeaderTimer);
     HeaderTimer = setTimeout(() => {
-        HeaderTitle.textContent = Meta.Title;
-        HeaderDescription.textContent = Meta.Description;
+        HeaderTitle.dataset.i18n = Meta.Title;
+        HeaderDescription.dataset.i18n = Meta.Description;
+        HeaderTitle.textContent = T(Meta.Title);
+        HeaderDescription.textContent = T(Meta.Description);
         HeaderText.style.opacity = '1';
     }, 160);
 }
@@ -423,13 +489,13 @@ function StopLiveTicker() {
 const Tweaks = {
     "IP Reach Disconnect": {
         Label: 'Disable IP Reach Disconnect', Icon: 'Monitor,IPReachDisconnect', Category: 'Gaming',
-        Description: 'Preventing Wi-Fi from suddenly disconnecting when network is unstable.',
+        Description: 'Stops Wi-Fi from dropping out when the network is unstable.',
         CheckCommand: `sh ${Service} check 'IP Reach Disconnect'`, Expect: 'false', ONLabel: 'Disabled', OFFLabel: 'Enabled',
         Warn: 'Reset after reboot',
     },
     "QDISC": {
         Label: 'Optimize QDISC', Icon: 'QDISC', Category: 'Gaming',
-        Description: 'Split data traffic into multiple paths and prioritize small data packets so they aren\'t held up by large data packets.',
+        Description: 'Splits traffic across several paths and prioritizes small packets so large transfers do not hold them back.',
         Type: 'select', HasInterfaces: true,
         Options: {
             pfifo_fast: { Label: 'pfifo_fast' },
@@ -448,14 +514,14 @@ const Tweaks = {
     },
     "Wi-Fi Force Low Latency Mode": {
         Label: 'Enable Wi-Fi Force Low Latency Mode', Icon: 'Wi-FiForceLowLatencyMode', Category: 'Gaming',
-        Description: 'Force Android to enable built-in low-latency mode at system level, falling back to hi-perf mode on devices that lack it.',
+        Description: 'Enables Android built-in low-latency Wi-Fi mode, falling back to hi-perf mode when unsupported.',
         CheckCommand: `sh ${Service} check 'Wi-Fi Force Low Latency Mode'`,
         Expect: ['2', '3'], ONLabel: 'Enabled', OFFLabel: 'Disabled',
         Warn: 'Reset after interface changes',
     },
     "Network Avoid Bad Wi-Fi & Mobile Data Always ON": {
         Label: 'Disable Network Avoid Bad Wi-Fi & Mobile Data Always ON', Icon: 'NetworkAvoidBadWi-Fi&MobileDataAlwaysON', Category: 'Gaming',
-        Description: 'Forces system to stay connected to Wi-Fi interface even if signal quality deteriorates, and prevents background cellular data from disrupting transmission stability.',
+        Description: 'Keeps the phone on Wi-Fi even when the signal drops, and stops background mobile data from disrupting it.',
         ONCommand: 'settings put global network_avoid_bad_wifi 0 && settings put global mobile_data_always_on 0',
         OFFCommand: 'settings put global network_avoid_bad_wifi 1 && settings put global mobile_data_always_on 1',
         CheckCommand: '[ "$(settings get global network_avoid_bad_wifi)" = "0" ] && [ "$(settings get global mobile_data_always_on)" = "0" ] && echo 0 || echo 1',
@@ -463,25 +529,25 @@ const Tweaks = {
     },
     "BLE Scan Always Enabled": {
         Label: 'Disable BLE Scan Always Enabled', Icon: 'BLEScanAlwaysEnabled', Category: 'Gaming',
-        Description: 'Minimize jitter and ping spikes when gaming over 2.4 GHz Wi-Fi network.',
+        Description: 'Reduces jitter and ping spikes when gaming on a 2.4 GHz Wi-Fi network.',
         ONCommand: 'settings put global ble_scan_always_enabled 0', OFFCommand: 'settings put global ble_scan_always_enabled 1',
         CheckCommand: 'settings get global ble_scan_always_enabled', Expect: '0', ONLabel: 'Disabled', OFFLabel: 'Enabled',
     },
     "Wi-Fi Scan Throttle": {
         Label: 'Enable Wi-Fi Scan Throttle', Icon: 'Wi-FiScanThrottle', Category: 'Gaming',
-        Description: 'Limit background Wi-Fi scanning to conserve battery life and prevent jitter.',
+        Description: 'Limits background Wi-Fi scanning to save battery and keep ping stable.',
         ONCommand: 'settings put global wifi_scan_throttle_enabled 1', OFFCommand: 'settings put global wifi_scan_throttle_enabled 0',
         CheckCommand: 'settings get global wifi_scan_throttle_enabled', Expect: '1', ONLabel: 'Enabled', OFFLabel: 'Disabled',
     },
     "Optimize NetDev": {
         Label: 'Optimize NetDev', Icon: 'OptimizeNetworkDevice', Category: 'Multitasking',
-        Description: 'Raise the network device backlog and NAPI polling budget so the kernel processes more packets per cycle under heavy multitasking.',
+        Description: 'Raises the kernel packet budget so networking keeps up during heavy multitasking.',
         CheckCommand: `sh ${Service} check 'Optimize NetDev'`, Expect: '0', ONLabel: 'Optimized', OFFLabel: 'Unoptimized',
         Warn: 'Reset after reboot',
     },
     "TCP Slow Start After Idle": {
         Label: 'Disable TCP Slow Start After Idle', Icon: 'TCPSlowStartAfterIdle', Category: 'Multitasking',
-        Description: 'Prevent TCP from resetting its congestion window after an idle period, keeping throughput high for bursty workloads.',
+        Description: 'Stops TCP from resetting after idle, so speed recovers right away.',
         CheckCommand: `sh ${Service} check 'TCP Slow Start After Idle'`, Expect: '0', ONLabel: 'Disabled', OFFLabel: 'Enabled',
         Warn: 'Reset after reboot',
     }
@@ -533,7 +599,7 @@ function UpdateSelectDisplay(Select, Tweak, Value) {
     Select.dataset.current = Value;
     const Choices = SelectChoices.get(Select.dataset.tweakId) || [];
     Select.classList.toggle('TweakSelectStatic', Choices.filter(Key => Key !== Value).length === 0);
-    const Label = Value === 'custom' ? 'Custom' : (Tweak.Options[Value] ? Tweak.Options[Value].Label : Value);
+    const Label = Value === 'custom' ? T('Custom') : (Tweak.Options[Value] ? Tweak.Options[Value].Label : Value);
     Select.querySelector('.TweakSelectValue').textContent = Label;
     for (const Item of Select.querySelectorAll('.TweakSelectItem')) {
         Item.classList.toggle('TweakSelectCurrent', Item.dataset.value === Value);
@@ -619,7 +685,8 @@ function RefreshWarnings() {
     for (const Warn of document.querySelectorAll('.TweakWarn')) {
         const Text = WarnFor(Warn.dataset.tweak, Warn.classList.contains('TweakUnsupported'));
         Warn.hidden = !Text;
-        Warn.textContent = Text;
+        Warn.dataset.i18n = Text;
+        Warn.textContent = T(Text);
     }
 }
 
@@ -675,21 +742,26 @@ function RenderTweakCards(State) {
         if (Tweak.Category && Tweak.Category !== LastCategory) {
             const Header = document.createElement('div');
             Header.className = 'TweakCategory';
-            Header.textContent = Tweak.Category;
+            Header.dataset.i18n = Tweak.Category;
+            Header.textContent = T(Tweak.Category);
             Container.appendChild(Header);
             LastCategory = Tweak.Category;
         }
         const Card = Template.content.cloneNode(true);
         Card.querySelector('.TweakIcon use').setAttribute('href', '#' + Tweak.Icon);
-        Card.querySelector('.TweakName').textContent = Tweak.Label || ID;
-        Card.querySelector('.TweakDescription').textContent = Tweak.Description;
+        const Name = Card.querySelector('.TweakName'), Description = Card.querySelector('.TweakDescription');
+        Name.dataset.i18n = Tweak.Label || ID;
+        Name.textContent = T(Tweak.Label || ID);
+        Description.dataset.i18n = Tweak.Description;
+        Description.textContent = T(Tweak.Description);
         const WarnText = WarnFor(ID, Unsupported.has(ID));
         if (WarnText || Tweak.Warn) {
             const Warn = document.createElement('div');
             Warn.className = Unsupported.has(ID) ? 'TweakWarn TweakUnsupported' : 'TweakWarn';
             Warn.dataset.tweak = ID;
             Warn.hidden = !WarnText;
-            Warn.textContent = WarnText;
+            Warn.dataset.i18n = WarnText;
+            Warn.textContent = T(WarnText);
             Card.querySelector('.TweakBody').appendChild(Warn);
         }
         const Input = Card.querySelector('Input');
@@ -710,7 +782,7 @@ function RenderTweakCards(State) {
                 if (ChipsContainer && Ifaces.length > 0) {
                     ChipsContainer.hidden = false;
                     ChipsContainer.replaceChildren();
-                    ChipsContainer.appendChild(RenderInterfaceChip('all', 'All', 'all'));
+                    ChipsContainer.appendChild(RenderInterfaceChip('all', T('All'), 'all'));
                     for (const Dev of Ifaces) {
                         const Info = ClassifyInterface(Dev);
                         ChipsContainer.appendChild(RenderInterfaceChip(Dev, Info.Label, Info.Icon));
@@ -782,14 +854,14 @@ async function ApplyTweak(ID, Payload, Target = 'all') {
             const SaveFailed = Out.split('\n').includes('SAVE_FAILED');
             if (IsSelect) SelectDirty = ID;
             if (Tweak.ONCommand) Log('Apply', `${ID} : ${Payload ? 'ON' : 'OFF'}`, 'Info');
-            const TargetLabel = Target === 'all' ? 'All' : Target;
-            Toast(SaveFailed ? 'Applied, but unable to save state' : `${Tweak.Label || ID}${IsSelect ? ` (${TargetLabel})` : ''} > ${IsSelect ? Tweak.Options[Payload].Label : (Payload ? Tweak.ONLabel : Tweak.OFFLabel)}`);
+            const TargetLabel = Target === 'all' ? T('All') : Target;
+            Toast(SaveFailed ? T('Applied, but unable to save state') : `${T(Tweak.Label || ID)}${IsSelect ? ` (${TargetLabel})` : ''} > ${IsSelect ? Tweak.Options[Payload].Label : T(Payload ? Tweak.ONLabel : Tweak.OFFLabel)}`);
         } catch (Err) {
             const Detail = IsSelect
                 ? ` value=${Payload} target=${Target}`
                 : ` state=${Payload ? 'ON' : 'OFF'}`;
             Log('TweakFail', `${ID}${Detail} | ${Err || 'unknown error'}`);
-            Toast('Unable to apply tweak');
+            Toast(T('Unable to apply tweak'));
             if (IsSelect) {
                 SelectDirty = ID;
                 if (PrevDevMap) {
@@ -846,10 +918,10 @@ async function ApplyLogLevel(Level) {
         LogLevel = Level;
         UpdateLogLevelDisplay(Level);
         SyncLogBufferState();
-        Toast(`Log Level > ${Level}`);
+        Toast(`${T('Log Level')} > ${Level}`);
     } catch (Err) {
         Log('LogLevel', `${Level} | ${Err || 'save failed'}`);
-        Toast('Unable to save setting');
+        Toast(T('Unable to save setting'));
     } finally {
         Field.disabled = false;
         Field.focus();
@@ -883,7 +955,7 @@ let Theme = 'Material';
 try {
     const Cached = localStorage.getItem('VinNet_Theme');
     if (Cached && Themes.includes(Cached)) Theme = Cached;
-} catch (e) {}
+} catch (e) { }
 
 function ApplyTheme(Name) {
     document.documentElement.dataset.theme = Name;
@@ -905,17 +977,88 @@ async function ApplyThemeSetting(Name) {
     try {
         await exec(`sh ${Service} theme ${Name}`);
         Theme = Name;
-        try { localStorage.setItem('VinNet_Theme', Name); } catch (e) {}
+        try { localStorage.setItem('VinNet_Theme', Name); } catch (e) { }
         ApplyTheme(Name);
         UpdateThemeDisplay(Name);
-        Toast(`Theme > ${Name}`);
+        Toast(`${T('Theme')} > ${Name}`);
     } catch (Err) {
         Log('Theme', `${Name} | ${Err || 'save failed'}`);
-        Toast('Unable to save setting');
+        Toast(T('Unable to save setting'));
     } finally {
         Field.disabled = false;
         Field.focus();
     }
+}
+
+function UpdateLanguageDisplay(Name) {
+    const Select = document.getElementById('SettingLanguage');
+    if (!Select) return;
+    Select.dataset.current = Name;
+    Select.querySelector('.TweakSelectValue').textContent = LanguageLabel(Name);
+    for (const Item of Select.querySelectorAll('.TweakSelectItem')) {
+        Item.classList.toggle('TweakSelectCurrent', Item.dataset.value === Name);
+    }
+    SyncSelectMenu(Select);
+}
+
+function RenderLanguageOptions() {
+    const Select = document.getElementById('SettingLanguage');
+    const Menu = Select && Select.querySelector('.TweakSelectMenu');
+    if (!Menu) return;
+    Menu.textContent = '';
+    for (const Name of LanguageNames) {
+        const Item = document.createElement('button');
+        Item.type = 'button';
+        Item.className = 'TweakSelectItem';
+        Item.dataset.value = Name;
+        Item.innerHTML = '<span></span><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>';
+        Item.querySelector('span').textContent = LanguageLabel(Name);
+        Menu.appendChild(Item);
+    }
+}
+
+function RelocalizeTweakSelects() {
+    for (const Select of document.querySelectorAll('#PageTweaks .TweakSelect')) {
+        const Tweak = Tweaks[Select.dataset.tweakId];
+        if (Tweak) UpdateSelectDisplay(Select, Tweak, Select.dataset.current);
+    }
+}
+
+async function ApplyLanguageSetting(Name) {
+    const Field = document.querySelector('#SettingLanguage .TweakSelectField');
+    Field.disabled = true;
+    try {
+        if (!await LoadStrings(Name)) throw new Error(`strings unavailable | ${Name}`);
+        await exec(`sh ${Service} language ${Name}`);
+        SetLanguage(Name);
+        try { localStorage.setItem('VinNet_Language', Name); } catch (e) { }
+        ApplyStaticText();
+        UpdateLanguageDisplay(Name);
+        UpdateHeader(Page[CurrentPageID]);
+        RefreshWarnings();
+        RelocalizeTweakSelects();
+        Toast(`${T('Language')} > ${LanguageLabel(Name)}`);
+    } catch (Err) {
+        Log('Language', `${Name} | ${Err || 'save failed'}`);
+        Toast(T('Unable to save setting'));
+    } finally {
+        Field.disabled = false;
+        Field.focus();
+    }
+}
+
+async function LoadLanguage() {
+    let Saved = null;
+    try { Saved = await exec(`sh ${Service} language`); }
+    catch (Err) { Log('Language', `read | ${Err || 'failed'}`); }
+    if (LanguageNames.includes(Saved)) SetLanguage(Saved);
+    else {
+        const Detected = DetectLanguage();
+        SetLanguage(Detected !== 'English' ? Detected : Language);
+    }
+    if (!await LoadStrings(Language)) SetLanguage('English');
+    ApplyStaticText();
+    UpdateLanguageDisplay(Language);
 }
 
 async function ApplyLogBuffer(Size) {
@@ -925,10 +1068,10 @@ async function ApplyLogBuffer(Size) {
         await exec(`sh ${Service} log_buffer ${Size}`);
         LogBuffer = Size;
         UpdateLogBufferDisplay(Size);
-        Toast(`Log Buffer > ${Size}`);
+        Toast(`${T('Log Buffer')} > ${Size}`);
     } catch (Err) {
         Log('LogBuffer', `${Size} | ${Err || 'save failed'}`);
-        Toast('Unable to save setting');
+        Toast(T('Unable to save setting'));
     } finally {
         SyncLogBufferState();
         Field.focus();
@@ -941,15 +1084,15 @@ async function ExportLog() {
     ExportingLog = true;
     try {
         if (LogLevel === 'Off') {
-            Toast('No Log to Export');
+            Toast(T('No Log to Export'));
             return;
         }
         await exec(`sh ${Service} export_log`);
     } catch (Err) {
         if (Err === 'EMPTY' || Err?.includes('EMPTY')) {
-            Toast('No Log to Export');
+            Toast(T('No Log to Export'));
         } else {
-            Toast('Failed to Export Log');
+            Toast(T('Failed to Export Log'));
             Log('ExportLog', `${Err?.message || Err || 'failed'}`);
         }
     } finally {
@@ -965,7 +1108,7 @@ async function LoadTheme() {
     try {
         const Saved = await exec(`sh ${Service} theme`);
         Theme = Themes.includes(Saved) ? Saved : 'Material';
-        try { localStorage.setItem('VinNet_Theme', Theme); } catch (e) {}
+        try { localStorage.setItem('VinNet_Theme', Theme); } catch (e) { }
     } catch (Err) {
         Theme = 'Material';
         Log('Theme', `read | ${Err || 'failed'}`);
@@ -992,6 +1135,13 @@ async function LoadSettings() {
             ThemeSelect.querySelector('.TweakSelectField').disabled = true;
             ThemeSelect.querySelector('.TweakSelectValue').textContent = '—';
         }
+        const LanguageSelect = document.getElementById('SettingLanguage');
+        if (LanguageSelect) {
+            LanguageSelect.classList.add('TweakSelectDisabled');
+            LanguageSelect.dataset.current = '—';
+            LanguageSelect.querySelector('.TweakSelectField').disabled = true;
+            LanguageSelect.querySelector('.TweakSelectValue').textContent = '—';
+        }
         if (ExportBtn) {
             ExportBtn.classList.add('TweakSelectDisabled');
             ExportBtn.disabled = true;
@@ -1006,7 +1156,7 @@ async function LoadSettings() {
             <svg viewBox="0 0 24 24" aria-hidden="true">
                 <use href="#ExportLog"></use>
             </svg>
-            <span>Export</span>
+            <span data-i18n="Export">${T('Export')}</span>
         `;
     }
     try {
@@ -1061,7 +1211,7 @@ async function LoadMetadata() {
 
 const Links = [
     { Label: 'Repository', Href: 'https://github.com/Vinzz1234567890/VinNet', Icon: 'Repository', IconClass: 'ir-icon-github', Text: 'VinNet' },
-    { Label: 'Telegram', Href: 'https://t.me/VinzzRepository', Icon: 'Telegram', IconClass: 'ir-icon-telegram', Text: 'Vinzz Repository' },
+    { Label: 'Channel', Href: 'https://t.me/VinzzRepository', Icon: 'Telegram', IconClass: 'ir-icon-telegram', Text: 'Vinzz Repository' },
     { Label: 'Feedback', Href: 'https://t.me/Vinzz1234567890', Icon: 'Telegram', IconClass: 'ir-icon-telegram', Text: 'Vinzz' },
 ];
 
@@ -1071,7 +1221,9 @@ function RenderLinks() {
     Container.replaceChildren();
     for (const Link of Links) {
         const Row = Template.content.cloneNode(true);
-        Row.querySelector('.IndexRowlabel').textContent = Link.Label;
+        const RowLabel = Row.querySelector('.IndexRowlabel');
+        RowLabel.dataset.i18n = Link.Label;
+        RowLabel.textContent = T(Link.Label);
         const Anchor = Row.querySelector('.chip');
         Anchor.href = Link.Href;
         const Icon = Anchor.querySelector('svg');
@@ -1088,7 +1240,9 @@ function RenderRows(ContainerID, Rows) {
     const Container = document.getElementById(ContainerID);
     for (const [ID, Label] of Rows) {
         const Row = IndexRowTemplate.content.cloneNode(true);
-        Row.querySelector('.IndexRowlabel').textContent = Label;
+        const RowLabel = Row.querySelector('.IndexRowlabel');
+        RowLabel.dataset.i18n = Label;
+        RowLabel.textContent = T(Label);
         Row.querySelector('.IndexRowValue').id = ID;
         Container.appendChild(Row);
     }
@@ -1123,11 +1277,11 @@ function SetupEventListeners() {
                     PersistentOn = Enabled;
                     PersistentReady = Promise.resolve();
                     RefreshWarnings();
-                    Toast(`Persistent Tweaks > ${Enabled ? 'Enabled' : 'Disabled'}`);
+                    Toast(`${T('Persistent Tweaks')} > ${T(Enabled ? 'Enabled' : 'Disabled')}`);
                 } catch (Err) {
                     Input.checked = !Enabled;
                     Log('Persistent', `${Err || 'failed'}`);
-                    Toast('Unable to save setting');
+                    Toast(T('Unable to save setting'));
                 } finally {
                     Input.disabled = false;
                 }
@@ -1197,15 +1351,19 @@ function SetupEventListeners() {
                 if (Value !== Select.dataset.current) await ApplyThemeSetting(Value);
                 return;
             }
+            if (Select.id === 'SettingLanguage') {
+                if (Value !== Select.dataset.current) await ApplyLanguageSetting(Value);
+                return;
+            }
             const Target = Select.dataset.target || 'all';
             if (Value !== Select.dataset.current) {
                 if (Value === 'cake') {
-                    Toast('Measuring uplink…');
+                    Toast(T('Measuring uplink…'));
                     try {
                         await MeasureUplink();
                     } catch (Err) {
                         Log('Uplink', `${Err || 'measure failed'}`);
-                        Toast('Uplink measurement failed');
+                        Toast(T('Uplink measurement failed'));
                     }
                 }
                 ApplyTweak(Select.dataset.tweakId, Value, Target);
@@ -1258,6 +1416,7 @@ async function Load() {
     Log('Session', navigator.userAgent, 'Info');
     setTimeout(() => { if (!Revealed) Log('Load', 'watchdog: data still pending after 8s'); Reveal(); }, 8000);
     FetchMonitor().catch(Err => Log('Monitor', `fetch | ${Err || 'failed'}`));
+    await LoadLanguage();
     const Results = await Promise.allSettled([
         LoadTheme(),
         LoadEnvironment(),
@@ -1280,6 +1439,9 @@ async function Load() {
 
 function Boot() {
     InitLayout();
+    RenderLanguageOptions();
+    ApplyStaticText();
+    UpdateLanguageDisplay(Language);
     SetupEventListeners();
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => setTimeout(Load, 100));
     else setTimeout(Load, 100);
