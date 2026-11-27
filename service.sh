@@ -35,7 +35,11 @@ LogLock() {
     local Waited=0
     while ! mkdir "$LogPath.lock" 2> /dev/null; do
         Waited=$((Waited + 1))
-        if [ "$Waited" -gt 100 ]; then rm -rf "$LogPath.lock"; mkdir "$LogPath.lock" 2> /dev/null; break; fi
+        if [ "$Waited" -gt 100 ]; then
+            rm -rf "$LogPath.lock"
+            mkdir "$LogPath.lock" 2> /dev/null
+            break
+        fi
         sleep 0.1
     done
 }
@@ -56,7 +60,10 @@ LogWrite() {
             BEGIN { N = split(ENVIRON["L"], New, "\n"); for (I = 1; I <= N; I++) Last[substr(New[I], index(New[I], "] ") + 2)] = I }
             { K = substr($0, index($0, "] ") + 2); if (!(K in Last)) print }
             END { for (I = 1; I <= N; I++) if (New[I] != "" && Last[substr(New[I], index(New[I], "] ") + 2)] == I) print New[I] }
-        ' "$Input" > "$Temp" 2> /dev/null && mv -f "$Temp" "$LogPath" 2> /dev/null || { rm -f "$Temp"; Status=1; }
+        ' "$Input" > "$Temp" 2> /dev/null && mv -f "$Temp" "$LogPath" 2> /dev/null || {
+            rm -f "$Temp"
+            Status=1
+        }
     fi
     [ "$Status" -ne 0 ] || [ ! -f "$Pending" ] || rm -f "$Pending"
     rm -rf "$LogPath.lock"
@@ -83,7 +90,7 @@ LogFilter() {
     rm -rf "$LogPath.lock"
 }
 
-ProbeWrite() { ( : > "$1/.WriteProbe" ) 2> /dev/null && rm -f "$1/.WriteProbe"; }
+ProbeWrite() { (: > "$1/.WriteProbe") 2> /dev/null && rm -f "$1/.WriteProbe"; }
 
 mkdir -p "$Core" 2> /dev/null
 
@@ -296,7 +303,7 @@ ApplyInterface() {
             else
                 Log ApplyFail "QDISC:$D : $Key | parent $Handle | ${ErrorOutput:-tc failed}"
             fi
-        done <<EOF
+        done << EOF
 $Kids
 EOF
         [ "$Changed" -eq 1 ] || return 1
@@ -320,7 +327,10 @@ ApplyLeaf() {
 
 ApplyQDISC() {
     local Key="$1" Target="${2:-all}" Spec D Seen=0 Changed=0
-    QDISCSpec "$Key" > /dev/null || { Log ApplyFail "QDISC : $Key is not a supported value"; return 1; }
+    QDISCSpec "$Key" > /dev/null || {
+        Log ApplyFail "QDISC : $Key is not a supported value"
+        return 1
+    }
     if [ "$Target" != "all" ]; then
         Spec=$(QDISCSpec "$Key" "$Target")
         ApplyLeaf "$Target" "$Key" "$Spec" || return
@@ -426,7 +436,11 @@ RunTweak() {
             W=0
             while ! mkdir "$Core/.qdisc.lock" 2> /dev/null; do
                 W=$((W + 1))
-                if [ "$W" -gt 100 ]; then rm -rf "$Core/.qdisc.lock"; mkdir "$Core/.qdisc.lock" 2> /dev/null; break; fi
+                if [ "$W" -gt 100 ]; then
+                    rm -rf "$Core/.qdisc.lock"
+                    mkdir "$Core/.qdisc.lock" 2> /dev/null
+                    break
+                fi
                 sleep 0.1
             done
             ApplyQDISC "$2" "${3:-all}"
@@ -462,7 +476,7 @@ RunTweak() {
             fi
             ;;
         "Optimize NetDev:OFF")
-            read -r B1 B2 B3 <<EOF
+            read -r B1 B2 B3 << EOF
 $(ReadTweak NetDevDefault)
 EOF
             Out=$(sysctl -w net.core.netdev_max_backlog="${B1:-1000}" net.core.netdev_budget="${B2:-300}" net.core.netdev_budget_usecs="${B3:-2000}" 2>&1)
@@ -600,7 +614,10 @@ TweakState() {
 
 CheckTweak() {
     local ID="$1" Output Live="" Desired=""
-    [ "$ID" != "QDISC" ] || { CheckQDISC; return; }
+    [ "$ID" != "QDISC" ] || {
+        CheckQDISC
+        return
+    }
     Output=$(LiveTweak "$ID") || return
     [ -n "$Output" ] || return 0
     if [ "$(ReadTweak Persistent)" = "ON" ]; then
@@ -642,7 +659,7 @@ CheckQDISC() {
                 RunTweak QDISC "$Desired" "$D" > /dev/null || Log RestoreFail "QDISC:$D : $Desired re-apply failed"
                 Changed=1
             fi
-        done <<EOF
+        done << EOF
 $Output
 EOF
         if [ "$Changed" -eq 1 ]; then
@@ -709,11 +726,11 @@ Diagnose() {
     fi
     if LogAllows Debug; then
         Lines=$(dmesg 2> /dev/null | grep -iE "f2fs|erofs|remount" | tail -5)
-        while IFS= read -r Line; do [ -z "$Line" ] || LogAdd Debug Diagnose "dmesg -- $Line"; done <<EOF
+        while IFS= read -r Line; do [ -z "$Line" ] || LogAdd Debug Diagnose "dmesg -- $Line"; done << EOF
 $Lines
 EOF
         Lines=$(dumpsys wifi 2> /dev/null | grep -E 'Wi-Fi is|Dump of ClientModeImpl|curState=|Supplicant state|mPowerSaveDisableRequests' | head -20)
-        while IFS= read -r Line; do [ -z "$Line" ] || LogAdd Debug Diagnose "wifi -- $Line"; done <<EOF
+        while IFS= read -r Line; do [ -z "$Line" ] || LogAdd Debug Diagnose "wifi -- $Line"; done << EOF
 $Lines
 EOF
     fi
@@ -743,7 +760,10 @@ StartDaemon() {
     if command -v setsid > /dev/null 2>&1; then
         setsid sh "$0" < /dev/null > /dev/null 2>&1 &
     else
-        ( trap '' HUP; sh "$0" ) < /dev/null > /dev/null 2>&1 &
+        (
+            trap '' HUP
+            sh "$0"
+        ) < /dev/null > /dev/null 2>&1 &
     fi
 }
 
@@ -864,7 +884,10 @@ case "${1:-}" in
             Error | Info | Debug)
                 SaveTweak LogLevel "$2" || exit 1
                 LogLevel="$2"
-                (LogFilter; Log Settings "Log Level : $2" Info) < /dev/null > /dev/null 2>&1 &
+                (
+                    LogFilter
+                    Log Settings "Log Level : $2" Info
+                ) < /dev/null > /dev/null 2>&1 &
                 ;;
             *) exit 1 ;;
         esac
@@ -880,7 +903,8 @@ case "${1:-}" in
         ;;
     theme)
         case "${2:-}" in
-            "") Theme=$(ReadTweak Theme)
+            "")
+                Theme=$(ReadTweak Theme)
                 printf '%s\n' "${Theme:-Material}"
                 ;;
             Material | MiuiX) SaveTweak Theme "$2" || exit 1 ;;
@@ -888,10 +912,29 @@ case "${1:-}" in
         esac
         exit 0
         ;;
+    language)
+        case "${2:-}" in
+            "")
+                Lang=$(ReadTweak Language)
+                [ "$Lang" = "Indonesia" ] && Lang=Indonesian
+                printf '%s\n' "$Lang"
+                ;;
+            English | Indonesian) SaveTweak Language "$2" || exit 1 ;;
+            Indonesia) SaveTweak Language Indonesian || exit 1 ;;
+            *) exit 1 ;;
+        esac
+        exit 0
+        ;;
     export_log)
-        [ -f "$LogPath" ] && [ -s "$LogPath" ] || { printf 'EMPTY\n' >&2; exit 2; }
+        [ -f "$LogPath" ] && [ -s "$LogPath" ] || {
+            printf 'EMPTY\n' >&2
+            exit 2
+        }
         Content=$(cat "$LogPath" 2> /dev/null)
-        [ -n "$Content" ] || { printf 'EMPTY\n' >&2; exit 2; }
+        [ -n "$Content" ] || {
+            printf 'EMPTY\n' >&2
+            exit 2
+        }
         am start --user 0 -a android.intent.action.SEND -t "text/plain" --es android.intent.extra.TEXT "$Content" > /dev/null 2>&1 || exit 1
         exit 0
         ;;
@@ -927,13 +970,21 @@ case "${1:-}" in
         until mkdir "$Core/.start.lock" 2> /dev/null; do
             RecordedPID > /dev/null && exit 0
             W=$((W + 1))
-            if [ "$W" -gt 50 ]; then rm -rf "$Core/.start.lock"; mkdir "$Core/.start.lock" 2> /dev/null; break; fi
+            if [ "$W" -gt 50 ]; then
+                rm -rf "$Core/.start.lock"
+                mkdir "$Core/.start.lock" 2> /dev/null
+                break
+            fi
             sleep 0.1
         done
         StartDaemon
         for I in 1 2 3 4 5 6 7 8 9 10; do
             sleep 0.2
-            RecordedPID && { rm -rf "$Core/.start.lock"; Log Daemon "restarted on demand" Info; exit 0; }
+            RecordedPID && {
+                rm -rf "$Core/.start.lock"
+                Log Daemon "restarted on demand" Info
+                exit 0
+            }
         done
         rm -rf "$Core/.start.lock"
         Log Daemon "restart failed | spawned process published no PID"
