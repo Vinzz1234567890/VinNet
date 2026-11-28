@@ -542,8 +542,28 @@ const Tweaks = {
     "Optimize NetDev": {
         Label: 'Optimize NetDev', Icon: 'OptimizeNetworkDevice', Category: 'Multitasking',
         Description: 'Raises the kernel packet budget so networking keeps up during heavy multitasking.',
-        CheckCommand: `sh ${Service} check 'Optimize NetDev'`, Expect: '0', ONLabel: 'Optimized', OFFLabel: 'Unoptimized',
+        Type: 'group', Children: ['NetDev Maximum Backlog', 'NetDev Budget + Microseconds'],
         Warn: 'Reset after reboot',
+    },
+    "NetDev Maximum Backlog": {
+        Label: 'Maximum Backlog', Parent: 'Optimize NetDev', Type: 'select', Plain: true,
+        Options: {
+            1000: { Label: '1000' },
+            2000: { Label: '2000' },
+            4000: { Label: '4000' },
+            8000: { Label: '8000' },
+            10000: { Label: '10000' },
+        },
+        CheckCommand: `sh ${Service} check 'NetDev Maximum Backlog'`,
+    },
+    "NetDev Budget + Microseconds": {
+        Label: 'Budget + Microseconds', Parent: 'Optimize NetDev', Type: 'select', Plain: true,
+        Options: {
+            '300+2000': { Label: '300 + 2000' },
+            '600+4000': { Label: '600 + 4000' },
+            '1200+8000': { Label: '1200 + 8000' },
+        },
+        CheckCommand: `sh ${Service} check 'NetDev Budget + Microseconds'`,
     },
     "TCP Slow Start After Idle": {
         Label: 'Disable TCP Slow Start After Idle', Icon: 'TCPSlowStartAfterIdle', Category: 'Multitasking',
@@ -654,7 +674,9 @@ function ParseSelectOutput(ID, Out) {
 
 async function RefreshSelect(ID) {
     const Tweak = Tweaks[ID];
-    const DevMap = ParseSelectOutput(ID, await exec(Tweak.CheckCommand));
+    const DevMap = Tweak.Plain
+        ? { all: (await exec(Tweak.CheckCommand)).trim() }
+        : ParseSelectOutput(ID, await exec(Tweak.CheckCommand));
     SelectDevMaps.set(ID, DevMap);
     const Element = document.getElementById('Tweak-' + ID);
     if (Element) UpdateSelectDisplay(Element, Tweak, DevMap[Element.dataset.target || 'all'] || '—');
@@ -702,7 +724,7 @@ async function CheckTweaks() {
         try {
             const Out = await exec(Cmd);
             if (!Out) { Unsupported.add(ID); Log(`Check:${ID}`, `no output | cmd=${Cmd}`); return; }
-            if (Tweak.Type === 'select') LiveState.set(ID, ParseSelectOutput(ID, Out));
+            if (Tweak.Type === 'select') LiveState.set(ID, Tweak.Plain ? { all: Out.trim() } : ParseSelectOutput(ID, Out));
             else LiveState.set(ID, [].concat(Tweak.Expect).some(E => Out.trim().split(/\s+/).includes(E)));
         } catch (Err) {
             Unsupported.add(ID);
@@ -712,6 +734,7 @@ async function CheckTweaks() {
     await Promise.all(Object.entries(Tweaks).map(async ([ID, Tweak]) => {
         if (Unsupported.has(ID)) return;
         if (Tweak.Type === 'select') {
+            if (Tweak.Plain) return;
             try {
                 const Choices = await SupportTasks.get(ID);
                 if (!Choices.length) throw new Error('no supported value');
@@ -731,6 +754,31 @@ async function CheckTweaks() {
     return { LiveState, Unsupported, SelectOptions };
 }
 
+function CreateTweakSelect(ID, Tweak, Value, Unsupported) {
+    const Select = document.createElement('div');
+    Select.className = 'TweakSelect';
+    Select.id = 'Tweak-' + ID;
+    Select.dataset.tweakId = ID;
+    Select.dataset.target = 'all';
+    Select.innerHTML = `<button type="button" class="TweakSelectField" aria-haspopup="listbox" aria-expanded="false"><span class="TweakSelectValue"></span><svg class="TweakSelectChevron" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10l5 5 5-5z"/></svg></button><div class="TweakSelectMenu" hidden></div>`;
+    const Menu = Select.querySelector('.TweakSelectMenu');
+    const Keys = Object.keys(Tweak.Options);
+    for (const Key of Keys) {
+        const Item = document.createElement('button');
+        Item.type = 'button';
+        Item.className = 'TweakSelectItem';
+        Item.dataset.value = Key;
+        Item.innerHTML = '<span></span><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>';
+        Item.querySelector('span').textContent = Tweak.Options[Key].Label;
+        Menu.appendChild(Item);
+    }
+    SelectChoices.set(ID, Keys);
+    UpdateSelectDisplay(Select, Tweak, Value);
+    Select.classList.toggle('TweakSelectDisabled', Unsupported);
+    Select.querySelector('.TweakSelectField').disabled = Unsupported;
+    return Select;
+}
+
 function RenderTweakCards(State) {
     const Container = document.getElementById('PageTweaks');
     const Template = document.getElementById('TweakCardTemplate');
@@ -739,6 +787,7 @@ function RenderTweakCards(State) {
     Container.replaceChildren();
     let LastCategory = null;
     for (const [ID, Tweak] of Object.entries(Tweaks)) {
+        if (Tweak.Parent) continue;
         if (Tweak.Category && Tweak.Category !== LastCategory) {
             const Header = document.createElement('div');
             Header.className = 'TweakCategory';
@@ -763,6 +812,38 @@ function RenderTweakCards(State) {
             Warn.dataset.i18n = WarnText;
             Warn.textContent = T(WarnText);
             Card.querySelector('.TweakBody').appendChild(Warn);
+        }
+        if (Tweak.Type === 'group') {
+            Card.querySelector('.Switch').remove();
+            Card.querySelector('.TweakSelect').remove();
+            const Group = document.createElement('div');
+            Group.className = 'TweakGroup';
+            for (const ChildID of Tweak.Children || []) {
+                const Child = Tweaks[ChildID];
+                if (!Child) continue;
+                const Row = document.createElement('div');
+                Row.className = 'TweakSub';
+                const ChildName = document.createElement('div');
+                ChildName.className = 'TweakSubName';
+                ChildName.dataset.i18n = Child.Label;
+                ChildName.textContent = T(Child.Label);
+                Row.appendChild(ChildName);
+                const DevMap = (LiveState.get(ChildID) && typeof LiveState.get(ChildID) === 'object') ? LiveState.get(ChildID) : {};
+                SelectDevMaps.set(ChildID, DevMap);
+                Row.appendChild(CreateTweakSelect(ChildID, Child, DevMap.all || '—', Unsupported.has(ChildID)));
+                if (Unsupported.has(ChildID)) {
+                    const ChildWarn = document.createElement('div');
+                    ChildWarn.className = 'TweakWarn TweakUnsupported';
+                    ChildWarn.dataset.tweak = ChildID;
+                    ChildWarn.dataset.i18n = 'Unsupported';
+                    ChildWarn.textContent = T('Unsupported');
+                    Row.appendChild(ChildWarn);
+                }
+                Group.appendChild(Row);
+            }
+            Card.querySelector('.TweakBody').appendChild(Group);
+            Container.appendChild(Card);
+            continue;
         }
         const Input = Card.querySelector('Input');
         if (Tweak.Type === 'select') {
@@ -855,7 +936,8 @@ async function ApplyTweak(ID, Payload, Target = 'all') {
             if (IsSelect) SelectDirty = ID;
             if (Tweak.ONCommand) Log('Apply', `${ID} : ${Payload ? 'ON' : 'OFF'}`, 'Info');
             const TargetLabel = Target === 'all' ? T('All') : Target;
-            Toast(SaveFailed ? T('Applied, but unable to save state') : `${T(Tweak.Label || ID)}${IsSelect ? ` (${TargetLabel})` : ''} > ${IsSelect ? Tweak.Options[Payload].Label : T(Payload ? Tweak.ONLabel : Tweak.OFFLabel)}`);
+            const Scope = IsSelect && !Tweak.Plain ? ` (${TargetLabel})` : '';
+            Toast(SaveFailed ? T('Applied, but unable to save state') : `${T(Tweak.Label || ID)}${Scope} > ${IsSelect ? Tweak.Options[Payload].Label : T(Payload ? Tweak.ONLabel : Tweak.OFFLabel)}`);
         } catch (Err) {
             const Detail = IsSelect
                 ? ` value=${Payload} target=${Target}`
