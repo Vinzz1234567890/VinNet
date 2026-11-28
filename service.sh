@@ -464,22 +464,30 @@ RunTweak() {
                 return 1
             fi
             ;;
-        "Optimize NetDev:ON")
-            if [ -z "$(ReadTweak NetDevDefault)" ]; then
-                SaveTweak NetDevDefault "$(sysctl -n net.core.netdev_max_backlog 2> /dev/null) $(sysctl -n net.core.netdev_budget 2> /dev/null) $(sysctl -n net.core.netdev_budget_usecs 2> /dev/null)"
-            fi
-            Out=$(sysctl -w net.core.netdev_max_backlog=1000 net.core.netdev_budget=900 net.core.netdev_budget_usecs=6000 2>&1)
+        "NetDev Maximum Backlog:"*)
+            case "$2" in
+                1000 | 2000 | 4000 | 8000 | 10000) ;;
+                *)
+                    Log ApplyFail "$1 : $2 | unsupported value"
+                    return 1
+                    ;;
+            esac
+            Out=$(sysctl -w net.core.netdev_max_backlog="$2" 2>&1)
             Status=$?
             if [ "$Status" -ne 0 ]; then
                 Log ApplyFail "$1 : $2 | ${Out:-sysctl failed}"
                 return 1
             fi
             ;;
-        "Optimize NetDev:OFF")
-            read -r B1 B2 B3 << EOF
-$(ReadTweak NetDevDefault)
-EOF
-            Out=$(sysctl -w net.core.netdev_max_backlog="${B1:-1000}" net.core.netdev_budget="${B2:-300}" net.core.netdev_budget_usecs="${B3:-2000}" 2>&1)
+        "NetDev Budget + Microseconds:"*)
+            case "$2" in
+                "300+2000" | "600+4000" | "1200+8000") ;;
+                *)
+                    Log ApplyFail "$1 : $2 | unsupported value"
+                    return 1
+                    ;;
+            esac
+            Out=$(sysctl -w net.core.netdev_budget="${2%%+*}" net.core.netdev_budget_usecs="${2#*+}" 2>&1)
             Status=$?
             if [ "$Status" -ne 0 ]; then
                 Log ApplyFail "$1 : $2 | ${Out:-sysctl failed}"
@@ -591,12 +599,9 @@ LiveTweak() {
         "TCP Slow Start After Idle")
             printf '%s\n' "$(sysctl -n net.ipv4.tcp_slow_start_after_idle 2> /dev/null)"
             ;;
-        "Optimize NetDev")
-            if [ "$(sysctl -n net.core.netdev_max_backlog 2> /dev/null)" = "1000" ] && [ "$(sysctl -n net.core.netdev_budget 2> /dev/null)" = "900" ] && [ "$(sysctl -n net.core.netdev_budget_usecs 2> /dev/null)" = "6000" ]; then
-                printf '0\n'
-            else
-                printf '1\n'
-            fi
+        "NetDev Maximum Backlog") sysctl -n net.core.netdev_max_backlog 2> /dev/null ;;
+        "NetDev Budget + Microseconds")
+            printf '%s+%s\n' "$(sysctl -n net.core.netdev_budget 2> /dev/null)" "$(sysctl -n net.core.netdev_budget_usecs 2> /dev/null)"
             ;;
         *) return 1 ;;
     esac
@@ -607,7 +612,7 @@ TweakState() {
         "IP Reach Disconnect") case "$2" in *false*) printf 'ON\n' ;; *) printf 'OFF\n' ;; esac ;;
         "Wi-Fi Force Low Latency Mode") case "$2" in 2 | 3) printf 'ON\n' ;; *) printf 'OFF\n' ;; esac ;;
         "TCP Slow Start After Idle") case "$2" in 0) printf 'ON\n' ;; *) printf 'OFF\n' ;; esac ;;
-        "Optimize NetDev") case "$2" in 0) printf 'ON\n' ;; *) printf 'OFF\n' ;; esac ;;
+        "NetDev Maximum Backlog" | "NetDev Budget + Microseconds") printf '%s\n' "$2" ;;
         *) return 1 ;;
     esac
 }
@@ -618,6 +623,25 @@ CheckTweak() {
         CheckQDISC
         return
     }
+    case "$ID" in
+        "NetDev Maximum Backlog" | "NetDev Budget + Microseconds")
+            Output=$(LiveTweak "$ID") || return
+            [ -n "$Output" ] || return 0
+            Desired=$(ReadTweak "$ID")
+            if [ -n "$Desired" ] && [ "$(ReadTweak Persistent)" = "ON" ] && [ "$Output" != "$Desired" ]; then
+                Log Check "$ID | live $Output, desired $Desired, re-applying" Debug
+                if RunTweak "$ID" "$Desired"; then
+                    Output=$(LiveTweak "$ID")
+                    Log Apply "$ID : $Desired | re-applied by check" Info
+                else
+                    Log RestoreFail "$ID : $Desired re-apply failed"
+                fi
+            fi
+            Log Check "$ID | live $Output" Debug
+            printf '%s\n' "$Output"
+            return
+            ;;
+    esac
     Output=$(LiveTweak "$ID") || return
     [ -n "$Output" ] || return 0
     if [ "$(ReadTweak Persistent)" = "ON" ]; then
@@ -676,7 +700,7 @@ RestoreTweaks() {
         return 0
     fi
     local Key Value Target
-    for Key in "IP Reach Disconnect" "Wi-Fi Force Low Latency Mode" "TCP Slow Start After Idle" "Optimize NetDev"; do
+    for Key in "IP Reach Disconnect" "Wi-Fi Force Low Latency Mode" "TCP Slow Start After Idle"; do
         Value=$(ReadTweak "$Key")
         case "$Value" in
             ON | OFF)
@@ -687,6 +711,11 @@ RestoreTweaks() {
                 fi
                 ;;
         esac
+    done
+
+    for Key in "NetDev Maximum Backlog" "NetDev Budget + Microseconds"; do
+        Value=$(ReadTweak "$Key")
+        [ -z "$Value" ] || RunTweak "$Key" "$Value" || Log RestoreFail "$Key : $Value | boot restore failed"
     done
 
     Value=$(ReadTweak "QDISC:all")
