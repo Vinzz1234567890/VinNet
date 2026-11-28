@@ -6,10 +6,13 @@
 }
 
 :root {
+    --ui-scale: 1;
+    font-size: calc(16px * var(--ui-scale));
+
     --safe-top: var(--window-inset-top, env(safe-area-inset-top, 0px));
     --safe-bottom: var(--window-inset-bottom, env(safe-area-inset-bottom, 0px));
-    --topbar-h: calc(82px + var(--safe-top));
-    --botnav-h: calc(68px + var(--safe-bottom));
+    --topbar-h: calc(5.125rem + var(--safe-top));
+    --botnav-h: calc(4.25rem + var(--safe-bottom));
     --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
     --ease-smooth: cubic-bezier(0.2, 1, 0.2, 1);
 
@@ -37,17 +40,17 @@
     --Bad: var(--error, #F2B8B5);
     --brand-telegram: #26A5E4;
 
-    --loader: 25px;
+    --loader: 1.5625rem;
     --loader-ring: 3px;
 
-    --fs-display: 28px;
-    --fs-heading: 17px;
-    --fs-title: 15px;
-    --fs-body: 13px;
-    --fs-caption: 11px;
+    --fs-display: 1.75rem;
+    --fs-heading: 1.0625rem;
+    --fs-title: .9375rem;
+    --fs-body: .8125rem;
+    --fs-caption: .6875rem;
 
-    --fs-category: 17px;
-    --fs-nav: 12px;
+    --fs-category: 1.0625rem;
+    --fs-nav: .75rem;
 }
 
 @media (prefers-color-scheme: light) {
@@ -87,8 +90,12 @@
 
 html,
 body {
+    width: 100%;
+    max-width: 100%;
     height: 100%;
     overflow: hidden;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
     background: var(--bg);
     color: var(--on-surf);
     font-family: 'Google Sans Flex', sans-serif;
@@ -112,8 +119,9 @@ textarea {
 #WebUI {
     display: flex;
     flex-direction: column;
+    width: 100%;
     height: 100%;
-    max-width: 540px;
+    max-width: 33.75rem;
     margin-inline: auto;
     position: relative;
     opacity: 0;
@@ -132,7 +140,7 @@ textarea {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 12px;
+    gap: .75rem;
     z-index: 9999;
     transition: opacity 0.3s;
     touch-action: none;
@@ -172,10 +180,10 @@ textarea {
     position: absolute;
     inset: 0 0 auto;
     z-index: 5;
-    padding: calc(16px + var(--safe-top)) 18px 14px;
+    padding: calc(1rem + var(--safe-top)) 1.125rem .875rem;
     background: color-mix(in srgb, var(--surf-lo) 85%, transparent);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
+    backdrop-filter: blur(1rem);
+    -webkit-backdrop-filter: blur(1rem);
     border-bottom: 1px solid color-mix(in srgb, var(--out-var) 40%, transparent);
     touch-action: none;
     contain: layout style;
@@ -198,7 +206,7 @@ textarea {
     font-weight: 400;
     color: var(--on-surf-var);
     letter-spacing: 0;
-    margin-top: 4px;
+    margin-top: .25rem;
     line-height: 1.45;
 }
 
@@ -223,10 +231,10 @@ textarea {
     overflow-y: auto;
     overscroll-behavior-y: none;
     touch-action: pan-y;
-    padding: calc(var(--topbar-h) + 16px) 14px calc(var(--botnav-h) + 12px);
+    padding: calc(var(--topbar-h) + 1rem) .875rem calc(var(--botnav-h) + .75rem);
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: .75rem;
     scrollbar-width: none;
 }
 
@@ -255,8 +263,8 @@ textarea {
     inset: auto 0 0;
     z-index: 5;
     background: color-mix(in srgb, var(--surf-lo) 85%, transparent);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
+    backdrop-filter: blur(1rem);
+    -webkit-backdrop-filter: blur(1rem);
     border-top: 1px solid color-mix(in srgb, var(--out-var) 40%, transparent);
     display: flex;
     padding-bottom: var(--safe-bottom);
@@ -270,17 +278,17 @@ textarea {
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 8px 0 10px;
-    gap: 4px;
+    padding: .5rem 0 .625rem;
+    gap: .25rem;
 }
 
 .NavigationBar svg,
 .NavigationBarActive svg {
-    width: 64px;
-    height: 32px;
-    padding: 4px 20px;
+    width: 4rem;
+    height: 2rem;
+    padding: .25rem 1.25rem;
     box-sizing: border-box;
-    border-radius: 16px;
+    border-radius: 1rem;
     fill: var(--on-surf-var);
     transition: fill 0.2s, background-color 0.25s var(--ease-smooth), transform 0.25s var(--spring);
 }
@@ -328,7 +336,7 @@ textarea {
     position: relative;
     width: 100%;
     height: 25%;
-    border-radius: 32px;
+    border-radius: 2rem;
     overflow: hidden;
     flex-shrink: 0;
     border: 1px solid var(--divider);
@@ -387,16 +395,16 @@ textarea {
 
 .ProcessOverlay {
     position: absolute;
-    bottom: 14px;
-    left: 14px;
+    bottom: .875rem;
+    left: .875rem;
     display: flex;
     align-items: baseline;
-    gap: 6px;
-    padding: 7px 12px;
+    gap: .375rem;
+    padding: .4375rem .75rem;
     background: rgb(0 0 0 / 0.45);
-    border-radius: 14px;
+    border-radius: .875rem;
     border: 1px solid rgb(255 255 255 / 0.08);
-    box-shadow: 0 4px 16px rgb(0 0 0 / 0.35);
+    box-shadow: 0 .25rem 1rem rgb(0 0 0 / 0.35);
 }
 
 .ProcessLabel,
@@ -421,8 +429,8 @@ textarea {
 .Card {
     background: var(--surf-c);
     border: 1px solid var(--divider);
-    border-radius: 26px;
-    padding: 18px;
+    border-radius: 1.625rem;
+    padding: 1.125rem;
     contain: style;
 }
 
@@ -434,13 +442,13 @@ textarea {
     line-height: 1.3;
     display: flex;
     align-items: center;
-    gap: 8px;
-    margin-bottom: 14px;
+    gap: .5rem;
+    margin-bottom: .875rem;
 }
 
 .CardLabel svg {
-    width: 17px;
-    height: 17px;
+    width: 1.0625rem;
+    height: 1.0625rem;
     fill: var(--pri);
     flex-shrink: 0;
 }
@@ -449,8 +457,8 @@ textarea {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 16px;
-    padding: 10px 0;
+    gap: 1rem;
+    padding: .625rem 0;
     border-bottom: 1px solid var(--divider);
 }
 
@@ -492,7 +500,7 @@ textarea {
     line-height: 1.25;
     color: var(--pri);
     letter-spacing: -0.2px;
-    padding: 12px 8px 2px;
+    padding: .75rem .5rem 2px;
 }
 
 .Tweak {
@@ -500,16 +508,16 @@ textarea {
     flex-wrap: wrap;
     align-items: flex-start;
     justify-content: space-between;
-    gap: 14px;
-    padding: 14px 0;
+    gap: .875rem;
+    padding: .875rem 0;
     border-bottom: 1px solid var(--divider);
 }
 
 .TweakIcon {
-    width: 38px;
-    height: 38px;
-    padding: 9px;
-    border-radius: 14px;
+    width: 2.375rem;
+    height: 2.375rem;
+    padding: .5625rem;
+    border-radius: .875rem;
     background: var(--sec-c);
     fill: var(--on-sec-c);
     flex-shrink: 0;
@@ -535,7 +543,7 @@ textarea {
 .TweakDescription {
     font-size: var(--fs-body);
     color: var(--on-surf-var);
-    margin-top: 4px;
+    margin-top: .25rem;
     line-height: 1.45;
 }
 
@@ -544,7 +552,7 @@ textarea {
     font-weight: 500;
     letter-spacing: 0.1px;
     color: var(--Warn);
-    margin-top: 4px;
+    margin-top: .25rem;
 }
 
 .TweakWarn.TweakUnsupported {
@@ -554,15 +562,15 @@ textarea {
 .TweakGroup {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: .75rem;
     width: 100%;
-    margin-top: 10px;
+    margin-top: .625rem;
 }
 
 .TweakSub {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: .375rem;
 }
 
 .TweakSubName {
@@ -579,17 +587,17 @@ textarea {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 8px;
+    gap: .5rem;
     width: 100%;
-    padding: 2px 0 4px;
+    padding: 2px 0 .25rem;
 }
 
 .TweakChip {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    padding: 6px 12px;
-    border-radius: 12px;
+    gap: .375rem;
+    padding: .375rem .75rem;
+    border-radius: .75rem;
     border: 1px solid var(--out-var);
     background: var(--surf-hi);
     color: var(--on-surf-var);
@@ -607,8 +615,8 @@ textarea {
 }
 
 .TweakChip svg {
-    width: 14px;
-    height: 14px;
+    width: .875rem;
+    height: .875rem;
     fill: currentColor;
     flex-shrink: 0;
 }
@@ -618,7 +626,7 @@ textarea {
     border-color: var(--pri);
     color: var(--on-pri);
     font-weight: 700;
-    box-shadow: 0 2px 10px var(--pri-mix-40);
+    box-shadow: 0 2px .625rem var(--pri-mix-40);
 }
 
 .TweakSelect {
@@ -630,11 +638,11 @@ textarea {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 8px;
+    gap: .5rem;
     width: 100%;
-    padding: 11px 14px;
+    padding: .6875rem .875rem;
     border: 1px solid var(--divider);
-    border-radius: 16px;
+    border-radius: 1rem;
     background: var(--surf-hi);
     color: var(--on-surf);
     font-size: var(--fs-body);
@@ -648,8 +656,8 @@ textarea {
 }
 
 .TweakSelectChevron {
-    width: 18px;
-    height: 18px;
+    width: 1.125rem;
+    height: 1.125rem;
     fill: var(--on-surf-var);
     flex-shrink: 0;
     transition: transform 0.2s var(--ease-smooth);
@@ -673,19 +681,19 @@ textarea {
 
 .TweakSelectMenu {
     position: absolute;
-    top: calc(100% + 6px);
+    top: calc(100% + .375rem);
     left: 0;
     right: 0;
     z-index: 20;
-    max-height: 260px;
+    max-height: 16.25rem;
     overflow-y: auto;
     overscroll-behavior: contain;
     scrollbar-width: none;
-    padding: 6px;
+    padding: .375rem;
     border: 1px solid var(--divider);
-    border-radius: 16px;
+    border-radius: 1rem;
     background: var(--surf-hi);
-    box-shadow: 0 6px 20px rgb(0 0 0 / 0.28);
+    box-shadow: 0 .375rem 1.25rem rgb(0 0 0 / 0.28);
     transform-origin: top;
     animation: TweakSelectIn 0.16s var(--ease-smooth);
 }
@@ -697,13 +705,13 @@ textarea {
 @keyframes TweakSelectIn {
     from {
         opacity: 0;
-        transform: scaleY(0.92) translateY(-4px);
+        transform: scaleY(0.92) translateY(-0.25rem);
     }
 }
 
 .TweakSelect.TweakSelectUp .TweakSelectMenu {
     top: auto;
-    bottom: calc(100% + 6px);
+    bottom: calc(100% + .375rem);
     transform-origin: bottom;
     animation-name: TweakSelectInUp;
 }
@@ -711,7 +719,7 @@ textarea {
 @keyframes TweakSelectInUp {
     from {
         opacity: 0;
-        transform: scaleY(0.92) translateY(4px);
+        transform: scaleY(0.92) translateY(.25rem);
     }
 }
 
@@ -719,11 +727,11 @@ textarea {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 8px;
+    gap: .5rem;
     width: 100%;
-    padding: 12px 12px;
+    padding: .75rem .75rem;
     border: 0;
-    border-radius: 10px;
+    border-radius: .625rem;
     background: transparent;
     color: var(--on-surf);
     font-size: var(--fs-body);
@@ -747,8 +755,8 @@ textarea {
 }
 
 .TweakSelectItem svg {
-    width: 18px;
-    height: 18px;
+    width: 1.125rem;
+    height: 1.125rem;
     fill: var(--pri);
     flex-shrink: 0;
     visibility: hidden;
@@ -767,14 +775,14 @@ textarea {
 #BtnExportLog {
     color: var(--on-surf);
     margin-top: 2px;
-    min-width: 52px;
+    min-width: 3.25rem;
     justify-content: center;
 }
 
 .Switch {
     position: relative;
-    width: 52px;
-    height: 32px;
+    width: 3.25rem;
+    height: 2rem;
     flex-shrink: 0;
     margin-top: 1px;
 }
@@ -789,7 +797,7 @@ textarea {
 .SwitchTrack {
     position: absolute;
     inset: 0;
-    border-radius: 16px;
+    border-radius: 1rem;
     background: var(--surf-hi);
     border: 2px solid var(--line);
     transition: background-color 0.22s, border-color 0.22s;
@@ -798,9 +806,9 @@ textarea {
 .SwitchThumb {
     position: absolute;
     top: 50%;
-    left: 6px;
-    width: 16px;
-    height: 16px;
+    left: .375rem;
+    width: 1rem;
+    height: 1rem;
     border-radius: 50%;
     background: var(--line);
     transform: translateY(-50%) translateX(0) scale(1);
@@ -826,13 +834,13 @@ textarea {
 }
 
 .Switch input:checked~.SwitchTrack .SwitchThumb {
-    transform: translateY(-50%) translateX(18px) scale(1.5);
+    transform: translateY(-50%) translateX(1.125rem) scale(1.5);
     background-color: var(--on-pri);
 }
 
 .Switch input:indeterminate~.SwitchTrack .SwitchThumb {
     left: 50%;
-    width: 12px;
+    width: .75rem;
     height: 2px;
     border-radius: 1px;
     transform: translate(-50%, -50%);
@@ -850,28 +858,28 @@ textarea {
 .chip {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    padding: 5px 14px;
+    gap: .375rem;
+    padding: .3125rem .875rem;
     background: var(--surf-hi);
     border: 1px solid var(--out-var);
     color: var(--on-surf);
-    border-radius: 20px;
+    border-radius: 1.25rem;
     font-size: var(--fs-body);
     font-weight: 600;
-    margin: 4px 4px 0 0;
+    margin: .25rem .25rem 0 0;
     text-decoration: none;
 }
 
 .chip-avatar {
-    width: 18px;
-    height: 18px;
+    width: 1.125rem;
+    height: 1.125rem;
     border-radius: 50%;
     object-fit: cover;
 }
 
 .chip-icon {
-    width: 18px;
-    height: 18px;
+    width: 1.125rem;
+    height: 1.125rem;
     border-radius: 50%;
     flex-shrink: 0;
     padding: 3px;
@@ -884,25 +892,25 @@ textarea {
 
 .Snack {
     position: fixed;
-    bottom: calc(80px + var(--safe-bottom));
+    bottom: calc(5rem + var(--safe-bottom));
     left: 50%;
-    transform: translateX(-50%) translateY(20px) scale(0.92);
+    transform: translateX(-50%) translateY(1.25rem) scale(0.92);
     background: color-mix(in srgb, var(--surf-hi) 92%, var(--pri));
     color: var(--on-surf);
     font-size: var(--fs-body);
     font-weight: 600;
-    padding: 10px 22px;
-    border-radius: 14px;
+    padding: .625rem 1.375rem;
+    border-radius: .875rem;
     border: 1px solid var(--divider);
     width: max-content;
-    max-width: calc(100vw - 32px);
+    max-width: calc(100vw - 2rem);
     white-space: normal;
     text-align: center;
     opacity: 0;
     transition: opacity 0.25s var(--ease-smooth), transform 0.32s var(--spring);
     pointer-events: none;
     z-index: 100;
-    box-shadow: 0 6px 20px rgb(0 0 0 / 0.25);
+    box-shadow: 0 .375rem 1.25rem rgb(0 0 0 / 0.25);
 }
 
 .Snack.Show {
@@ -935,10 +943,10 @@ textarea {
     --Warn: #9A5B00;
     --Bad: #C0392B;
 
-    --mx-card: 20px;
-    --mx-ctl: 12px;
-    --mx-shadow: 0 1px 2px rgb(16 24 40 / 0.04), 0 14px 32px -24px rgb(16 24 40 / 0.35);
-    --mx-shadow-pop: 0 18px 44px -20px rgb(16 24 40 / 0.40), 0 2px 8px rgb(16 24 40 / 0.05);
+    --mx-card: 1.25rem;
+    --mx-ctl: .75rem;
+    --mx-shadow: 0 1px 2px rgb(16 24 40 / 0.04), 0 .875rem 2rem -1.5rem rgb(16 24 40 / 0.35);
+    --mx-shadow-pop: 0 1.125rem 2.75rem -1.25rem rgb(16 24 40 / 0.40), 0 2px .5rem rgb(16 24 40 / 0.05);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -959,24 +967,24 @@ textarea {
         --Warn: #FFD166;
         --Bad: #FF8F8A;
         --mx-shadow: 0 1px 2px rgb(0 0 0 / 0.5);
-        --mx-shadow-pop: 0 20px 44px -18px rgb(0 0 0 / 0.8);
+        --mx-shadow-pop: 0 1.25rem 2.75rem -1.125rem rgb(0 0 0 / 0.8);
     }
 }
 
 [data-theme="MiuiX"] .Page {
-    padding: calc(var(--topbar-h) + 12px) 16px calc(var(--botnav-h) + 18px);
-    gap: 12px;
+    padding: calc(var(--topbar-h) + .75rem) 1rem calc(var(--botnav-h) + 1.125rem);
+    gap: .75rem;
 }
 
 [data-theme="MiuiX"] .Header {
-    padding: calc(20px + var(--safe-top)) 20px 15px;
+    padding: calc(1.25rem + var(--safe-top)) 1.25rem .9375rem;
     background: color-mix(in srgb, var(--bg) 76%, transparent);
     border-bottom: 0;
     box-shadow: none;
-    backdrop-filter: saturate(180%) blur(20px);
-    -webkit-backdrop-filter: saturate(180%) blur(20px);
-    -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 10px), transparent);
-    mask-image: linear-gradient(to bottom, #000 calc(100% - 10px), transparent);
+    backdrop-filter: saturate(180%) blur(1.25rem);
+    -webkit-backdrop-filter: saturate(180%) blur(1.25rem);
+    -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - .625rem), transparent);
+    mask-image: linear-gradient(to bottom, #000 calc(100% - .625rem), transparent);
 }
 
 [data-theme="MiuiX"] .HeaderTitle {
@@ -1011,16 +1019,16 @@ textarea {
 
 [data-theme="MiuiX"] .ProcessOverlay {
     z-index: 2;
-    bottom: 12px;
-    left: 12px;
-    padding: 5px 10px;
-    gap: 6px;
+    bottom: .75rem;
+    left: .75rem;
+    padding: .3125rem .625rem;
+    gap: .375rem;
     border: 0;
-    border-radius: 10px;
+    border-radius: .625rem;
     background: rgb(0 0 0 / 0.34);
     box-shadow: none;
-    backdrop-filter: blur(14px) saturate(140%);
-    -webkit-backdrop-filter: blur(14px) saturate(140%);
+    backdrop-filter: blur(.875rem) saturate(140%);
+    -webkit-backdrop-filter: blur(.875rem) saturate(140%);
 }
 
 [data-theme="MiuiX"] .ProcessLabel {
@@ -1036,7 +1044,7 @@ textarea {
 }
 
 [data-theme="MiuiX"] .Card {
-    padding: 16px;
+    padding: 1rem;
     border: 0;
     border-radius: var(--mx-card);
     background: var(--surf-c);
@@ -1044,22 +1052,22 @@ textarea {
 }
 
 [data-theme="MiuiX"] .CardLabel {
-    gap: 7px;
-    margin-bottom: 10px;
+    gap: .4375rem;
+    margin-bottom: .625rem;
     font-size: var(--fs-title);
     font-weight: 600;
     letter-spacing: -0.1px;
 }
 
 [data-theme="MiuiX"] .CardLabel svg {
-    width: 17px;
-    height: 17px;
+    width: 1.0625rem;
+    height: 1.0625rem;
     fill: var(--pri-ink);
 }
 
 [data-theme="MiuiX"] .IndexRow {
-    padding: 11px 0;
-    gap: 12px;
+    padding: .6875rem 0;
+    gap: .75rem;
     border-bottom-color: var(--divider);
 }
 
@@ -1084,7 +1092,7 @@ textarea {
 }
 
 [data-theme="MiuiX"] .TweakCategory {
-    padding: 20px 4px 6px;
+    padding: 1.25rem .25rem .375rem;
     font-size: var(--fs-category);
     font-weight: 700;
     line-height: 1.25;
@@ -1096,7 +1104,7 @@ textarea {
 [data-theme="MiuiX"] #PageSettings>.Card,
 [data-theme="MiuiX"] #PageTweaks>.Card {
     position: relative;
-    padding: 0 16px;
+    padding: 0 1rem;
     border: 0;
     border-radius: 0;
     background: var(--surf-c);
@@ -1109,7 +1117,7 @@ textarea {
 }
 
 [data-theme="MiuiX"] #PageSettings>.Card:nth-child(2) {
-    margin-top: 14px;
+    margin-top: .875rem;
     border-radius: var(--mx-card) var(--mx-card) 0 0;
 }
 
@@ -1128,8 +1136,8 @@ textarea {
     content: "";
     position: absolute;
     top: 0;
-    left: 66px;
-    right: 16px;
+    left: 4.125rem;
+    right: 1rem;
     height: 1px;
     background: var(--divider);
     pointer-events: none;
@@ -1137,22 +1145,22 @@ textarea {
 
 [data-theme="MiuiX"] .Tweak {
     position: relative;
-    padding: 15px 0;
-    gap: 14px;
+    padding: .9375rem 0;
+    gap: .875rem;
     border-bottom: 0;
     align-items: center;
 }
 
 [data-theme="MiuiX"] .Card>.Tweak:first-child,
 [data-theme="MiuiX"] .Card>.Tweak:last-child {
-    padding-top: 15px;
-    padding-bottom: 15px;
+    padding-top: .9375rem;
+    padding-bottom: .9375rem;
 }
 
 [data-theme="MiuiX"] .Tweak:not(:last-child)::after {
     content: "";
     position: absolute;
-    left: 50px;
+    left: 3.125rem;
     right: 0;
     bottom: 0;
     height: 1px;
@@ -1161,10 +1169,10 @@ textarea {
 }
 
 [data-theme="MiuiX"] .TweakIcon {
-    width: 36px;
-    height: 36px;
-    padding: 8px;
-    border-radius: 12px;
+    width: 2.25rem;
+    height: 2.25rem;
+    padding: .5rem;
+    border-radius: .75rem;
     background: var(--pri-mix-14);
     fill: var(--pri-ink);
 }
@@ -1184,22 +1192,22 @@ textarea {
 }
 
 [data-theme="MiuiX"] .TweakWarn {
-    margin-top: 5px;
+    margin-top: .3125rem;
     font-size: var(--fs-caption);
 }
 
 [data-theme="MiuiX"] .SwitchTrack {
     border: 0;
-    border-radius: 999px;
+    border-radius: 62.4375rem;
     background: color-mix(in srgb, var(--on-surf) 12%, var(--surf-hi));
 }
 
 [data-theme="MiuiX"] .SwitchThumb {
-    left: 4px;
-    width: 24px;
-    height: 24px;
+    left: .25rem;
+    width: 1.5rem;
+    height: 1.5rem;
     background: #FFFFFF;
-    box-shadow: 0 2px 5px rgb(16 24 40 / 0.18), 0 1px 1px rgb(16 24 40 / 0.10);
+    box-shadow: 0 2px .3125rem rgb(16 24 40 / 0.18), 0 1px 1px rgb(16 24 40 / 0.10);
 }
 
 [data-theme="MiuiX"] .Switch input:checked~.SwitchTrack {
@@ -1207,13 +1215,13 @@ textarea {
 }
 
 [data-theme="MiuiX"] .Switch input:checked~.SwitchTrack .SwitchThumb {
-    transform: translateY(-50%) translateX(20px);
+    transform: translateY(-50%) translateX(1.25rem);
     background-color: #FFFFFF;
 }
 
 [data-theme="MiuiX"] .Switch input:indeterminate~.SwitchTrack .SwitchThumb {
     left: 50%;
-    width: 12px;
+    width: .75rem;
     height: 2px;
     border-radius: 1px;
     transform: translate(-50%, -50%);
@@ -1236,7 +1244,7 @@ textarea {
 
 [data-theme="MiuiX"] .TweakSelectField {
     width: 100%;
-    padding: 11px 12px;
+    padding: .6875rem .75rem;
     border: 0;
     border-radius: var(--mx-ctl);
     background: var(--surf-hi);
@@ -1256,22 +1264,22 @@ textarea {
 }
 
 [data-theme="MiuiX"] .TweakSelectChevron {
-    width: 18px;
-    height: 18px;
+    width: 1.125rem;
+    height: 1.125rem;
     fill: var(--on-surf-var);
 }
 
 [data-theme="MiuiX"] .TweakSelectMenu {
-    padding: 6px;
+    padding: .375rem;
     border: 0;
-    border-radius: 16px;
+    border-radius: 1rem;
     background: var(--surf-c);
     box-shadow: var(--mx-shadow-pop);
 }
 
 [data-theme="MiuiX"] .TweakSelectItem {
-    padding: 11px 12px;
-    border-radius: 10px;
+    padding: .6875rem .75rem;
+    border-radius: .625rem;
     font-size: var(--fs-body);
     font-weight: 500;
 }
@@ -1287,9 +1295,9 @@ textarea {
 }
 
 [data-theme="MiuiX"] .TweakChip {
-    padding: 6px 12px;
+    padding: .375rem .75rem;
     border: 0;
-    border-radius: 999px;
+    border-radius: 62.4375rem;
     background: var(--surf-hi);
     color: var(--on-surf);
     font-size: var(--fs-body);
@@ -1300,13 +1308,13 @@ textarea {
     background: var(--pri);
     color: var(--on-pri);
     font-weight: 600;
-    box-shadow: 0 6px 14px -8px var(--pri-mix-40);
+    box-shadow: 0 .375rem .875rem -0.5rem var(--pri-mix-40);
 }
 
 [data-theme="MiuiX"] .chip {
-    padding: 5px 12px 5px 8px;
+    padding: .3125rem .75rem .3125rem .5rem;
     border: 0;
-    border-radius: 999px;
+    border-radius: 62.4375rem;
     background: var(--surf-hi);
     color: var(--on-surf);
     font-size: var(--fs-body);
@@ -1314,38 +1322,38 @@ textarea {
 }
 
 [data-theme="MiuiX"] .Snack {
-    padding: 11px 18px;
+    padding: .6875rem 1.125rem;
     border: 0;
-    border-radius: 15px;
+    border-radius: .9375rem;
     background: color-mix(in srgb, #1C1C1E 92%, transparent);
     color: #FFFFFF;
     font-size: var(--fs-body);
     font-weight: 500;
-    box-shadow: 0 18px 44px -20px rgb(0 0 0 / 0.55);
-    backdrop-filter: blur(16px) saturate(160%);
-    -webkit-backdrop-filter: blur(16px) saturate(160%);
+    box-shadow: 0 1.125rem 2.75rem -1.25rem rgb(0 0 0 / 0.55);
+    backdrop-filter: blur(1rem) saturate(160%);
+    -webkit-backdrop-filter: blur(1rem) saturate(160%);
 }
 
 [data-theme="MiuiX"] .Navigation {
     border-top: 0;
     background: color-mix(in srgb, var(--bg) 80%, transparent);
     box-shadow: 0 -1px 0 var(--divider);
-    backdrop-filter: saturate(180%) blur(20px);
-    -webkit-backdrop-filter: saturate(180%) blur(20px);
+    backdrop-filter: saturate(180%) blur(1.25rem);
+    -webkit-backdrop-filter: saturate(180%) blur(1.25rem);
 }
 
 [data-theme="MiuiX"] .NavigationBar,
 [data-theme="MiuiX"] .NavigationBarActive {
-    padding: 8px 0 10px;
-    gap: 4px;
+    padding: .5rem 0 .625rem;
+    gap: .25rem;
 }
 
 [data-theme="MiuiX"] .NavigationBar svg,
 [data-theme="MiuiX"] .NavigationBarActive svg {
-    width: 28px;
-    height: 28px;
+    width: 1.75rem;
+    height: 1.75rem;
     padding: 0;
-    border-radius: 8px;
+    border-radius: .5rem;
     background: transparent;
     fill: var(--on-surf-var);
     transition: transform 0.26s var(--spring), fill 0.2s var(--ease-smooth);
