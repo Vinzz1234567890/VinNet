@@ -1346,23 +1346,8 @@ async function DecodeImage(ImageElement) {
     }
 }
 
-function SyncUiScale() {
-    const RootElement = document.documentElement;
-    const LayoutWidth = RootElement.clientWidth || window.innerWidth || 0;
-    const ScreenWidth = (window.screen && window.screen.width) || 0;
-    const VisualScale = window.visualViewport && window.visualViewport.scale > 0 ? window.visualViewport.scale : 1;
-    let Scale = 1;
-    if (VisualScale < 1) Scale = Math.max(Scale, 1 / VisualScale);
-    if (LayoutWidth > 0 && ScreenWidth > 0) Scale = Math.max(Scale, LayoutWidth / ScreenWidth);
-    Scale = Math.min(Scale, 3);
-    RootElement.style.setProperty('--ui-scale', Scale.toFixed(3));
-    Log('Layout', `ui-scale ${Scale.toFixed(3)} | layout ${LayoutWidth} | screen ${ScreenWidth} | visual ${VisualScale}`, 'Debug');
-}
-
 function SetupEventListeners() {
     SetupGestureListeners();
-    addEventListener('resize', SyncUiScale);
-    if (window.visualViewport) window.visualViewport.addEventListener('resize', SyncUiScale);
 
     document.addEventListener('change', Event => {
         if (Event.target.id === 'PersistentTweaks') {
@@ -1484,7 +1469,6 @@ function SetupEventListeners() {
 }
 
 function InitLayout() {
-    SyncUiScale();
     RenderRows('MonitorRows', [['Latency', 'Latency'], ['Jitter', 'Jitter']]);
     RenderRows('EnvironmentRows', [...Environment, ['Root', 'Root'], ['Vendor', 'Vendor']]);
     RenderRows('MetadataRows', [...Metadata, ['MetadataVersion', 'Version']]);
