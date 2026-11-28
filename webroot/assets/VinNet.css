@@ -551,6 +551,26 @@ textarea {
     color: var(--Bad);
 }
 
+.TweakGroup {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+    margin-top: 10px;
+}
+
+.TweakSub {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.TweakSubName {
+    font-size: var(--fs-body);
+    font-weight: 600;
+    color: var(--on-surf-var);
+}
+
 .TweakChips[hidden] {
     display: none;
 }
